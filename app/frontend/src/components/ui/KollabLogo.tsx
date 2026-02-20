@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 
 interface KollabLogoProps {
-  size?: number; // svg px size, default 34
-  textSize?: string; // tailwind class, default "text-xl"
+  size?: number; 
+  textSize?: string; 
 }
 
 const KollabLogo = ({ size = 34, textSize = "text-xl" }: KollabLogoProps) => (

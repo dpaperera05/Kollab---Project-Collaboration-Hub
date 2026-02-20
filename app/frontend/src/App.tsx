@@ -7,13 +7,17 @@ import { useEffect, useLayoutEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailsPage from "./pages/ProjectDetailsPage";
+import PostProjectPage from "./pages/PostProjectPage";
+import Chatbot from "./components/chatbot/Chatbot";
+
 
 const queryClient = new QueryClient();
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useLayoutEffect(() => {
-    // Disable browser's native scroll restoration so we control it
     if ("scrollRestoration" in history) {
       history.scrollRestoration = "manual";
     }
@@ -34,9 +38,13 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+            <Route path="/projects/new" element={<PostProjectPage />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <Chatbot />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
