@@ -98,7 +98,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
 
       </div>
 
-      {/* Meta row */}
+      
       <div className="px-5 pt-3 flex flex-wrap gap-x-3 gap-y-1.5">
         <MetaItem icon={<Clock size={12} />} label={project.timeCommitment} />
         <MetaItem icon={<MapPin size={12} />} label={project.location} />
@@ -165,10 +165,6 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
           {bookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
         </button>
         {project.mentorLinked
-
-
-
-
 
 
         }

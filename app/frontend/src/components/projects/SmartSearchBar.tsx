@@ -27,7 +27,6 @@ const SmartSearchBar = ({ value, onChange }: SmartSearchBarProps) => {
             : "border-border shadow-sm hover:border-primary/40"
         )}
       >
-        {/* AI Sparkle icon */}
         <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
           <Sparkles size={16} className="text-primary" />
         </span>

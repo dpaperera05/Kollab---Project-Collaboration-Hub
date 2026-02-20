@@ -1,5 +1,3 @@
-// ============= Full file contents =============
-
 export type ProjectStatus = "Open" | "Ongoing" | "Filled" | "Finished";
 export type Difficulty = "Beginner" | "Intermediate" | "Advanced";
 export type Domain =
@@ -47,11 +45,9 @@ export interface ProjectOwner {
 export interface Project {
   id: string;
   title: string;
-  // Legacy fields kept for backward compatibility
   posterAvatar: string;
   posterName: string;
   posterRating: number;
-  // Extended owner
   owner: ProjectOwner;
   domain: Domain;
   difficulty: Difficulty;
@@ -70,7 +66,7 @@ export interface Project {
   teamMembers: TeamMember[];
   relatedProjectIds: string[];
   mentorLinked: boolean;
-  postedAt: string; // ISO date string
+  postedAt: string; 
   tags: string[];
   posterImage: string;
 }
