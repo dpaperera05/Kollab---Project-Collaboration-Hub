@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 
 
 const queryClient = new QueryClient();
@@ -37,6 +38,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+
 
             <Route path="*" element={<NotFound />} />
           </Routes>
