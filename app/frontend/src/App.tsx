@@ -9,6 +9,7 @@ import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
+import PostProjectPage from "./pages/PostProjectPage";
 
 
 const queryClient = new QueryClient();
@@ -16,7 +17,6 @@ const queryClient = new QueryClient();
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   useLayoutEffect(() => {
-    // Disable browser's native scroll restoration so we control it
     if ("scrollRestoration" in history) {
       history.scrollRestoration = "manual";
     }
@@ -39,7 +39,7 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
-
+            <Route path="/projects/new" element={<PostProjectPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

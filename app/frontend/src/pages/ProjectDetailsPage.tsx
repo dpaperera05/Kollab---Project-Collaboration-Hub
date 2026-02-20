@@ -140,7 +140,6 @@ const ProjectDetailsPage = () => {
 
               <Separator />
 
-              {/* Mobile sidebar: show between team and related */}
               <div className="lg:hidden space-y-4">
                 <OwnerCard owner={project.owner} />
                 <MessageOwnerWidget
@@ -149,11 +148,9 @@ const ProjectDetailsPage = () => {
                 />
               </div>
 
-              {/* Related Projects */}
               <RelatedProjects projects={relatedProjects} />
             </div>
 
-            {/* ── RIGHT sidebar (desktop) ── */}
             <aside className="hidden lg:flex flex-col gap-4 sticky top-24">
               <OwnerCard owner={project.owner} />
               <MessageOwnerWidget
