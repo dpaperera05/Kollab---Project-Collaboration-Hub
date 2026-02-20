@@ -72,42 +72,22 @@ const Footer = () => {
   return (
     <footer className="border-t border-border bg-muted/20">
       <Container>
-        {/* Main grid */}
         <div className="py-14 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1.5fr] lg:gap-8">
 
-          {/* Col 1 — Brand */}
           <div className="space-y-5 sm:col-span-2 lg:col-span-1">
             <KollabLogo size={32} textSize="text-xl" />
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               Kollab is a collaboration platform where students discover projects, find teammates, learn with mentors, and build proof of skills.
             </p>
-            
-
-
-
-
-
-
-
-
-
-
-
-
-
 
           </div>
 
-          {/* Col 2 — Discover */}
           <FooterLinkGroup title="Discover" links={discoverLinks} />
 
-          {/* Col 3 — Participate */}
           <FooterLinkGroup title="Participate" links={participateLinks} />
 
-          {/* Col 4 — Help & Support */}
           <FooterLinkGroup title="Help & Support" links={helpLinks} />
 
-          {/* Col 5 — Stay in the loop */}
           <div className="space-y-5">
             <h3 className="text-sm font-bold text-foreground tracking-wide">Stay in the Loop</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -137,7 +117,6 @@ const Footer = () => {
               }
             </form>
 
-            {/* Socials */}
             <div className="flex items-center gap-1.5 pt-1">
               {socials.map(({ icon: Icon, label, href }) =>
               <a
@@ -153,7 +132,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom bar */}
         <div className="border-t border-border py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <span>© 2026 Kollab. All rights reserved.</span>
           <div className="flex items-center gap-5">

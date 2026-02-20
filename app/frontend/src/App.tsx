@@ -7,6 +7,8 @@ import { useEffect, useLayoutEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import ProjectsPage from "./pages/ProjectsPage";
+
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
