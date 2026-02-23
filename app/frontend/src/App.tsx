@@ -11,6 +11,9 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import PostProjectPage from "./pages/PostProjectPage";
 import Chatbot from "./components/chatbot/Chatbot";
+import ProfilePage from "./pages/profile/ProfilePage";
+import PortfolioShowcasePage from "./pages/portfolio/PortfolioShowcasePage";
+
 
 //Auth related webpages
 import LoginPage from "./pages/auth/LoginPage";
@@ -55,6 +58,8 @@ const App = () => (
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
             <Route path="/projects/new" element={<PostProjectPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/portfolio/:id" element={<PortfolioShowcasePage />} />
 
 
             <Route path="/login" element={<LoginPage />} />
