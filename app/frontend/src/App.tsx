@@ -12,6 +12,8 @@ import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import PostProjectPage from "./pages/PostProjectPage";
 import Chatbot from "./components/chatbot/Chatbot";
 
+//Auth related webpages
+import LoginPage from "./pages/auth/LoginPage";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +43,7 @@ const App = () => (
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
             <Route path="/projects/new" element={<PostProjectPage />} />
+            <Route path="/login" element={<LoginPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
