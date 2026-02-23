@@ -14,6 +14,8 @@ import Chatbot from "./components/chatbot/Chatbot";
 import ProfilePage from "./pages/profile/ProfilePage";
 import PortfolioShowcasePage from "./pages/portfolio/PortfolioShowcasePage";
 
+import PeoplePage from "./pages/PeoplePage";
+
 
 //Auth related webpages
 import LoginPage from "./pages/auth/LoginPage";
@@ -61,6 +63,7 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/portfolio/:id" element={<PortfolioShowcasePage />} />
 
+            <Route path="/people" element={<PeoplePage />} />
 
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
