@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Briefcase, Layers, MessageCircle, Clock, Github, Linkedin, Globe, Copy, Check } from "lucide-react";
-import { PersonProfile } from "@/data/mockPeople";
+import type { PersonProfile } from "@/data/mockPeople";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 

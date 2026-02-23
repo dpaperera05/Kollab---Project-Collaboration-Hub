@@ -1,5 +1,5 @@
 import { Layers, Briefcase, Award, Zap } from "lucide-react";
-import { ActivityItem } from "@/data/mockPeople";
+import type { ActivityItem } from "@/data/mockPeople";
 import { cn } from "@/lib/utils";
 
 interface Props {
