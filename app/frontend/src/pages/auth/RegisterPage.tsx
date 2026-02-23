@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Navbar from "@/components/layout/Navbar";
-import type { register } from "@/lib/authStore";
+import { register } from "@/lib/authStore";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
