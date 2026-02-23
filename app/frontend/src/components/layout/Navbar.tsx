@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { label: "Projects", href: "/projects" },
-  { label: "People", href: "#" },
-  { label: "Mentors", href: "#" },
+  { label: "People", href: "/people" },
+  { label: "Mentors", href: "/mentors" },
   { label: "Job Simulations", href: "#" },
   { label: "Events", href: "#" },
   { label: "Blogs", href: "#" },
@@ -90,13 +90,13 @@ const Navbar = () => {
               </button>
             )}
             <Link
-              to="#"
+              to="/login"
               className="px-4 py-2 text-[15px] font-semibold text-foreground/80 hover:text-foreground transition-colors duration-150"
             >
               Login
             </Link>
             <Link
-              to="#"
+              to="/register"
               className="px-5 py-2.5 text-[15px] font-semibold text-primary-foreground rounded-lg bg-primary hover:bg-primary/90 shadow-brand-sm hover:shadow-brand transition-all duration-200 hover:-translate-y-0.5"
             >
               Get Started
@@ -149,13 +149,13 @@ const Navbar = () => {
               })}
               <div className="mt-3 pt-3 border-t border-border flex gap-2">
                 <Link
-                  to="#"
+                  to="/login"
                   className="flex-1 px-4 py-2.5 text-sm font-medium text-center border border-border rounded-lg hover:bg-accent transition-colors"
                 >
                   Login
                 </Link>
                 <Link
-                  to="#"
+                  to="/register"
                   className="flex-1 px-4 py-2.5 text-sm font-semibold text-center text-primary-foreground rounded-lg bg-primary shadow-brand-sm"
                 >
                   Get Started

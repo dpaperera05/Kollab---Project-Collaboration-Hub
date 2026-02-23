@@ -12,6 +12,20 @@ import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import PostProjectPage from "./pages/PostProjectPage";
 import Chatbot from "./components/chatbot/Chatbot";
 
+//Auth related webpages
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import VerifyEmailPage from "./pages/auth/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+
+//Onboridng related webpages
+import RoleStep from "./pages/onboarding/RoleStep";
+import BasicsStep from "./pages/onboarding/BasicsStep";
+import SkillsStep from "./pages/onboarding/SkillsStep";
+import LinksStep from "./pages/onboarding/LinksStep";
+import AvailabilityStep from "./pages/onboarding/AvailabilityStep";
+import InterestsStep from "./pages/onboarding/InterestsStep";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +55,21 @@ const App = () => (
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
             <Route path="/projects/new" element={<PostProjectPage />} />
+
+
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+            <Route path="/onboarding/role" element={<RoleStep />} />
+            <Route path="/onboarding/basics" element={<BasicsStep />} />
+            <Route path="/onboarding/skills" element={<SkillsStep />} />
+            <Route path="/onboarding/links" element={<LinksStep />} />
+            <Route path="/onboarding/availability" element={<AvailabilityStep />} />
+            <Route path="/onboarding/interests" element={<InterestsStep />} />
+
 
             <Route path="*" element={<NotFound />} />
           </Routes>
