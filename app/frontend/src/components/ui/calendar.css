@@ -1,0 +1,29 @@
+/* Base layout tweaks for react-day-picker to pair with our Tailwind classes */
+.rdp {
+  margin: 0;
+}
+
+.rdp-months {
+  display: flex;
+  gap: 1rem;
+}
+
+.rdp-month {
+  width: 100%;
+}
+
+.rdp-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rdp-cell {
+  text-align: center;
+  padding: 0;
+}
+
+.rdp-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

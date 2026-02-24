@@ -81,6 +81,14 @@
     /* Navigation */
     --nav-bg: 0 0% 100% / 0.9;
     --nav-border: 240 6% 92%;
+
+    /* react-day-picker overrides */
+    --rdp-accent-color: hsl(var(--primary));
+    --rdp-accent-color-dark: hsl(var(--primary));
+    --rdp-background-color: hsl(var(--accent));
+    --rdp-outline: 2px solid hsl(var(--ring));
+    --rdp-outline-selected: 2px solid hsl(var(--ring));
+    --rdp-today-color: hsl(var(--foreground));
   }
 
   .dark {
@@ -145,6 +153,14 @@
 
     --nav-bg: 240 12% 7% / 0.92;
     --nav-border: 240 8% 18%;
+
+    /* react-day-picker overrides (dark) */
+    --rdp-accent-color: hsl(var(--primary));
+    --rdp-accent-color-dark: hsl(var(--primary));
+    --rdp-background-color: hsl(var(--accent));
+    --rdp-outline: 2px solid hsl(var(--ring));
+    --rdp-outline-selected: 2px solid hsl(var(--ring));
+    --rdp-today-color: hsl(var(--foreground));
   }
 }
 

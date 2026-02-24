@@ -4,7 +4,7 @@ import {
   ArrowLeft, Upload, ImageIcon, Calendar, Clock, MapPin, Globe, Tag, Trophy,
   Users, FileText, Sparkles, ExternalLink, X, ChevronDown, ChevronUp,
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, isBefore, startOfDay, startOfToday } from "date-fns";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
@@ -224,6 +224,8 @@ const CreateEventPage = () => {
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState("");
 
+  const today = useMemo(() => startOfToday(), []);
+
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }));
 
@@ -429,7 +431,11 @@ const CreateEventPage = () => {
                     <Label className="text-sm font-semibold">Start Date <span className="text-destructive">*</span></Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("mt-1.5 w-full h-11 justify-start font-normal", !form.startDate && "text-muted-foreground")}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn("mt-1.5 w-full h-11 justify-start font-normal", !form.startDate && "text-muted-foreground")}
+                        >
                           <Calendar size={14} className="mr-2" />
                           {form.startDate ? format(form.startDate, "PPP") : "Pick date"}
                         </Button>
@@ -439,7 +445,7 @@ const CreateEventPage = () => {
                           mode="single"
                           selected={form.startDate}
                           onSelect={(d) => set("startDate", d)}
-                          disabled={(d) => d < new Date()}
+                          disabled={(d) => isBefore(startOfDay(d), today)}
                           initialFocus
                           className="p-3 pointer-events-auto"
                         />
@@ -460,7 +466,11 @@ const CreateEventPage = () => {
                     <Label className="text-sm font-semibold">End Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("mt-1.5 w-full h-11 justify-start font-normal", !form.endDate && "text-muted-foreground")}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn("mt-1.5 w-full h-11 justify-start font-normal", !form.endDate && "text-muted-foreground")}
+                        >
                           <Calendar size={14} className="mr-2" />
                           {form.endDate ? format(form.endDate, "PPP") : "Pick date"}
                         </Button>
@@ -470,7 +480,7 @@ const CreateEventPage = () => {
                           mode="single"
                           selected={form.endDate}
                           onSelect={(d) => set("endDate", d)}
-                          disabled={(d) => d < (form.startDate || new Date())}
+                          disabled={(d) => isBefore(startOfDay(d), form.startDate ? startOfDay(form.startDate) : today)}
                           initialFocus
                           className="p-3 pointer-events-auto"
                         />
