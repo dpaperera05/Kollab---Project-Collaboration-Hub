@@ -24,8 +24,7 @@ import EventsListingPage from "./pages/events/EventsListingPage";
 import CreateEventPage from "@/pages/events/CreateEventPage";
 import BlogsPage from "@/pages/BlogsPage";
 import BlogDetailPage from "@/pages/BlogDetailPage";
-//import CreateBlogPage from "@/pages/blogs/CreateBlogPage";
-
+import CreateBlogPage from "@/pages/blogs/CreateBlogPage";
 
 //Auth related webpages
 import LoginPage from "./pages/auth/LoginPage";
@@ -77,7 +76,7 @@ const App = () => (
             <Route path="/events" element={<EventsListingPage />} />
             <Route path="/events/create" element={<CreateEventPage />} />
             <Route path="/blogs" element={<BlogsPage />} />
-            {/* <Route path="/blogs/create" element={<CreateBlogPage />} /> */}
+            <Route path="/blogs/create" element={<CreateBlogPage />} />
             <Route path="/blogs/:id" element={<BlogDetailPage />} />
 
             <Route path="/people" element={<PeoplePage />} />
