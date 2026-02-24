@@ -20,6 +20,7 @@ import MentorsPage from "./pages/MentorsPage";
 import MentorProfilePage from "./pages/MentorProfilePage";
 
 import ProjectWorkspacePage from "./pages/projects/ProjectWorkspacePage";
+import EventsListingPage from "./pages/events/EventsListingPage";
 
 
 //Auth related webpages
@@ -68,6 +69,9 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/portfolio/:id" element={<PortfolioShowcasePage />} />
             <Route path="/projects/:id/workspace" element={<ProjectWorkspacePage />} />
+
+            <Route path="/events" element={<EventsListingPage />} />
+
 
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/people/:id" element={<PersonProfilePage />} />
