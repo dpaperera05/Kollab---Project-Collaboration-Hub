@@ -23,6 +23,8 @@ import ProjectWorkspacePage from "./pages/projects/ProjectWorkspacePage";
 import EventsListingPage from "./pages/events/EventsListingPage";
 import CreateEventPage from "@/pages/events/CreateEventPage";
 import BlogsPage from "@/pages/BlogsPage";
+import BlogDetailPage from "@/pages/BlogDetailPage";
+//import CreateBlogPage from "@/pages/blogs/CreateBlogPage";
 
 
 //Auth related webpages
@@ -75,6 +77,8 @@ const App = () => (
             <Route path="/events" element={<EventsListingPage />} />
             <Route path="/events/create" element={<CreateEventPage />} />
             <Route path="/blogs" element={<BlogsPage />} />
+            {/* <Route path="/blogs/create" element={<CreateBlogPage />} /> */}
+            <Route path="/blogs/:id" element={<BlogDetailPage />} />
 
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/people/:id" element={<PersonProfilePage />} />
