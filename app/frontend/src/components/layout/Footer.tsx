@@ -7,8 +7,10 @@ import KollabLogo from "@/components/ui/KollabLogo";
 const discoverLinks = [
 { label: "Projects", href: "/projects" },
 { label: "People", href: "/people" },
-{ label: "Mentors", href: "#" },
+{ label: "Mentors", href: "/mentors" },
 { label: "Job Simulations", href: "#" },
+{ label: "Events", href: "/events" },
+{ label: "Blogs", href: "/blogs" },
 { label: "Insights", href: "#" }];
 
 
@@ -81,6 +83,21 @@ const Footer = () => {
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
               Kollab is a collaboration platform where students discover projects, find teammates, learn with mentors, and build proof of skills.
             </p>
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
           </div>
 
           {/* Col 2 — Discover */}
