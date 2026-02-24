@@ -86,7 +86,7 @@ const ManageProjectsTab = () => {
                         {["Open", "Ongoing", "Filled", "Finished"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => toast({ title: "Workspace coming soon" })}><ExternalLink size={12} /> Workspace</Button>
+                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => navigate(`/projects/${p.id}/workspace`)}><ExternalLink size={12} /> Workspace</Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:bg-destructive/10"><Trash2 size={12} /></Button>
@@ -128,7 +128,7 @@ const ManageProjectsTab = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => navigate(`/projects/${j.id}`)}><Eye size={12} /> View</Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => toast({ title: "Workspace coming soon" })}><ExternalLink size={12} /> Workspace</Button>
+                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => navigate(`/projects/${j.id}/workspace`)}><ExternalLink size={12} /> Workspace</Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:bg-destructive/10">Leave</Button>
