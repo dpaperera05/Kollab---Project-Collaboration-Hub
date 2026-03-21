@@ -323,7 +323,7 @@ const CreateEventPage = () => {
                     Share hackathons, workshops, talks, and webinars with the Kollab community.
                   </p>
                 </div>
-                <Badge variant="outline" className="text-[11px] font-medium">Frontend demo</Badge>
+                
               </div>
               <div className="hidden lg:flex flex-shrink-0 items-center justify-center w-[300px] xl:w-[340px]">
                 <CreateEventIllustration />
