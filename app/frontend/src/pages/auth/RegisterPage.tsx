@@ -48,7 +48,7 @@ const RegisterPage = () => {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
 
-    const result = register(email.trim(), password, userType!);
+    const result = await register(email.trim(), password, userType!);
     setLoading(false);
 
     if (!result.success) {

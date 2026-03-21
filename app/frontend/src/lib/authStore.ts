@@ -22,12 +22,16 @@ export interface KollabUser {
   onboardingCompleted?: boolean;
   onboardingStep?: string;
   isProfilePublic?: boolean;
+  name?: string;
+  token?: string;
   profile?: KollabUserProfile;
 }
 
 type LoginResult =
   | { success: true; user: KollabUser }
   | { success: false; error: string };
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 type RegisterResult =
   | { success: true; user: KollabUser }
@@ -66,31 +70,50 @@ export function login(email: string, password: string): LoginResult {
   return { success: true, user };
 }
 
-export function register(
+export async function register(
   email: string,
   password: string,
   userType: "member" | "mentor"
-): RegisterResult {
-  const users = getUsers();
-  const exists = users.some(
-    (u) => u.email.toLowerCase() === email.toLowerCase()
-  );
+): Promise<RegisterResult> {
+  try {
+    const response = await fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, userType }),
+    });
 
-  if (exists) {
-    return { success: false, error: "An account with this email already exists." };
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return { success: false, error: payload?.message || "Registration failed" };
+    }
+
+    const apiUser = payload?.data?.user;
+    const token = payload?.data?.token as string | undefined;
+
+    if (!apiUser?.id || !apiUser?.email) {
+      return { success: false, error: "Invalid response from server" };
+    }
+
+    const newUser: KollabUser = {
+      id: apiUser.id,
+      email: apiUser.email,
+      name: apiUser.name,
+      password,
+      userType: apiUser.userType || userType,
+      isEmailVerified: Boolean(apiUser.isEmailVerified),
+      token,
+    };
+
+    const users = getUsers();
+    saveUsers([...users, newUser]);
+    setSession(newUser);
+
+    return { success: true, user: newUser };
+  } catch (error) {
+    console.error("Register request failed", error);
+    return { success: false, error: "Unable to register. Please try again." };
   }
-
-  const newUser: KollabUser = {
-    id: crypto.randomUUID(),
-    email,
-    password,
-    userType,
-    isEmailVerified: false,
-  };
-
-  saveUsers([...users, newUser]);
-  setSession(newUser);
-  return { success: true, user: newUser };
 }
 
 export function getSession(): KollabUser | null {
