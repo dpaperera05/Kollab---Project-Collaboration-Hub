@@ -24,6 +24,7 @@ export interface KollabUser {
   isProfilePublic?: boolean;
   name?: string;
   token?: string;
+  verificationToken?: string;
   profile?: KollabUserProfile;
 }
 
@@ -36,6 +37,8 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 type RegisterResult =
   | { success: true; user: KollabUser }
   | { success: false; error: string };
+
+const VERIFICATION_TOKEN_KEY = "kollab_verification_token";
 
 const USERS_KEY = "kollab_users";
 const SESSION_KEY = "kollab_auth_user";
@@ -55,6 +58,18 @@ export function saveUsers(users: KollabUser[]): void {
 export function setSession(user: KollabUser): void {
   localStorage.setItem(SESSION_KEY, JSON.stringify(user));
 }
+
+const saveVerificationToken = (token: string) => {
+  localStorage.setItem(VERIFICATION_TOKEN_KEY, token);
+};
+
+const getVerificationToken = (): string | null => {
+  return localStorage.getItem(VERIFICATION_TOKEN_KEY);
+};
+
+const clearVerificationToken = () => {
+  localStorage.removeItem(VERIFICATION_TOKEN_KEY);
+};
 
 export function login(email: string, password: string): LoginResult {
   const users = getUsers();
@@ -90,6 +105,7 @@ export async function register(
 
     const apiUser = payload?.data?.user;
     const token = payload?.data?.token as string | undefined;
+    const verificationToken = payload?.data?.verificationToken as string | undefined;
 
     if (!apiUser?.id || !apiUser?.email) {
       return { success: false, error: "Invalid response from server" };
@@ -103,11 +119,16 @@ export async function register(
       userType: apiUser.userType || userType,
       isEmailVerified: Boolean(apiUser.isEmailVerified),
       token,
+      verificationToken,
     };
 
     const users = getUsers();
     saveUsers([...users, newUser]);
     setSession(newUser);
+
+    if (verificationToken) {
+      saveVerificationToken(verificationToken);
+    }
 
     return { success: true, user: newUser };
   } catch (error) {
@@ -130,32 +151,51 @@ export function logout(): void {
 }
 
 type VerifyResult =
-  | { success: true }
+  | { success: true; user: KollabUser }
   | { success: false; error: string };
 
-const VALID_OTP = "123456";
-
-export function verifyEmail(code: string): VerifyResult {
-  if (code !== VALID_OTP) {
-    return { success: false, error: "Invalid code. Please try again." };
-  }
-
+export async function verifyEmail(code: string): Promise<VerifyResult> {
   const session = getSession();
-  if (!session) {
-    return { success: false, error: "No active session." };
+  const verificationToken = getVerificationToken();
+
+  if (!session || !verificationToken) {
+    return { success: false, error: "No verification session found." };
   }
 
-  // Update user in users list
-  const users = getUsers();
-  const updated = users.map((u) =>
-    u.id === session.id ? { ...u, isEmailVerified: true } : u
-  );
-  saveUsers(updated);
+  try {
+    const response = await fetch(`${API_BASE}/auth/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: session.email, code, verificationToken }),
+    });
 
-  // Update session
-  setSession({ ...session, isEmailVerified: true });
+    const payload = await response.json().catch(() => null);
 
-  return { success: true };
+    if (!response.ok) {
+      return { success: false, error: payload?.message || "Verification failed" };
+    }
+
+    const apiUser = payload?.data?.user;
+    if (!apiUser?.id) {
+      return { success: false, error: "Invalid response from server" };
+    }
+
+    const updatedUser: KollabUser = {
+      ...session,
+      ...apiUser,
+      isEmailVerified: true,
+    };
+
+    const users = getUsers();
+    saveUsers(users.map((u) => (u.id === session.id ? updatedUser : u)));
+    setSession(updatedUser);
+    clearVerificationToken();
+
+    return { success: true, user: updatedUser };
+  } catch (error) {
+    console.error("Verify request failed", error);
+    return { success: false, error: "Unable to verify. Please try again." };
+  }
 }
 
 const VALID_RESET_CODE = "654321";

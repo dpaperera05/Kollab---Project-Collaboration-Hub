@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { User } from "../models/user.model";
 import { generateToken } from "../utils/token";
+import { generateOtp, OTP_EXPIRY_MINUTES } from "../utils/otp";
+import { sendEmail } from "../services/email.service";
+import { issueVerificationToken, verifyVerificationToken } from "../utils/verifyToken";
 
 export const register = async (req: Request, res: Response) => {
   const { name, email, password, userType } = req.body as {
@@ -26,24 +29,81 @@ export const register = async (req: Request, res: Response) => {
 
     const user = await User.create({ name: derivedName, email, password: hashedPassword, userType });
 
-    const token = generateToken(user.id);
+    try {
+      // create OTP (not stored server-side; encoded into a short-lived token returned to client)
+      const code = generateOtp();
+      const verificationToken = issueVerificationToken({ email: user.email, code });
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      data: {
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          userType: user.userType,
-          isEmailVerified: user.isEmailVerified,
+      const subject = "Verify your Kollab account";
+      const text = `Your verification code is ${code}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`;
+      const html = `<p>Your verification code is <strong>${code}</strong>.</p><p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>`;
+      await sendEmail(user.email, subject, text, html);
+
+      const token = generateToken(user.id);
+
+      return res.status(201).json({
+        success: true,
+        message: "User registered successfully. Please verify your email.",
+        data: {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            userType: user.userType,
+            isEmailVerified: user.isEmailVerified,
+          },
+          token,
+          verificationToken,
         },
-        token,
-      },
-    });
+      });
+    } catch (emailError) {
+      // cleanup the created user so repeated attempts don't hit 409
+      await User.findByIdAndDelete(user.id).catch(() => undefined);
+      console.error("Error sending verification email:", emailError);
+      return res.status(500).json({ success: false, message: "Failed to send verification email. Please try again." });
+    }
   } catch (error) {
     console.error("Error during registration:", error);
     return res.status(500).json({ success: false, message: "Failed to register user" });
   }
+};
+
+export const verifyEmail = async (req: Request, res: Response) => {
+  const { email, code, verificationToken } = req.body as { email?: string; code?: string; verificationToken?: string };
+
+  if (!email || !code || !verificationToken) {
+    return res.status(400).json({ success: false, message: "Email, code, and verification token are required" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({ success: false, message: "User not found" });
+  }
+
+  const payload = verifyVerificationToken(verificationToken);
+
+  if (!payload || payload.email !== user.email) {
+    return res.status(400).json({ success: false, message: "Invalid verification token" });
+  }
+
+  if (payload.code !== code) {
+    return res.status(400).json({ success: false, message: "Invalid code" });
+  }
+
+  user.isEmailVerified = true;
+  await user.save();
+
+  return res.json({
+    success: true,
+    message: "Email verified successfully",
+    data: {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        userType: user.userType,
+        isEmailVerified: user.isEmailVerified,
+      },
+    },
+  });
 };

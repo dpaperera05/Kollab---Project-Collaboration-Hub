@@ -51,7 +51,7 @@ const VerifyEmailPage = () => {
       setLoading(true);
       await new Promise((r) => setTimeout(r, 500));
 
-      const result = verifyEmail(code);
+      const result = await verifyEmail(code);
       setLoading(false);
 
       if (!result.success) {
