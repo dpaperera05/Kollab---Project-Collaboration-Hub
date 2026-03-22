@@ -9,7 +9,7 @@ import { Booking } from "../models/booking.model";
 import { Chat } from "../models/chat.model";
 import { VerificationToken } from "../models/verificationToken.model";
 import { toUserResponse } from "../utils/userResponse";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -41,6 +41,10 @@ export const getMe = async (req: Request, res: Response) => {
 export const uploadAvatar = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+  const user = await User.findById(userId);
+  if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+  const previousKey = (user.profile as any)?.avatarKey as string | undefined;
 
   const { image } = req.body as { image?: string };
   if (!image) return res.status(400).json({ success: false, message: "Image is required" });
@@ -92,15 +96,20 @@ export const uploadAvatar = async (req: Request, res: Response) => {
     ? `${publicBase.replace(/\/$/, "")}/${key}`
     : `https://${bucket}.r2.cloudflarestorage.com/${key}`;
 
-  const user = await User.findById(userId);
-  if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
   const profile = user.profile && typeof (user.profile as any).toObject === "function"
     ? (user.profile as any).toObject()
     : { ...(user.profile || {}) };
 
-  user.profile = { ...profile, avatarUrl: imageUrl } as any;
+  user.profile = { ...profile, avatarUrl: imageUrl, avatarKey: key } as any;
   await user.save();
+
+  if (previousKey && previousKey !== key) {
+    try {
+      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: previousKey }));
+    } catch (err) {
+      console.error("R2 delete previous avatar failed", err);
+    }
+  }
 
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };

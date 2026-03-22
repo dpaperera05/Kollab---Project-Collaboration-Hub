@@ -4,6 +4,7 @@ export interface KollabUserProfile {
   timezone?: string;
   location?: string;
   avatarUrl?: string;
+  avatarKey?: string;
   preferredRoles?: string[];
   skills?: string[];
   techStack?: string[];

@@ -17,6 +17,7 @@ export const toUserResponse = (user: IUser) => {
           timezone: user.profile.timezone,
           location: user.profile.location,
           avatarUrl: user.profile.avatarUrl,
+          avatarKey: (user.profile as any).avatarKey,
           preferredRoles: user.profile.preferredRoles,
           skills: user.profile.skills,
           techStack: user.profile.techStack,

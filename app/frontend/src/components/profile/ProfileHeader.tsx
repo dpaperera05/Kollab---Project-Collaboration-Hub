@@ -15,6 +15,7 @@ const ProfileHeader = ({ user, onUpdate }: Props) => {
   const [isPublic, setIsPublic] = useState(user.isProfilePublic ?? true);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
   const p = user.profile || {};
+  const avatarSrc = p.avatarUrl || (p as any).avatar;
 
   useEffect(() => {
     setIsPublic(user.isProfilePublic ?? true);
@@ -65,7 +66,7 @@ const ProfileHeader = ({ user, onUpdate }: Props) => {
           {/* Avatar */}
           <div className="relative group shrink-0">
             <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-              <AvatarImage src={p.avatarUrl} />
+              <AvatarImage src={avatarSrc} />
               <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">{initials}</AvatarFallback>
             </Avatar>
             <button
