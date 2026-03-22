@@ -3,6 +3,7 @@ export interface KollabUserProfile {
   bio?: string;
   timezone?: string;
   location?: string;
+  avatarUrl?: string;
   preferredRoles?: string[];
   skills?: string[];
   techStack?: string[];

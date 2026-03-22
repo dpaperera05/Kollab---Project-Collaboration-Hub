@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { type KollabUser, updateUserProfile } from "@/lib/authStore";
-import { setProfilePublic } from "@/lib/profileStore";
+import { type KollabUser } from "@/lib/authStore";
+import { setProfilePublic, uploadAvatar } from "@/lib/profileStore";
 
 interface Props { user: KollabUser; onUpdate: () => void; }
 
@@ -24,10 +24,15 @@ const ProfileHeader = ({ user, onUpdate }: Props) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      updateUserProfile({ avatar: reader.result as string });
-      onUpdate();
-      toast({ title: "Avatar updated" });
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      const result = await uploadAvatar(base64);
+      if (result.success) {
+        onUpdate();
+        toast({ title: "Avatar updated" });
+      } else {
+        toast({ title: result.error || "Failed to upload avatar", variant: "destructive" });
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -60,7 +65,7 @@ const ProfileHeader = ({ user, onUpdate }: Props) => {
           {/* Avatar */}
           <div className="relative group shrink-0">
             <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-              <AvatarImage src={p.avatar} />
+              <AvatarImage src={p.avatarUrl} />
               <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">{initials}</AvatarFallback>
             </Avatar>
             <button

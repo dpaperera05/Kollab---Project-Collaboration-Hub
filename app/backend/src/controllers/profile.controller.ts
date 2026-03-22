@@ -9,6 +9,7 @@ import { Booking } from "../models/booking.model";
 import { Chat } from "../models/chat.model";
 import { VerificationToken } from "../models/verificationToken.model";
 import { toUserResponse } from "../utils/userResponse";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -34,6 +35,73 @@ export const getMe = async (req: Request, res: Response) => {
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   const user = await User.findById(userId);
   if (!user) return res.status(404).json({ success: false, message: "User not found" });
+  return res.json({ success: true, data: { user: toUserResponse(user) } });
+};
+
+export const uploadAvatar = async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+  const { image } = req.body as { image?: string };
+  if (!image) return res.status(400).json({ success: false, message: "Image is required" });
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.R2_BUCKET_NAME;
+  const publicBase = process.env.R2_PUBLIC_BASE_URL; // optional custom/public base
+
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+    return res.status(500).json({ success: false, message: "Image upload not configured" });
+  }
+
+  const base64Match = image.match(/^data:(.+);base64,(.+)$/);
+  const base64Data = base64Match ? base64Match[2] : image;
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(base64Data, "base64");
+  } catch {
+    return res.status(400).json({ success: false, message: "Invalid image data" });
+  }
+
+  if (buffer.byteLength > 5 * 1024 * 1024) {
+    return res.status(413).json({ success: false, message: "Image too large (max 5MB)" });
+  }
+
+  const client = new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+
+  const key = `avatars/${userId}-${Date.now()}.png`;
+
+  try {
+    await client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: "image/png",
+    }));
+  } catch (err) {
+    console.error("R2 upload failed", err);
+    return res.status(502).json({ success: false, message: "Upload failed" });
+  }
+
+  const imageUrl = publicBase
+    ? `${publicBase.replace(/\/$/, "")}/${key}`
+    : `https://${bucket}.r2.cloudflarestorage.com/${key}`;
+
+  const user = await User.findById(userId);
+  if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+  const profile = user.profile && typeof (user.profile as any).toObject === "function"
+    ? (user.profile as any).toObject()
+    : { ...(user.profile || {}) };
+
+  user.profile = { ...profile, avatarUrl: imageUrl } as any;
+  await user.save();
+
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
 

@@ -5,6 +5,7 @@ export interface IUserProfile {
   bio?: string;
   timezone?: string;
   location?: string;
+  avatarUrl?: string;
   preferredRoles?: string[];
   skills?: string[];
   techStack?: string[];
@@ -41,6 +42,7 @@ const profileSchema = new Schema<IUserProfile>(
     techStack: [{ type: String, trim: true }],
     expertiseSkills: [{ type: String, trim: true }],
     headline: { type: String, trim: true },
+    avatarUrl: { type: String, trim: true },
     languages: [{ type: String, trim: true }],
     rateType: { type: String, enum: ["free", "paid"], trim: true },
     rateNote: { type: String, trim: true },

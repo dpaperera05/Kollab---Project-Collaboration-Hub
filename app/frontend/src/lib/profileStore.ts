@@ -1,5 +1,5 @@
 import { getSession, setSession, getUsers, saveUsers, type KollabUser, logout } from "./authStore";
-import { apiDelete, apiPut } from "./api";
+import { apiDelete, apiPut, apiPost } from "./api";
 
 // ─── Profile visibility ─────────────────────────────────────
 export async function setProfilePublic(isPublic: boolean): Promise<{ success: boolean; user?: KollabUser; error?: string }> {
@@ -18,6 +18,25 @@ export async function setProfilePublic(isPublic: boolean): Promise<{ success: bo
     return { success: true, user: merged };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to update visibility" };
+  }
+}
+
+export async function uploadAvatar(image: string): Promise<{ success: boolean; user?: KollabUser; error?: string }> {
+  const session = getSession();
+  if (!session) return { success: false, error: "No session." };
+
+  try {
+    const res = await apiPost<{ success: boolean; data: { user: Partial<KollabUser> } }>("/profile/me/avatar", { image });
+    const apiUser = res?.data?.user;
+    if (!apiUser?.id) return { success: false, error: "Invalid response from server" };
+
+    const merged: KollabUser = { ...session, ...apiUser } as KollabUser;
+    setSession(merged);
+    const users = getUsers();
+    saveUsers(users.map((u) => (u.id === merged.id ? merged : u)));
+    return { success: true, user: merged };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to upload avatar" };
   }
 }
 
