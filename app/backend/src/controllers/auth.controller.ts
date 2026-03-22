@@ -5,6 +5,7 @@ import { generateToken } from "../utils/token";
 import { generateOtp, OTP_EXPIRY_MINUTES } from "../utils/otp";
 import { sendEmail } from "../services/email.service";
 import { issueVerificationToken, verifyVerificationToken } from "../utils/verifyToken";
+import { toUserResponse } from "../utils/userResponse";
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body as { email?: string; password?: string };
@@ -27,19 +28,18 @@ export const login = async (req: Request, res: Response) => {
     return res.status(403).json({ success: false, message: "Please verify your email before logging in" });
   }
 
+  if (!user.onboardingCompleted && !user.onboardingStep) {
+    user.onboardingStep = "/onboarding/role";
+    await user.save();
+  }
+
   const token = generateToken(user.id);
 
   return res.json({
     success: true,
     message: "Login successful",
     data: {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        isEmailVerified: user.isEmailVerified,
-      },
+      user: toUserResponse(user),
       token,
     },
   });
@@ -66,7 +66,14 @@ export const register = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const derivedName = name?.trim() || email.split("@")[0];
 
-    const user = await User.create({ name: derivedName, email, password: hashedPassword, userType });
+    const user = await User.create({
+      name: derivedName,
+      email,
+      password: hashedPassword,
+      userType,
+      onboardingStep: "/onboarding/role",
+      profile: { name: derivedName },
+    });
 
     try {
       // create OTP (not stored server-side; encoded into a short-lived token returned to client)
@@ -84,13 +91,7 @@ export const register = async (req: Request, res: Response) => {
         success: true,
         message: "User registered successfully. Please verify your email.",
         data: {
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            userType: user.userType,
-            isEmailVerified: user.isEmailVerified,
-          },
+          user: toUserResponse(user),
           token,
           verificationToken,
         },
@@ -136,13 +137,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
     success: true,
     message: "Email verified successfully",
     data: {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        isEmailVerified: user.isEmailVerified,
-      },
+      user: toUserResponse(user),
     },
   });
 };
