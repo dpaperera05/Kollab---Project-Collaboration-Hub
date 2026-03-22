@@ -1,14 +1,24 @@
 import { getSession, setSession, getUsers, saveUsers, type KollabUser, logout } from "./authStore";
-import { apiDelete } from "./api";
+import { apiDelete, apiPut } from "./api";
 
 // ─── Profile visibility ─────────────────────────────────────
-export function setProfilePublic(isPublic: boolean): void {
+export async function setProfilePublic(isPublic: boolean): Promise<{ success: boolean; user?: KollabUser; error?: string }> {
   const session = getSession();
-  if (!session) return;
-  const updated = { ...session, isProfilePublic: isPublic };
-  setSession(updated);
-  const users = getUsers();
-  saveUsers(users.map(u => u.id === session.id ? { ...u, isProfilePublic: isPublic } : u));
+  if (!session) return { success: false, error: "No session." };
+
+  try {
+    const res = await apiPut<{ success: boolean; data: { user: Partial<KollabUser> } }>("/profile/me", { isProfilePublic: isPublic });
+    const apiUser = res?.data?.user;
+    if (!apiUser?.id) return { success: false, error: "Invalid response from server" };
+
+    const merged: KollabUser = { ...session, ...apiUser } as KollabUser;
+    setSession(merged);
+    const users = getUsers();
+    saveUsers(users.map((u) => (u.id === merged.id ? merged : u)));
+    return { success: true, user: merged };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to update visibility" };
+  }
 }
 
 export function isProfilePublic(): boolean {

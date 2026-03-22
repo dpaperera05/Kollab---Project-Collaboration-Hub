@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,16 +15,31 @@ interface Props { user: KollabUser; onUpdate: () => void; }
 
 const SettingsTab = ({ user, onUpdate }: Props) => {
   const navigate = useNavigate();
-  const isPublic = user.isProfilePublic ?? true;
+  const [isPublic, setIsPublic] = useState(user.isProfilePublic ?? true);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
 
-  const toggleVisibility = () => {
-    setProfilePublic(!isPublic);
-    onUpdate();
-    toast({ title: `Profile set to ${!isPublic ? "Public" : "Private"}` });
+  useEffect(() => {
+    setIsPublic(user.isProfilePublic ?? true);
+  }, [user.isProfilePublic]);
+
+  const toggleVisibility = async (next: boolean) => {
+    if (updatingVisibility) return;
+    setIsPublic(next);
+    setUpdatingVisibility(true);
+    const result = await setProfilePublic(next);
+    setUpdatingVisibility(false);
+
+    if (result.success) {
+      toast({ title: `Profile set to ${next ? "Public" : "Private"}` });
+      onUpdate();
+    } else {
+      setIsPublic(!next);
+      toast({ title: result.error || "Failed to update visibility", variant: "destructive" });
+    }
   };
 
   const handleChangePassword = () => {
@@ -69,7 +84,7 @@ const SettingsTab = ({ user, onUpdate }: Props) => {
                 {isPublic ? "Your profile is visible to others" : "Your profile is hidden from listings"}
               </p>
             </div>
-            <Switch checked={isPublic} onCheckedChange={toggleVisibility} />
+            <Switch checked={isPublic} onCheckedChange={toggleVisibility} disabled={updatingVisibility} />
           </div>
         </CardContent>
       </Card>
