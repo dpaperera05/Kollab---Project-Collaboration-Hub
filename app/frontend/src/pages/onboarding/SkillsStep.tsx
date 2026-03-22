@@ -32,7 +32,6 @@ const SkillsStep = () => {
   const [techStack, setTechStack] = useState<string[]>(
     () => session?.profile?.techStack || []
   );
-  const [error, setError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const guard = checkOnboardingAccess("/onboarding/skills");
@@ -44,11 +43,6 @@ const SkillsStep = () => {
   const isValid = skills.length >= 3 && (isMentor || techStack.length >= 3);
 
   const handleNext = () => {
-    if (!isValid) {
-      setError(isMentor ? "Select at least 3 expertise skills." : "Select at least 3 skills and 3 tools/tech stack.");
-      return;
-    }
-    setError(undefined);
     const partial = isMentor
       ? { expertiseSkills: skills, techStack }
       : { skills, techStack };
@@ -78,32 +72,18 @@ const SkillsStep = () => {
         <ChipMultiSelect
           options={SKILLS}
           selected={skills}
-          onChange={(next) => {
-            setSkills(next);
-            const valid = next.length >= 3 && (isMentor || techStack.length >= 3);
-            setError(valid ? undefined : (isMentor ? "Select at least 3 expertise skills." : "Select at least 3 skills and 3 tools/tech stack."));
-          }}
+          onChange={setSkills}
           label={isMentor ? "Expertise Skills" : "Skills"}
           minRequired={3}
         />
         <ChipMultiSelect
           options={TECH_STACK}
           selected={techStack}
-          onChange={(next) => {
-            setTechStack(next);
-            const valid = skills.length >= 3 && (isMentor || next.length >= 3);
-            setError(valid ? undefined : (isMentor ? "Select at least 3 expertise skills." : "Select at least 3 skills and 3 tools/tech stack."));
-          }}
+          onChange={setTechStack}
           label="Tech Stack"
           minRequired={isMentor ? 0 : 3}
         />
       </div>
-
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
 
       <div className="mt-4 flex justify-between">
         <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>
