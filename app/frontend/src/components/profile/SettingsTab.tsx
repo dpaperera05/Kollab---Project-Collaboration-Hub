@@ -46,9 +46,14 @@ const SettingsTab = ({ user, onUpdate }: Props) => {
     navigate("/login", { replace: true });
   };
 
-  const handleDeleteAccount = () => {
-    deleteAccount();
-    navigate("/login", { replace: true });
+  const handleDeleteAccount = async () => {
+    const result = await deleteAccount();
+    if (result.success) {
+      toast({ title: "Account deleted" });
+      navigate("/login", { replace: true });
+    } else {
+      toast({ title: result.error || "Failed to delete account", variant: "destructive" });
+    }
   };
 
   return (

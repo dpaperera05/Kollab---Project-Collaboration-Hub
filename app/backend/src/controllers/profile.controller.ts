@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { User } from "../models/user.model";
+import { Project } from "../models/project.model";
+import { Blog } from "../models/blog.model";
+import { Event } from "../models/event.model";
+import { PortfolioItem } from "../models/portfolio.model";
+import { Booking } from "../models/booking.model";
+import { Chat } from "../models/chat.model";
+import { VerificationToken } from "../models/verificationToken.model";
 import { toUserResponse } from "../utils/userResponse";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
@@ -121,4 +128,22 @@ export const changePassword = async (req: Request, res: Response) => {
   await user.save();
 
   return res.json({ success: true, message: "Password updated" });
+};
+
+export const deleteAccount = async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+  await Promise.all([
+    Project.deleteMany({ $or: [{ ownerId: userId }, { "members.userId": userId }, { "applicants.userId": userId }] }),
+    Blog.deleteMany({ userId }),
+    Event.deleteMany({ userId }),
+    PortfolioItem.deleteMany({ userId }),
+    Booking.deleteMany({ $or: [{ memberId: userId }, { mentorId: userId }] }),
+    Chat.deleteMany({ participantIds: userId }),
+    VerificationToken.deleteMany({ userId }),
+    User.findByIdAndDelete(userId),
+  ]);
+
+  return res.json({ success: true, message: "Account and associated data deleted" });
 };

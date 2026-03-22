@@ -1,4 +1,5 @@
-import { getSession, setSession, getUsers, saveUsers, type KollabUser } from "./authStore";
+import { getSession, setSession, getUsers, saveUsers, type KollabUser, logout } from "./authStore";
+import { apiDelete } from "./api";
 
 // ─── Profile visibility ─────────────────────────────────────
 export function setProfilePublic(isPublic: boolean): void {
@@ -58,10 +59,16 @@ export function changePassword(currentPassword: string, newPassword: string): { 
 }
 
 // ─── Delete account ─────────────────────────────────────────
-export function deleteAccount(): void {
+export async function deleteAccount(): Promise<{ success: boolean; error?: string }> {
   const session = getSession();
-  if (!session) return;
-  const users = getUsers();
-  saveUsers(users.filter(u => u.id !== session.id));
-  localStorage.removeItem("kollab_auth_user");
+  if (!session) return { success: false, error: "Not logged in" };
+  try {
+    await apiDelete<{ success: boolean; message?: string }>("/profile/me");
+    const users = getUsers();
+    saveUsers(users.filter((u) => u.id !== session.id));
+    logout();
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to delete account" };
+  }
 }
