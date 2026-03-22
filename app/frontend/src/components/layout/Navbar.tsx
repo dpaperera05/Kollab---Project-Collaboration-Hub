@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, X, Sun, Moon } from "lucide-react";
+import { Menu, X, Sun, Moon, UserRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Link, useLocation } from "react-router-dom";
 import Container from "@/components/ui/Container";
 import KollabLogo from "@/components/ui/KollabLogo";
 import { cn } from "@/lib/utils";
+import { getSession, type KollabUser } from "@/lib/authStore";
 
 const navLinks = [
   { label: "Projects", href: "/projects" },
@@ -24,12 +25,20 @@ const Navbar = () => {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const location = useLocation();
+  const [session, setSession] = useState<KollabUser | null>(null);
 
   useEffect(() => {
     setMounted(true);
     const handleScroll = () => setScrolled(window.scrollY > 16);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    setSession(getSession());
+
+    const handleStorage = () => setSession(getSession());
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   // Close mobile menu on route change
@@ -89,18 +98,31 @@ const Navbar = () => {
                 {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
               </button>
             )}
-            <Link
-              to="/login"
-              className="px-4 py-2 text-[15px] font-semibold text-foreground/80 hover:text-foreground transition-colors duration-150"
-            >
-              Login
-            </Link>
-            <Link
-              to="/register"
-              className="px-5 py-2.5 text-[15px] font-semibold text-primary-foreground rounded-lg bg-primary hover:bg-primary/90 shadow-brand-sm hover:shadow-brand transition-all duration-200 hover:-translate-y-0.5"
-            >
-              Get Started
-            </Link>
+            {session ? (
+              <Link
+                to="/profile"
+                className="px-5 py-2.5 text-[15px] font-semibold text-primary-foreground rounded-lg bg-primary hover:bg-primary/90 shadow-brand-sm hover:shadow-brand transition-all duration-200 hover:-translate-y-0.5 flex items-center gap-2"
+                aria-label="Go to profile"
+              >
+                <UserRound size={18} strokeWidth={2.25} />
+                <span>Profile</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-[15px] font-semibold text-foreground/80 hover:text-foreground transition-colors duration-150"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-5 py-2.5 text-[15px] font-semibold text-primary-foreground rounded-lg bg-primary hover:bg-primary/90 shadow-brand-sm hover:shadow-brand transition-all duration-200 hover:-translate-y-0.5"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile right */}
@@ -147,19 +169,31 @@ const Navbar = () => {
                   </Link>
                 );
               })}
-              <div className="mt-3 pt-3 border-t border-border flex gap-2">
-                <Link
-                  to="/login"
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-center border border-border rounded-lg hover:bg-accent transition-colors"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-center text-primary-foreground rounded-lg bg-primary shadow-brand-sm"
-                >
-                  Get Started
-                </Link>
+              <div className="mt-3 pt-3 border-t border-border flex gap-2 items-center">
+                {session ? (
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-primary-foreground rounded-lg bg-primary shadow-brand-sm w-full justify-center"
+                  >
+                    <UserRound size={18} strokeWidth={2.25} />
+                    <span>Profile</span>
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="flex-1 px-4 py-2.5 text-sm font-medium text-center border border-border rounded-lg hover:bg-accent transition-colors"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="flex-1 px-4 py-2.5 text-sm font-semibold text-center text-primary-foreground rounded-lg bg-primary shadow-brand-sm"
+                    >
+                      Get Started
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </Container>
