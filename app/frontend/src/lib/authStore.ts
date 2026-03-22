@@ -7,10 +7,13 @@ export interface KollabUserProfile {
   skills?: string[];
   techStack?: string[];
   expertiseSkills?: string[];
+  headline?: string;
+  languages?: string[];
+  rateType?: "free" | "paid";
+  rateNote?: string;
   links?: { github?: string; linkedin?: string; portfolio?: string };
   availabilityHoursPerWeek?: number;
   domainInterests?: string[];
-  avatar?: string;
 }
 
 export interface KollabUser {

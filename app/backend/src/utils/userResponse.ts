@@ -9,6 +9,7 @@ export const toUserResponse = (user: IUser) => {
     isEmailVerified: user.isEmailVerified,
     onboardingCompleted: Boolean(user.onboardingCompleted),
     onboardingStep: user.onboardingStep,
+    isProfilePublic: user.isProfilePublic,
     profile: user.profile
       ? {
           name: user.profile.name,
@@ -19,10 +20,13 @@ export const toUserResponse = (user: IUser) => {
           skills: user.profile.skills,
           techStack: user.profile.techStack,
           expertiseSkills: user.profile.expertiseSkills,
+          headline: user.profile.headline,
+          languages: user.profile.languages,
+          rateType: user.profile.rateType,
+          rateNote: user.profile.rateNote,
           links: user.profile.links,
           availabilityHoursPerWeek: user.profile.availabilityHoursPerWeek,
           domainInterests: user.profile.domainInterests,
-          avatar: user.profile.avatar,
         }
       : undefined,
   };

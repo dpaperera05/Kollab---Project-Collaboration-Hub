@@ -1,0 +1,24 @@
+import { Schema, model, Document } from "mongoose";
+
+export interface IBlog extends Document {
+  userId: string;
+  title: string;
+  coverImage?: string;
+  excerpt?: string;
+  content?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const blogSchema = new Schema<IBlog>(
+  {
+    userId: { type: String, ref: "User", required: true, index: true },
+    title: { type: String, required: true, trim: true },
+    coverImage: { type: String, trim: true },
+    excerpt: { type: String, trim: true },
+    content: { type: String, trim: true },
+  },
+  { timestamps: true }
+);
+
+export const Blog = model<IBlog>("Blog", blogSchema);

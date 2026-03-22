@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,15 +8,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Upload, X, FileText } from "lucide-react";
-import { mockBlogs, type MockBlog } from "@/data/mockProfileContent";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+
+type Blog = {
+  _id: string;
+  title: string;
+  coverImage?: string;
+  excerpt?: string;
+  content?: string;
+  createdAt: string;
+};
 
 const BlogsManagerTab = () => {
-  const [blogs, setBlogs] = useState<MockBlog[]>([...mockBlogs]);
-  const [editing, setEditing] = useState<Partial<MockBlog> | null>(null);
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<Blog> | null>(null);
   const coverRef = useRef<HTMLInputElement>(null);
 
-  const openNew = () => setEditing({ id: "", title: "", coverImage: "", excerpt: "", content: "", createdAt: new Date().toISOString().split("T")[0] });
-  const openEdit = (b: MockBlog) => setEditing({ ...b });
+  useEffect(() => {
+    apiGet<{ success: boolean; data: { blogs: Blog[] } }>("/blogs")
+      .then(res => setBlogs(res?.data?.blogs || []))
+      .catch(() => toast({ title: "Failed to load blogs", variant: "destructive" }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const openNew = () => setEditing({ _id: "", title: "", coverImage: "", excerpt: "", content: "", createdAt: new Date().toISOString() });
+  const openEdit = (b: Blog) => setEditing({ ...b });
 
   const handleCover = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,24 +45,34 @@ const BlogsManagerTab = () => {
 
   const handleSave = () => {
     if (!editing?.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
-    if (editing.id) {
-      setBlogs(prev => prev.map(b => b.id === editing.id ? { ...b, ...editing } as MockBlog : b));
-      toast({ title: "Blog updated" });
+    if (editing._id) {
+      apiPut<{ success: boolean; data: { blog: Blog } }>(`/blogs/${editing._id}`, editing)
+        .then(res => {
+          const updated = res?.data?.blog;
+          setBlogs(prev => prev.map(b => b._id === updated._id ? updated : b));
+          toast({ title: "Blog updated" });
+        })
+        .catch(() => toast({ title: "Failed to update blog", variant: "destructive" }))
+        .finally(() => setEditing(null));
     } else {
-      const newBlog: MockBlog = {
-        id: `b-${Date.now()}`, title: editing.title!, coverImage: editing.coverImage || "",
-        excerpt: editing.excerpt || "", content: editing.content || "",
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setBlogs(prev => [newBlog, ...prev]);
-      toast({ title: "Blog created" });
+      apiPost<{ success: boolean; data: { blog: Blog } }>("/blogs", editing)
+        .then(res => {
+          const created = res?.data?.blog;
+          setBlogs(prev => [created, ...prev]);
+          toast({ title: "Blog created" });
+        })
+        .catch(() => toast({ title: "Failed to create blog", variant: "destructive" }))
+        .finally(() => setEditing(null));
     }
-    setEditing(null);
   };
 
   const deleteBlog = (id: string) => {
-    setBlogs(prev => prev.filter(b => b.id !== id));
-    toast({ title: "Blog deleted" });
+    apiDelete(`/blogs/${id}`)
+      .then(() => {
+        setBlogs(prev => prev.filter(b => b._id !== id));
+        toast({ title: "Blog deleted" });
+      })
+      .catch(() => toast({ title: "Failed to delete blog", variant: "destructive" }));
   };
 
   const set = (key: string, val: string) => setEditing(prev => prev ? { ...prev, [key]: val } : prev);
@@ -57,14 +84,16 @@ const BlogsManagerTab = () => {
         <Button onClick={openNew} className="gap-2"><Plus size={16} /> New Blog</Button>
       </div>
 
-      {blogs.length === 0 ? (
+        {loading ? (
+          <Card className="border-border card-shadow"><CardContent className="py-12 text-center text-muted-foreground">Loading...</CardContent></Card>
+        ) : blogs.length === 0 ? (
         <Card className="border-border card-shadow"><CardContent className="py-12 text-center text-muted-foreground">
           <FileText size={32} className="mx-auto mb-3 opacity-50" /><p>No blogs yet. Write your first post!</p>
         </CardContent></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {blogs.map(b => (
-            <Card key={b.id} className="border-border card-shadow overflow-hidden">
+            <Card key={b._id} className="border-border card-shadow overflow-hidden">
               {b.coverImage && <div className="aspect-video bg-muted overflow-hidden"><img src={b.coverImage} alt="" className="w-full h-full object-cover" /></div>}
               <CardContent className="p-5 space-y-2">
                 <h4 className="font-semibold text-foreground">{b.title}</h4>
@@ -80,7 +109,7 @@ const BlogsManagerTab = () => {
                       <AlertDialogHeader><AlertDialogTitle>Delete blog?</AlertDialogTitle><AlertDialogDescription>This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteBlog(b.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                        <AlertDialogAction onClick={() => deleteBlog(b._id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>

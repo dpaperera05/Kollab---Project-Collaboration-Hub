@@ -9,10 +9,13 @@ export interface IUserProfile {
   skills?: string[];
   techStack?: string[];
   expertiseSkills?: string[];
+  headline?: string;
+  languages?: string[];
+  rateType?: "free" | "paid";
+  rateNote?: string;
   links?: { github?: string; linkedin?: string; portfolio?: string };
   availabilityHoursPerWeek?: number;
   domainInterests?: string[];
-  avatar?: string;
 }
 
 export interface IUser extends Document {
@@ -23,6 +26,7 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   onboardingCompleted?: boolean;
   onboardingStep?: string;
+  isProfilePublic?: boolean;
   profile?: IUserProfile;
 }
 
@@ -36,6 +40,10 @@ const profileSchema = new Schema<IUserProfile>(
     skills: [{ type: String, trim: true }],
     techStack: [{ type: String, trim: true }],
     expertiseSkills: [{ type: String, trim: true }],
+    headline: { type: String, trim: true },
+    languages: [{ type: String, trim: true }],
+    rateType: { type: String, enum: ["free", "paid"], trim: true },
+    rateNote: { type: String, trim: true },
     links: {
       github: { type: String, trim: true },
       linkedin: { type: String, trim: true },
@@ -43,7 +51,6 @@ const profileSchema = new Schema<IUserProfile>(
     },
     availabilityHoursPerWeek: { type: Number, min: 1, max: 80 },
     domainInterests: [{ type: String, trim: true }],
-    avatar: { type: String, trim: true },
   },
   { _id: false }
 );
@@ -57,6 +64,7 @@ const userSchema = new Schema<IUser>(
     isEmailVerified: { type: Boolean, default: false },
     onboardingCompleted: { type: Boolean, default: false },
     onboardingStep: { type: String, default: "/onboarding/role" },
+    isProfilePublic: { type: Boolean, default: true },
     profile: { type: profileSchema, default: {} },
   },
   {

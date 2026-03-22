@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +10,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Upload, X, Calendar, MapPin, ExternalLink, Clock } from "lucide-react";
-import { mockEvents, EVENT_TAG_OPTIONS, type MockEvent } from "@/data/mockProfileContent";
+import { EVENT_TAG_OPTIONS } from "@/data/mockProfileContent";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+
+type Event = {
+  _id: string;
+  title: string;
+  coverImage?: string;
+  type: "Hackathon" | "Talk" | "Workshop" | "Webinar";
+  dateTime: string;
+  location: string;
+  tags: string[];
+  externalLink?: string;
+  description?: string;
+};
 
 const EVENT_TYPES = ["Hackathon", "Talk", "Workshop", "Webinar"] as const;
 
@@ -22,12 +35,20 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const EventsManagerTab = () => {
-  const [events, setEvents] = useState<MockEvent[]>([...mockEvents]);
-  const [editing, setEditing] = useState<Partial<MockEvent> | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<Event> | null>(null);
   const coverRef = useRef<HTMLInputElement>(null);
 
-  const openNew = () => setEditing({ id: "", title: "", coverImage: "", type: "Talk", dateTime: "", location: "Virtual", tags: [], externalLink: "", postedBy: "You", description: "" });
-  const openEdit = (e: MockEvent) => setEditing({ ...e });
+  useEffect(() => {
+    apiGet<{ success: boolean; data: { events: Event[] } }>("/events")
+      .then(res => setEvents(res?.data?.events || []))
+      .catch(() => toast({ title: "Failed to load events", variant: "destructive" }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const openNew = () => setEditing({ _id: "", title: "", coverImage: "", type: "Talk", dateTime: "", location: "Virtual", tags: [], externalLink: "", description: "" });
+  const openEdit = (e: Event) => setEditing({ ...e });
 
   const handleCover = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -39,25 +60,34 @@ const EventsManagerTab = () => {
 
   const handleSave = () => {
     if (!editing?.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
-    if (editing.id) {
-      setEvents(prev => prev.map(ev => ev.id === editing.id ? { ...ev, ...editing } as MockEvent : ev));
-      toast({ title: "Event updated" });
+    if (editing._id) {
+      apiPut<{ success: boolean; data: { event: Event } }>(`/events/${editing._id}`, editing)
+        .then(res => {
+          const updated = res?.data?.event;
+          setEvents(prev => prev.map(ev => ev._id === updated._id ? updated : ev));
+          toast({ title: "Event updated" });
+        })
+        .catch(() => toast({ title: "Failed to update event", variant: "destructive" }))
+        .finally(() => setEditing(null));
     } else {
-      const newEvent: MockEvent = {
-        id: `e-${Date.now()}`, title: editing.title!, coverImage: editing.coverImage || "",
-        type: (editing.type || "Talk") as MockEvent["type"], dateTime: editing.dateTime || new Date().toISOString(),
-        location: editing.location || "Virtual", tags: editing.tags || [], externalLink: editing.externalLink || "",
-        postedBy: "You", description: editing.description || "",
-      };
-      setEvents(prev => [newEvent, ...prev]);
-      toast({ title: "Event created" });
+      apiPost<{ success: boolean; data: { event: Event } }>("/events", editing)
+        .then(res => {
+          const created = res?.data?.event;
+          setEvents(prev => [created, ...prev]);
+          toast({ title: "Event created" });
+        })
+        .catch(() => toast({ title: "Failed to create event", variant: "destructive" }))
+        .finally(() => setEditing(null));
     }
-    setEditing(null);
   };
 
   const deleteEvent = (id: string) => {
-    setEvents(prev => prev.filter(e => e.id !== id));
-    toast({ title: "Event deleted" });
+    apiDelete(`/events/${id}`)
+      .then(() => {
+        setEvents(prev => prev.filter(e => e._id !== id));
+        toast({ title: "Event deleted" });
+      })
+      .catch(() => toast({ title: "Failed to delete event", variant: "destructive" }));
   };
 
   const set = (key: string, val: any) => setEditing(prev => prev ? { ...prev, [key]: val } : prev);
@@ -82,7 +112,9 @@ const EventsManagerTab = () => {
         <Button onClick={openNew} className="gap-2"><Plus size={16} /> New Event</Button>
       </div>
 
-      {events.length === 0 ? (
+      {loading ? (
+        <Card className="border-border card-shadow"><CardContent className="py-12 text-center text-muted-foreground">Loading...</CardContent></Card>
+      ) : events.length === 0 ? (
         <Card className="border-border card-shadow"><CardContent className="py-12 text-center text-muted-foreground">
           <Calendar size={32} className="mx-auto mb-3 opacity-50" /><p>No events created yet.</p>
         </CardContent></Card>
@@ -91,7 +123,7 @@ const EventsManagerTab = () => {
           {events.map(ev => {
             const dl = daysLeft(ev.dateTime);
             return (
-              <Card key={ev.id} className="border-border card-shadow overflow-hidden">
+              <Card key={ev._id} className="border-border card-shadow overflow-hidden">
                 {ev.coverImage && <div className="aspect-video bg-muted overflow-hidden"><img src={ev.coverImage} alt="" className="w-full h-full object-cover" /></div>}
                 <CardContent className="p-5 space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -118,7 +150,7 @@ const EventsManagerTab = () => {
                         <AlertDialogHeader><AlertDialogTitle>Delete event?</AlertDialogTitle><AlertDialogDescription>This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteEvent(ev.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                          <AlertDialogAction onClick={() => deleteEvent(ev._id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

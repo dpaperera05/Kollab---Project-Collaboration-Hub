@@ -1,15 +1,7 @@
 import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
 import { User } from "../models/user.model";
 import { toUserResponse } from "../utils/userResponse";
-
-const ALLOWED_ONBOARDING_STEPS = [
-  "/onboarding/role",
-  "/onboarding/basics",
-  "/onboarding/skills",
-  "/onboarding/links",
-  "/onboarding/availability",
-  "/onboarding/interests",
-];
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -30,30 +22,19 @@ const sanitizeLinks = (value?: unknown) => {
   return hasAny ? links : undefined;
 };
 
-export const getOnboardingProfile = async (req: Request, res: Response) => {
+export const getMe = async (req: Request, res: Response) => {
   const userId = req.userId;
-  if (!userId) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
-  }
-
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   const user = await User.findById(userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: "User not found" });
-  }
-
+  if (!user) return res.status(404).json({ success: false, message: "User not found" });
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
 
-export const updateOnboardingProfile = async (req: Request, res: Response) => {
+export const updateProfile = async (req: Request, res: Response) => {
   const userId = req.userId;
-  if (!userId) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
-  }
-
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   const user = await User.findById(userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: "User not found" });
-  }
+  if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
   const {
     name,
@@ -64,15 +45,14 @@ export const updateOnboardingProfile = async (req: Request, res: Response) => {
     skills,
     techStack,
     expertiseSkills,
-    links,
-    availabilityHoursPerWeek,
-    domainInterests,
     headline,
     languages,
     rateType,
     rateNote,
+    links,
+    availabilityHoursPerWeek,
+    domainInterests,
     isProfilePublic,
-    onboardingStep,
   } = req.body as Record<string, unknown>;
 
   const profile = user.profile && typeof (user.profile as any).toObject === "function"
@@ -114,41 +94,31 @@ export const updateOnboardingProfile = async (req: Request, res: Response) => {
   }
 
   user.profile = cleanedProfile;
-
-  if (cleanedProfile.name) {
-    user.name = cleanedProfile.name;
-  }
-
-  if (typeof isProfilePublic === "boolean") {
-    user.isProfilePublic = isProfilePublic;
-  }
-
-  if (typeof onboardingStep === "string") {
-    if (!ALLOWED_ONBOARDING_STEPS.includes(onboardingStep)) {
-      return res.status(400).json({ success: false, message: "Invalid onboarding step" });
-    }
-    user.onboardingStep = onboardingStep;
-  }
+  if (cleanedProfile.name) user.name = cleanedProfile.name;
+  if (typeof isProfilePublic === "boolean") user.isProfilePublic = isProfilePublic;
 
   await user.save();
-
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
 
-export const completeOnboarding = async (req: Request, res: Response) => {
+export const changePassword = async (req: Request, res: Response) => {
   const userId = req.userId;
-  if (!userId) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+  const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: "Current and new passwords are required" });
   }
 
   const user = await User.findById(userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: "User not found" });
-  }
+  if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-  user.onboardingCompleted = true;
-  user.onboardingStep = undefined;
+  const match = await bcrypt.compare(currentPassword, user.password);
+  if (!match) return res.status(400).json({ success: false, message: "Current password is incorrect" });
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+  user.password = hashed;
   await user.save();
 
-  return res.json({ success: true, data: { user: toUserResponse(user) } });
+  return res.json({ success: true, message: "Password updated" });
 };
