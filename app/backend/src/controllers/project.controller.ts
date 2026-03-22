@@ -34,7 +34,7 @@ export const listOwnedProjects = async (req: Request, res: Response) => {
 export const listJoinedProjects = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-  const projects = await Project.find({ "members.userId": userId }).sort({ createdAt: -1 });
+  const projects = await Project.find({ "members.userId": userId, ownerId: { $ne: userId } }).sort({ createdAt: -1 });
   return res.json({ success: true, data: { projects } });
 };
 
@@ -102,7 +102,7 @@ export const createProject = async (req: Request, res: Response) => {
     roles: cleanedRoles,
     postedAt: new Date().toISOString(),
     applicants: [],
-    members: [{ userId, role: "Owner", status: "Open" }],
+    members: [],
   });
   return res.status(201).json({ success: true, data: { project } });
 };
@@ -145,6 +145,22 @@ export const updateApplicant = async (req: Request, res: Response) => {
   }
   applicant.status = status as any;
   applicant.rejectionReason = status === "rejected" ? (typeof rejectionReason === "string" ? rejectionReason.trim() : undefined) : undefined;
+
+  const memberIndex = applicant.userId
+    ? project.members.findIndex((m) => m.userId === applicant.userId)
+    : -1;
+
+  if (status === "approved" && applicant.userId) {
+    if (memberIndex === -1) {
+      project.members.push({ userId: applicant.userId, role: applicant.role, status: project.status });
+    } else {
+      project.members[memberIndex].role = applicant.role;
+      project.members[memberIndex].status = project.status;
+    }
+  } else if (memberIndex !== -1) {
+    project.members.splice(memberIndex, 1);
+  }
+
   await project.save();
   return res.json({ success: true, data: { project } });
 };
