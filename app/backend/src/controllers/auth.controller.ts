@@ -6,6 +6,45 @@ import { generateOtp, OTP_EXPIRY_MINUTES } from "../utils/otp";
 import { sendEmail } from "../services/email.service";
 import { issueVerificationToken, verifyVerificationToken } from "../utils/verifyToken";
 
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body as { email?: string; password?: string };
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: "Email and password are required" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(401).json({ success: false, message: "Invalid email or password" });
+  }
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
+    return res.status(401).json({ success: false, message: "Invalid email or password" });
+  }
+
+  if (!user.isEmailVerified) {
+    return res.status(403).json({ success: false, message: "Please verify your email before logging in" });
+  }
+
+  const token = generateToken(user.id);
+
+  return res.json({
+    success: true,
+    message: "Login successful",
+    data: {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        userType: user.userType,
+        isEmailVerified: user.isEmailVerified,
+      },
+      token,
+    },
+  });
+};
+
 export const register = async (req: Request, res: Response) => {
   const { name, email, password, userType } = req.body as {
     name?: string;

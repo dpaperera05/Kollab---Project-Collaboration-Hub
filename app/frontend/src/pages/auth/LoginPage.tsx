@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Navbar from "@/components/layout/Navbar";
-import type { login } from "@/lib/authStore";
+import { login } from "@/lib/authStore";
 import { cn } from "@/lib/utils";
 
 const LoginPage = () => {
@@ -29,7 +29,7 @@ const LoginPage = () => {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 500));
 
-    const result = login(email.trim(), password);
+    const result = await login(email.trim(), password);
     setLoading(false);
 
     if (!result.success) {

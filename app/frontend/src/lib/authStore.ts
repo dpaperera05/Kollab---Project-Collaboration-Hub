@@ -71,18 +71,42 @@ const clearVerificationToken = () => {
   localStorage.removeItem(VERIFICATION_TOKEN_KEY);
 };
 
-export function login(email: string, password: string): LoginResult {
-  const users = getUsers();
-  const user = users.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-  );
+export async function login(email: string, password: string): Promise<LoginResult> {
+  try {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-  if (!user) {
-    return { success: false, error: "Invalid email or password." };
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      return { success: false, error: payload?.message || "Login failed" };
+    }
+
+    const apiUser = payload?.data?.user;
+    const token = payload?.data?.token as string | undefined;
+
+    if (!apiUser?.id || !token) {
+      return { success: false, error: "Invalid response from server" };
+    }
+
+    const user: KollabUser = {
+      ...apiUser,
+      password,
+      token,
+      isEmailVerified: Boolean(apiUser.isEmailVerified),
+    };
+
+    const users = getUsers();
+    saveUsers([...users.filter((u) => u.email.toLowerCase() !== user.email.toLowerCase()), user]);
+    setSession(user);
+    return { success: true, user };
+  } catch (error) {
+    console.error("Login request failed", error);
+    return { success: false, error: "Unable to login. Please try again." };
   }
-
-  setSession(user);
-  return { success: true, user };
 }
 
 export async function register(
