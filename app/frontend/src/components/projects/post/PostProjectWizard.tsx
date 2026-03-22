@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { generateProjectId, saveLocalProject } from "@/lib/localProjects";
-import type { Project } from "@/data/mockProjects";
 import Step1Basics, {type BasicsData } from "./Step1Basics";
 import Step2Roles, {type RoleData } from "./Step2Roles";
 import Step3Settings, {type SettingsData } from "./Step3Settings";
 import Step4Review from "./Step4Review";
 import { cn } from "@/lib/utils";
 import { Check, Layers, Users, Settings, Eye } from "lucide-react";
+import { apiPost } from "@/lib/api";
+import { getSession } from "@/lib/authStore";
 
 const STEPS = [
   { label: "Project Basics", icon: Layers, desc: "Identity & details" },
@@ -81,6 +81,14 @@ const PostProjectWizard = () => {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>({ basics: null, roles: [], settings: null });
 
+  useEffect(() => {
+    const session = getSession();
+    if (!session) {
+      navigate("/login", { replace: true });
+      toast({ title: "Please login to post a project", variant: "destructive" });
+    }
+  }, [navigate]);
+
   const handleBasicsDone = (basics: BasicsData) => {
     setData((d) => ({ ...d, basics }));
     setStep(2);
@@ -99,64 +107,60 @@ const PostProjectWizard = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handlePublish = () => {
+  const fileToBase64 = (file: File | null): Promise<string | undefined> => {
+    if (!file) return Promise.resolve(undefined);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePublish = async () => {
     const { basics, roles, settings } = data;
     if (!basics || !settings) return;
 
-    const newProject: Project = {
-      id: generateProjectId(),
-      title: basics.title,
-      posterAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=You",
-      posterName: "You",
-      posterRating: 5.0,
-      owner: {
-        id: "owner-local",
-        name: "You",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=You",
-        rating: 5.0,
-        title: "Project Owner",
-        projectsPosted: 1,
-      },
-      domain: basics.domain as Project["domain"],
-      difficulty: basics.difficulty as Project["difficulty"],
-      status: "Open",
-      projectType: basics.projectType as Project["projectType"],
-      summary: basics.summary,
-      description: basics.summary,
-      problemStatement: basics.problemStatement || "",
-      deliverables: basics.deliverables
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      duration: basics.duration as Project["duration"],
-      timeCommitment: `${basics.weeklyHours} hrs/week`,
-      technologies: basics.technologies,
-      location: "Remote",
-      compensation: basics.compensation as Project["compensation"],
-      roles: roles.map((r) => ({
-        title: r.title,
-        level: r.level as "Junior" | "Intermediate" | "Senior",
-        skills: r.requiredSkills,
-        niceToHave: r.niceToHaveSkills,
-        responsibilities: r.responsibilities
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        filled: 0,
-        total: r.seats,
-        status: "Open" as const,
-      })),
-      teamMembers: [],
-      relatedProjectIds: [],
-      mentorLinked: false,
-      postedAt: new Date().toISOString(),
-      tags: settings.tags,
-      posterImage: basics.posterPreviewUrl || "",
-    };
+    try {
+      const posterImage = await fileToBase64(basics.posterFile);
+      const payload = {
+        title: basics.title,
+        summary: basics.summary,
+        problemStatement: basics.problemStatement,
+        deliverables: basics.deliverables,
+        projectType: basics.projectType,
+        domain: basics.domain,
+        technologies: basics.technologies,
+        difficulty: basics.difficulty,
+        duration: basics.duration,
+        weeklyHours: basics.weeklyHours,
+        compensation: basics.compensation,
+        posterImage: posterImage || basics.posterPreviewUrl,
+        tags: settings.tags,
+        roles: roles.map((r) => ({
+          id: r.id,
+          title: r.title,
+          responsibilities: r.responsibilities,
+          requiredSkills: r.requiredSkills,
+          niceToHaveSkills: r.niceToHaveSkills,
+          level: r.level,
+          seats: r.seats,
+          status: r.status,
+        })),
+      };
 
-    saveLocalProject(newProject);
-    toast({ title: "Project posted successfully 🎉" });
-    navigate(`/projects/${newProject.id}`);
+      const res = await apiPost<{ success: boolean; data: { project: { _id: string } } }>("/projects", payload);
+      const id = res?.data?.project?._id;
+      toast({ title: "Project posted successfully 🎉" });
+      if (id) {
+        navigate(`/projects/${id}`);
+      } else {
+        navigate("/projects");
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: error?.message || "Failed to post project", variant: "destructive" });
+    }
   };
 
   const stepDescriptions = [

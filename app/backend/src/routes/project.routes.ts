@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware";
 import {
+  listPublicProjects,
   listOwnedProjects,
   listJoinedProjects,
   createProject,
@@ -12,8 +13,10 @@ import {
 } from "../controllers/project.controller";
 
 const router = Router();
-router.use(authenticate);
 
+router.get("/public", listPublicProjects);
+
+router.use(authenticate);
 router.get("/owned", listOwnedProjects);
 router.get("/joined", listJoinedProjects);
 router.post("/", createProject);

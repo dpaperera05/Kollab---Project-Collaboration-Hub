@@ -75,6 +75,20 @@ export const register = async (req: Request, res: Response) => {
       profile: { name: derivedName },
     });
 
+    const emailEnabled = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS && (process.env.SMTP_FROM || process.env.SMTP_USER));
+
+    // If email is not configured, auto-verify to unblock local/dev usage
+    if (!emailEnabled) {
+      user.isEmailVerified = true;
+      await user.save();
+      const token = generateToken(user.id);
+      return res.status(201).json({
+        success: true,
+        message: "User registered (email verification skipped — SMTP not configured)",
+        data: { user: toUserResponse(user), token, verificationToken: null },
+      });
+    }
+
     try {
       // create OTP (not stored server-side; encoded into a short-lived token returned to client)
       const code = generateOtp();

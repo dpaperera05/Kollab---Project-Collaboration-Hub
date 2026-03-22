@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, FolderOpen } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -6,15 +6,34 @@ import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
 import SmartSearchBar from "@/components/projects/SmartSearchBar";
 import ProjectFilters, { type FilterState } from "@/components/projects/ProjectFilters";
-import ProjectCard from "@/components/projects/ProjectCard";
+import ProjectCard, { type ProjectCardProject } from "@/components/projects/ProjectCard";
 import RecommendedCarousel from "@/components/projects/RecommendedCarousel";
 import PaginationBar from "@/components/projects/PaginationBar";
 import ProjectsHeroIllustration from "@/components/projects/ProjectsHeroIllustration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { mockProjects } from "@/data/mockProjects";
-import { getAllProjects } from "@/lib/localProjects";
+import { apiGet } from "@/lib/api";
+import { getSession } from "@/lib/authStore";
 
-const allProjects = getAllProjects(mockProjects);
+type BackendProject = {
+  _id: string;
+  title: string;
+  summary: string;
+  domain: string;
+  difficulty: string;
+  status: "Open" | "Ongoing" | "Filled" | "Finished";
+  technologies?: string[];
+  tags?: string[];
+  postedAt?: string;
+  createdAt?: string;
+  compensation?: string;
+  weeklyHours?: number;
+  duration?: string;
+  roles?: Array<{ title: string; status?: "Open" | "Filled"; seats?: number }>;
+  ownerId?: string;
+};
+
+const recommendedProjects = mockProjects;
 
 const PAGE_SIZE = 9;
 
@@ -79,10 +98,49 @@ const ProjectsPage = () => {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading] = useState(false);
+  const [projects, setProjects] = useState<ProjectCardProject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      setIsLoading(true);
+      try {
+        const res = await apiGet<{ success: boolean; data: { projects: BackendProject[] } }>("/projects/public");
+        const mapped = (res?.data?.projects ?? []).map((p) => ({
+          id: p._id,
+          title: p.title,
+          summary: p.summary,
+          domain: p.domain,
+          difficulty: p.difficulty,
+          status: p.status,
+          technologies: p.technologies ?? [],
+          tags: p.tags ?? [],
+          postedAt: p.postedAt ?? p.createdAt ?? new Date().toISOString(),
+          compensation: p.compensation,
+          weeklyHours: p.weeklyHours,
+          duration: p.duration,
+          posterName: p.ownerId ? "Project owner" : undefined,
+          roles: (p.roles ?? []).map((role) => ({
+            title: role.title,
+            status: role.status,
+            total: role.seats,
+            filled: role.status === "Filled" ? role.seats : 0,
+          })),
+        }));
+        setProjects(mapped);
+      } catch (err) {
+        console.error("Failed to load projects", err);
+        setProjects([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProjects();
+  }, []);
 
   const filteredProjects = useMemo(() => {
-    let result = [...allProjects];
+    let result = [...projects];
 
     // Search
     if (search.trim()) {
@@ -133,11 +191,11 @@ const ProjectsPage = () => {
     } else if (filters.sortBy === "Oldest") {
       result.sort((a, b) => new Date(a.postedAt).getTime() - new Date(b.postedAt).getTime());
     } else if (filters.sortBy === "Top Rated") {
-      result.sort((a, b) => b.posterRating - a.posterRating);
+      result.sort((a, b) => (b.posterRating ?? 0) - (a.posterRating ?? 0));
     }
 
     return result;
-  }, [search, filters]);
+  }, [projects, search, filters]);
 
   const paginatedProjects = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -158,6 +216,15 @@ const ProjectsPage = () => {
   const handleSearch = (val: string) => {
     setSearch(val);
     setCurrentPage(1);
+  };
+
+  const handleAddProject = () => {
+    const session = getSession();
+    if (!session) {
+      navigate("/login");
+      return;
+    }
+    navigate("/projects/new");
   };
 
   return (
@@ -183,7 +250,7 @@ const ProjectsPage = () => {
                 <SmartSearchBar value={search} onChange={handleSearch} />
 
                 <button
-                  onClick={() => navigate("/projects/new")}
+                  onClick={handleAddProject}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 hover:-translate-y-0.5 transition-all duration-200 shadow-brand-sm hover:shadow-brand"
                 >
                   <Plus size={16} />
@@ -207,7 +274,7 @@ const ProjectsPage = () => {
 
           {/* AI Recommended Carousel */}
           <div className="rounded-xl border border-border bg-card/50 p-5">
-            <RecommendedCarousel projects={allProjects} />
+            <RecommendedCarousel projects={recommendedProjects} />
           </div>
 
           {/* Results count */}
