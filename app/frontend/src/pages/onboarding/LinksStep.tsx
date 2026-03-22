@@ -23,6 +23,7 @@ const LinksStep = () => {
   const [linkedin, setLinkedin] = useState(session?.profile?.links?.linkedin || "");
   const [portfolio, setPortfolio] = useState(session?.profile?.links?.portfolio || "");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const guard = checkOnboardingAccess("/onboarding/links");
@@ -37,7 +38,12 @@ const LinksStep = () => {
     if (linkedin && !isValidUrl(linkedin)) e.linkedin = "Invalid URL";
     if (portfolio && !isValidUrl(portfolio)) e.portfolio = "Invalid URL";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    if (Object.keys(e).length === 0) {
+      setFormError(undefined);
+      return true;
+    }
+    setFormError("Fix the invalid links to continue.");
+    return false;
   };
 
   const handleNext = () => {
@@ -84,6 +90,12 @@ const LinksStep = () => {
           {errors.portfolio && <p className="text-xs text-destructive">{errors.portfolio}</p>}
         </div>
       </div>
+
+      {formError && (
+        <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {formError}
+        </div>
+      )}
 
       <div className="mt-4 flex justify-between">
         <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>

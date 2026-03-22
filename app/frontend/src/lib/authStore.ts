@@ -43,6 +43,24 @@ const VERIFICATION_TOKEN_KEY = "kollab_verification_token";
 const USERS_KEY = "kollab_users";
 const SESSION_KEY = "kollab_auth_user";
 
+const getAuthHeaders = () => {
+  const session = getSession();
+  if (!session?.token) return undefined;
+  return {
+    Authorization: `Bearer ${session.token}`,
+    "Content-Type": "application/json",
+  };
+};
+
+const persistUserFromApi = (apiUser: Partial<KollabUser>) => {
+  const session = getSession();
+  if (!session || !apiUser?.id) return;
+  const merged: KollabUser = { ...session, ...apiUser } as KollabUser;
+  const users = getUsers();
+  saveUsers(users.map((u) => (u.id === merged.id ? merged : u)));
+  setSession(merged);
+};
+
 export function getUsers(): KollabUser[] {
   try {
     return JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
@@ -102,6 +120,9 @@ export async function login(email: string, password: string): Promise<LoginResul
     const users = getUsers();
     saveUsers([...users.filter((u) => u.email.toLowerCase() !== user.email.toLowerCase()), user]);
     setSession(user);
+    if (apiUser) {
+      persistUserFromApi({ ...apiUser, token } as KollabUser);
+    }
     return { success: true, user };
   } catch (error) {
     console.error("Login request failed", error);
@@ -144,6 +165,9 @@ export async function register(
       isEmailVerified: Boolean(apiUser.isEmailVerified),
       token,
       verificationToken,
+      onboardingCompleted: apiUser.onboardingCompleted,
+      onboardingStep: apiUser.onboardingStep,
+      profile: apiUser.profile,
     };
 
     const users = getUsers();
@@ -261,11 +285,27 @@ export function updateUserProfile(partial: Partial<KollabUserProfile>): void {
   if (!session) return;
   const profile = { ...(session.profile || {}), ...partial };
   const updated = { ...session, profile };
-  // Update session
   setSession(updated);
-  // Update users list
   const users = getUsers();
-  saveUsers(users.map(u => u.id === session.id ? { ...u, profile } : u));
+  saveUsers(users.map((u) => (u.id === session.id ? { ...u, profile } : u)));
+
+  const headers = getAuthHeaders();
+  if (!headers) return;
+  void fetch(`${API_BASE}/onboarding/me`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ ...partial }),
+  })
+    .then((res) => res.json().catch(() => null))
+    .then((payload) => {
+      const apiUser = payload?.data?.user;
+      if (apiUser?.id) {
+        persistUserFromApi(apiUser as KollabUser);
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to sync profile", err);
+    });
 }
 
 export function setOnboardingStep(step: string): void {
@@ -274,7 +314,25 @@ export function setOnboardingStep(step: string): void {
   const updated = { ...session, onboardingStep: step };
   setSession(updated);
   const users = getUsers();
-  saveUsers(users.map(u => u.id === session.id ? { ...u, onboardingStep: step } : u));
+  saveUsers(users.map((u) => (u.id === session.id ? { ...u, onboardingStep: step } : u)));
+
+  const headers = getAuthHeaders();
+  if (!headers) return;
+  void fetch(`${API_BASE}/onboarding/me`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ onboardingStep: step }),
+  })
+    .then((res) => res.json().catch(() => null))
+    .then((payload) => {
+      const apiUser = payload?.data?.user;
+      if (apiUser?.id) {
+        persistUserFromApi(apiUser as KollabUser);
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to sync onboarding step", err);
+    });
 }
 
 export function setOnboardingCompleted(): void {
@@ -283,5 +341,22 @@ export function setOnboardingCompleted(): void {
   const updated = { ...session, onboardingCompleted: true, onboardingStep: undefined };
   setSession(updated);
   const users = getUsers();
-  saveUsers(users.map(u => u.id === session.id ? { ...u, onboardingCompleted: true, onboardingStep: undefined } : u));
+  saveUsers(users.map((u) => (u.id === session.id ? { ...u, onboardingCompleted: true, onboardingStep: undefined } : u)));
+
+  const headers = getAuthHeaders();
+  if (!headers) return;
+  void fetch(`${API_BASE}/onboarding/complete`, {
+    method: "POST",
+    headers,
+  })
+    .then((res) => res.json().catch(() => null))
+    .then((payload) => {
+      const apiUser = payload?.data?.user;
+      if (apiUser?.id) {
+        persistUserFromApi(apiUser as KollabUser);
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to mark onboarding complete", err);
+    });
 }
