@@ -42,6 +42,7 @@ const BasicsStep = () => {
   const [bio, setBio] = useState(session?.profile?.bio || "");
   const [timezone, setTimezone] = useState(session?.profile?.timezone || guessTimezone());
   const [location, setLocation] = useState(session?.profile?.location || "");
+  const [errors, setErrors] = useState<{ name?: string; bio?: string; timezone?: string; form?: string }>({});
 
   useEffect(() => {
     const guard = checkOnboardingAccess("/onboarding/basics");
@@ -50,9 +51,19 @@ const BasicsStep = () => {
 
   if (!session) return null;
 
-  const isValid = name.trim().length > 0 && bio.trim().length > 0 && timezone.length > 0;
+  const computeValidation = () => {
+    const nameError = name.trim().length < 2 ? "Name must be at least 2 characters." : undefined;
+    const bioError = bio.trim().length < 10 ? "Bio should be at least 10 characters." : undefined;
+    const tzError = timezone ? undefined : "Select your timezone.";
+    return { name: nameError, bio: bioError, timezone: tzError };
+  };
+
+  const isValid = Object.values(computeValidation()).every((v) => !v);
 
   const handleNext = () => {
+    const validation = computeValidation();
+    setErrors((prev) => ({ ...prev, ...validation, form: undefined }));
+    if (Object.values(validation).some(Boolean)) return;
     updateUserProfile({ name: name.trim(), bio: bio.trim(), timezone, location: location.trim() });
     setOnboardingStep("/onboarding/skills");
     navigate(getNextOnboardingRoute("/onboarding/basics"));
@@ -75,25 +86,49 @@ const BasicsStep = () => {
       <div className="space-y-3">
         <div className="space-y-1">
           <Label htmlFor="name" className="text-xs font-medium text-foreground">Full Name *</Label>
-          <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="John Doe" className={inputCls} />
+          <Input id="name" value={name} onChange={e => {
+            const value = e.target.value;
+            setName(value);
+            const nameError = value.trim().length < 2 ? "Name must be at least 2 characters." : undefined;
+            setErrors((prev) => ({ ...prev, name: nameError, form: undefined }));
+          }} placeholder="John Doe" className={inputCls} />
+          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
         </div>
         <div className="space-y-1">
           <Label htmlFor="bio" className="text-xs font-medium text-foreground">Short Bio *</Label>
-          <Textarea id="bio" value={bio} onChange={e => setBio(e.target.value)} placeholder="A brief intro…" rows={2}
+          <Textarea id="bio" value={bio} onChange={e => {
+            const value = e.target.value;
+            setBio(value);
+            const bioError = value.trim().length < 10 ? "Bio should be at least 10 characters." : undefined;
+            setErrors((prev) => ({ ...prev, bio: bioError, form: undefined }));
+          }} placeholder="A brief intro…" rows={2}
             className="rounded-xl bg-background text-sm placeholder:text-muted-foreground/60 focus-visible:ring-primary border border-border resize-none" />
+          {errors.bio && <p className="text-xs text-destructive">{errors.bio}</p>}
         </div>
         <div className="space-y-1">
           <Label htmlFor="tz" className="text-xs font-medium text-foreground">Timezone *</Label>
-          <select id="tz" value={timezone} onChange={e => setTimezone(e.target.value)}
+          <select id="tz" value={timezone} onChange={e => {
+            const value = e.target.value;
+            setTimezone(value);
+            const tzError = value ? undefined : "Select your timezone.";
+            setErrors((prev) => ({ ...prev, timezone: tzError, form: undefined }));
+          }}
             className="flex h-10 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
+          {errors.timezone && <p className="text-xs text-destructive">{errors.timezone}</p>}
         </div>
         <div className="space-y-1">
           <Label htmlFor="loc" className="text-xs font-medium text-foreground">Location <span className="text-muted-foreground font-normal">(optional)</span></Label>
           <Input id="loc" value={location} onChange={e => setLocation(e.target.value)} placeholder="San Francisco, CA" className={inputCls} />
         </div>
       </div>
+
+      {Object.values(errors).some(Boolean) && (
+        <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errors.name || errors.bio || errors.timezone || errors.form}
+        </div>
+      )}
 
       <div className="mt-4 flex justify-between">
         <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>

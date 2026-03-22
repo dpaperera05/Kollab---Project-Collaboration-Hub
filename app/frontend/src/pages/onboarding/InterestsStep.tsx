@@ -34,6 +34,7 @@ const InterestsStep = () => {
   const [selected, setSelected] = useState<string[]>(
     () => session?.profile?.domainInterests || []
   );
+  const [error, setError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const guard = checkOnboardingAccess("/onboarding/interests");
@@ -43,6 +44,11 @@ const InterestsStep = () => {
   if (!session) return null;
 
   const handleNext = () => {
+    if (selected.length === 0) {
+      setError("Select at least one interest to continue.");
+      return;
+    }
+    setError(undefined);
     updateUserProfile({ domainInterests: selected });
     setOnboardingCompleted();
     navigate("/profile");
@@ -65,10 +71,19 @@ const InterestsStep = () => {
       <TileSelect
         options={DOMAINS}
         selected={selected}
-        onChange={setSelected}
+        onChange={(next) => {
+          setSelected(next);
+          setError(next.length ? undefined : "Select at least one interest to continue.");
+        }}
         label="Domain Interests"
         minRequired={1}
       />
+
+      {error && (
+        <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="mt-4 flex justify-between">
         <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>

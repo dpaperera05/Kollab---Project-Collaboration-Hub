@@ -46,7 +46,10 @@ const VerifyEmailPage = () => {
       e?.preventDefault();
       setError("");
 
-      if (code.length < 6) return;
+      if (!/^\d{6}$/.test(code)) {
+        setError("Enter the 6-digit code sent to your email.");
+        return;
+      }
 
       setLoading(true);
       await new Promise((r) => setTimeout(r, 500));
@@ -120,16 +123,15 @@ const VerifyEmailPage = () => {
             </p>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <OtpInput value={code} onChange={(v) => { setCode(v); setError(""); }} />
+
+            {error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
             <Button
               type="submit"

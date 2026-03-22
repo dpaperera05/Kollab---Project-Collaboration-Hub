@@ -15,6 +15,7 @@ const AvailabilityStep = () => {
   const [hours, setHours] = useState<string>(
     () => session?.profile?.availabilityHoursPerWeek?.toString() || ""
   );
+  const [error, setError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const guard = checkOnboardingAccess("/onboarding/availability");
@@ -27,6 +28,11 @@ const AvailabilityStep = () => {
   const isValid = !isNaN(numHours) && numHours >= 1 && numHours <= 40;
 
   const handleNext = () => {
+    if (!isValid) {
+      setError("Enter weekly hours between 1 and 40.");
+      return;
+    }
+    setError(undefined);
     updateUserProfile({ availabilityHoursPerWeek: numHours });
     setOnboardingStep("/onboarding/interests");
     navigate(getNextOnboardingRoute("/onboarding/availability"));
@@ -54,12 +60,27 @@ const AvailabilityStep = () => {
           min={1}
           max={40}
           value={hours}
-          onChange={e => setHours(e.target.value)}
+          onChange={e => {
+            const value = e.target.value;
+            setHours(value);
+            const parsed = parseInt(value, 10);
+            if (isNaN(parsed) || parsed < 1 || parsed > 40) {
+              setError("Enter weekly hours between 1 and 40.");
+            } else {
+              setError(undefined);
+            }
+          }}
           placeholder="e.g. 10"
           className="h-10 rounded-xl bg-background text-sm placeholder:text-muted-foreground/60 focus-visible:ring-primary border border-border max-w-[180px]"
         />
         <p className="text-xs text-muted-foreground">Between 1 and 40 hours per week.</p>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="mt-4 flex justify-between">
         <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>

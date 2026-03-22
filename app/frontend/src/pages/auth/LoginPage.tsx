@@ -14,15 +14,39 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
+
+  const validateEmail = (value: string): string | undefined => {
+    if (!value.trim()) return "Email is required.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return "Enter a valid email.";
+    return undefined;
+  };
+
+  const validatePassword = (value: string): string | undefined => {
+    if (!value.trim()) return "Password is required.";
+    if (value.length < 8) return "Password must be at least 8 characters.";
+    return undefined;
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setErrors((prev) => ({ ...prev, email: validateEmail(value), form: undefined }));
+  };
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    setErrors((prev) => ({ ...prev, password: validatePassword(value), form: undefined }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setErrors({});
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please fill in all fields.");
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    if (emailError || passwordError) {
+      setErrors({ email: emailError, password: passwordError });
       return;
     }
 
@@ -33,7 +57,7 @@ const LoginPage = () => {
     setLoading(false);
 
     if (!result.success) {
-      setError((result as {success: false;error: string;}).error);
+      setErrors({ form: (result as {success: false;error: string;}).error });
       return;
     }
 
@@ -77,13 +101,6 @@ const LoginPage = () => {
             </p>
           </div>
 
-          {/* Error */}
-          {error &&
-          <div className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </div>
-          }
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
@@ -96,9 +113,9 @@ const LoginPage = () => {
                 autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleEmailChange(e.target.value)}
                 className="h-12 rounded-xl bg-background/60 text-base placeholder:text-muted-foreground/60 focus-visible:ring-primary" />
-
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -120,7 +137,7 @@ const LoginPage = () => {
                   autoComplete="current-password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
                   className="h-12 rounded-xl bg-background/60 pr-11 text-base placeholder:text-muted-foreground/60 focus-visible:ring-primary" />
 
                 <button
@@ -132,7 +149,14 @@ const LoginPage = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
             </div>
+
+            {errors.form && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {errors.form}
+              </div>
+            )}
 
             <Button
               type="submit"

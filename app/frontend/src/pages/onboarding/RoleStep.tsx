@@ -55,6 +55,7 @@ const RoleStep = () => {
       ? session.profile.expertiseSkills || []
       : session.profile.preferredRoles || [];
   });
+  const [error, setError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const guard = checkOnboardingAccess("/onboarding/role");
@@ -67,6 +68,11 @@ const RoleStep = () => {
   const options = isMentor ? MENTOR_EXPERTISE : MEMBER_ROLES;
 
   const handleNext = () => {
+    if (selected.length === 0) {
+      setError("Select at least one option to continue.");
+      return;
+    }
+    setError(undefined);
     const partial = isMentor
       ? { expertiseSkills: selected }
       : { preferredRoles: selected };
@@ -89,10 +95,18 @@ const RoleStep = () => {
       <TileSelect
         options={options}
         selected={selected}
-        onChange={setSelected}
+        onChange={(next) => {
+          setSelected(next);
+          setError(next.length ? undefined : "Select at least one option to continue.");
+        }}
         label={isMentor ? "Expertise Areas" : "Preferred Roles"}
         minRequired={1}
       />
+      {error && (
+        <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
       <div className="mt-4 flex justify-end">
         <Button
           onClick={handleNext}
