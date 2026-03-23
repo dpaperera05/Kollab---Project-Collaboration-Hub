@@ -79,6 +79,7 @@ const EventsListingPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [events, setEvents] = useState<ReturnType<typeof mapEvent>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -96,19 +97,25 @@ const EventsListingPage = () => {
         if (filters.sortBy) params.set("sortBy", filters.sortBy);
         if (filters.dateRange && filters.dateRange !== "All") params.set("dateRange", filters.dateRange);
 
-        const res = await apiGet<{ success: boolean; data: { events: BackendEvent[] } }>(`/events/public?${params.toString()}`);
+        params.set("page", String(currentPage));
+        params.set("pageSize", String(PAGE_SIZE));
+
+        const res = await apiGet<{ success: boolean; data: { events: BackendEvent[]; total: number; page: number; pageSize: number } }>(`/events/public?${params.toString()}`);
         const mapped = (res?.data?.events ?? []).map(mapEvent);
         setEvents(mapped);
+        setTotalCount(res?.data?.total ?? mapped.length);
+        setCurrentPage(res?.data?.page ?? currentPage);
       } catch (err) {
         console.error("Failed to load events", err);
         setEvents([]);
+        setTotalCount(0);
       } finally {
         setIsLoading(false);
       }
     };
 
     load();
-  }, [filters]);
+  }, [filters, currentPage]);
 
   const handleFilterChange = (f: EventFilterState) => { setFilters(f); setCurrentPage(1); };
   const handleClear = () => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); };
@@ -153,7 +160,7 @@ const EventsListingPage = () => {
 
           {/* Count */}
           <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{events.length}</span> event{events.length !== 1 ? "s" : ""} found
+            <span className="font-semibold text-foreground">{totalCount}</span> event{totalCount !== 1 ? "s" : ""} found
           </p>
 
           {/* List */}
@@ -170,9 +177,9 @@ const EventsListingPage = () => {
           )}
 
           {/* Pagination */}
-          {events.length > PAGE_SIZE && (
+          {totalCount > PAGE_SIZE && (
             <PaginationBar
-              totalItems={events.length}
+              totalItems={totalCount}
               pageSize={PAGE_SIZE}
               currentPage={currentPage}
               onPageChange={(page) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }); }}

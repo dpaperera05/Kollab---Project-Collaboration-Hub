@@ -79,6 +79,9 @@ const buildDateFilter = (dateRange?: string) => {
 export const listPublicEvents = async (req: Request, res: Response) => {
   const { type, location, tags, sortBy, dateRange } = req.query;
 
+  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize || "6"), 10) || 6, 1), 50);
+
   const filter: Record<string, any> = {};
   if (typeof type === "string" && type !== "All" && type.trim()) filter.type = type.trim();
   if (typeof location === "string" && location !== "All" && location.trim()) filter.locationType = location.trim();
@@ -103,8 +106,13 @@ export const listPublicEvents = async (req: Request, res: Response) => {
     sort.dateTime = 1; // Soonest default
   }
 
-  const events = await Event.find(filter).sort(sort);
-  return res.json({ success: true, data: { events } });
+  const total = await Event.countDocuments(filter);
+  const events = await Event.find(filter)
+    .sort(sort)
+    .skip((page - 1) * pageSize)
+    .limit(pageSize);
+
+  return res.json({ success: true, data: { events, total, page, pageSize } });
 };
 
 export const listEvents = async (req: Request, res: Response) => {
