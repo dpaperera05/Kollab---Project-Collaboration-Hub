@@ -39,6 +39,7 @@ export interface IProject extends Document {
   weeklyHours: number;
   compensation: string;
   posterImage?: string;
+  posterKey?: string;
   tags: string[];
   status: ProjectStatus;
   roles: IProjectRole[];

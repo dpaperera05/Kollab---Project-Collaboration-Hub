@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Project } from "../models/project.model";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const ensureStringArray = (val: unknown): string[] => {
   if (!Array.isArray(val)) return [];
@@ -22,6 +23,59 @@ const ensureDeliverables = (val: unknown): string[] => {
 export const listPublicProjects = async (_req: Request, res: Response) => {
   const projects = await Project.find({}).sort({ createdAt: -1 });
   return res.json({ success: true, data: { projects } });
+};
+
+const getR2Config = () => {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.R2_BUCKET_NAME;
+  const publicBase = process.env.R2_PUBLIC_BASE_URL;
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) return null;
+  const client = new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+  return { client, bucket, publicBase } as const;
+};
+
+const uploadPosterToR2 = async (base64: string) => {
+  const cfg = getR2Config();
+  if (!cfg) throw new Error("R2 not configured");
+
+  const base64Match = base64.match(/^data:(.+);base64,(.+)$/);
+  const base64Data = base64Match ? base64Match[2] : base64;
+  const contentType = base64Match?.[1] || "image/png";
+
+  const buffer = Buffer.from(base64Data, "base64");
+  if (buffer.byteLength > 8 * 1024 * 1024) {
+    throw new Error("Image too large (max 8MB)");
+  }
+
+  const key = `posters/${Date.now()}-${Math.floor(Math.random() * 10000)}.png`;
+  await cfg.client.send(new PutObjectCommand({
+    Bucket: cfg.bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+  }));
+
+  const imageUrl = cfg.publicBase
+    ? `${cfg.publicBase.replace(/\/$/, "")}/${key}`
+    : `https://${cfg.bucket}.r2.cloudflarestorage.com/${key}`;
+
+  return { imageUrl, key } as const;
+};
+
+const deleteR2Object = async (key?: string) => {
+  const cfg = getR2Config();
+  if (!cfg || !key) return;
+  try {
+    await cfg.client.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }));
+  } catch (err) {
+    console.error("R2 delete failed", err);
+  }
 };
 
 export const listOwnedProjects = async (req: Request, res: Response) => {
@@ -83,6 +137,15 @@ export const createProject = async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: "Roles must include title, responsibilities, and required skills" });
   }
 
+  let poster: { imageUrl: string; key?: string } | null = null;
+  try {
+    if (posterImage && typeof posterImage === "string" && posterImage.startsWith("data:")) {
+      poster = await uploadPosterToR2(posterImage);
+    }
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err?.message || "Poster upload failed" });
+  }
+
   const project = await Project.create({
     ownerId: userId,
     title: String(title).trim(),
@@ -96,7 +159,8 @@ export const createProject = async (req: Request, res: Response) => {
     duration: String(duration).trim(),
     weeklyHours: Number(weeklyHours),
     compensation: String(compensation).trim(),
-    posterImage: typeof posterImage === "string" ? posterImage.trim() : undefined,
+    posterImage: poster?.imageUrl || (typeof posterImage === "string" ? posterImage.trim() : undefined),
+    posterKey: poster?.key,
     tags: ensureStringArray(tags),
     status: "Open",
     roles: cleanedRoles,
@@ -128,6 +192,9 @@ export const deleteProject = async (req: Request, res: Response) => {
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   const deleted = await Project.findOneAndDelete({ _id: id, ownerId: userId });
   if (!deleted) return res.status(404).json({ success: false, message: "Project not found" });
+  if (deleted.posterKey) {
+    void deleteR2Object(deleted.posterKey);
+  }
   return res.json({ success: true, message: "Deleted" });
 };
 
