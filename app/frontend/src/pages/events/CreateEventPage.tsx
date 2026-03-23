@@ -21,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { EVENT_TYPES } from "@/data/eventsData";
 import { DOMAIN_TAGS, TOOLS_TECH_TAGS, SKILLS_TAGS, ALL_EVENT_TAGS, TIMEZONE_OPTIONS } from "@/data/eventTagOptions";
+import { apiPost } from "@/lib/api";
+import { getSession } from "@/lib/authStore";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -30,6 +32,7 @@ interface FormState {
   type: string;
   description: string;
   coverPreview: string | null;
+  coverData: string | null;
   externalUrl: string;
   startDate: Date | undefined;
   startTime: string;
@@ -48,7 +51,7 @@ interface FormState {
 }
 
 const INITIAL: FormState = {
-  title: "", type: "", description: "", coverPreview: null, externalUrl: "",
+  title: "", type: "", description: "", coverPreview: null, coverData: null, externalUrl: "",
   startDate: undefined, startTime: "09:00", endDate: undefined, endTime: "17:00",
   timezone: "UTC", locationType: "", city: "", virtualPlatform: "",
   tags: [], featured: false, organizer: "", prize: "", participantCount: "", notes: "",
@@ -220,7 +223,7 @@ const CreateEventPage = () => {
 
   const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState("");
 
@@ -238,8 +241,15 @@ const CreateEventPage = () => {
   const handleCover = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    set("coverPreview", url);
+    const objectUrl = URL.createObjectURL(file);
+    set("coverPreview", objectUrl);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      set("coverData", result);
+    };
+    reader.readAsDataURL(file);
   };
 
   /* Validation */
@@ -248,7 +258,7 @@ const CreateEventPage = () => {
     if (!form.title.trim()) errs.title = "Title is required";
     if (!form.type) errs.type = "Event type is required";
     if (!form.description.trim()) errs.description = "Description is required";
-    if (!form.coverPreview) errs.cover = "Cover image is required";
+    if (!form.coverData) errs.cover = "Cover image is required";
     if (!form.externalUrl.trim()) errs.externalUrl = "Event URL is required";
     if (!form.startDate) errs.startDate = "Start date is required";
     if (!form.startTime) errs.startTime = "Start time is required";
@@ -262,11 +272,57 @@ const CreateEventPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    setSubmitted(true);
-    toast({
-      title: "🎉 Event created successfully",
-      description: "This is a frontend demo — no data was saved.",
-    });
+    const session = getSession();
+    if (!session) {
+      navigate("/login");
+      return;
+    }
+
+    const makeIso = (date?: Date, time?: string) => {
+      if (!date || !time) return null;
+      const dateStr = format(date, "yyyy-MM-dd");
+      return new Date(`${dateStr}T${time}:00`).toISOString();
+    };
+
+    const startIso = makeIso(form.startDate, form.startTime);
+    const endIso = makeIso(form.endDate, form.endTime);
+    if (!startIso) {
+      toast({ title: "Invalid date/time", description: "Start date/time is required", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    apiPost<{ success: boolean; data: { event: any } }>("/events", {
+      title: form.title,
+      type: form.type,
+      description: form.description,
+      coverImage: form.coverData,
+      externalLink: form.externalUrl,
+      dateTime: startIso,
+      endDateTime: endIso || undefined,
+      timezone: form.timezone,
+      locationType: form.locationType,
+      city: form.locationType === "City" ? form.city : undefined,
+      virtualPlatform: form.locationType === "Virtual" ? form.virtualPlatform : undefined,
+      tags: form.tags,
+      featured: form.featured,
+      organizer: form.organizer || undefined,
+      prize: form.prize || undefined,
+      participantCount: form.participantCount ? Number(form.participantCount) : undefined,
+      notes: form.notes || undefined,
+    })
+      .then(() => {
+        toast({ title: "🎉 Event created", description: "Your event is now live." });
+        navigate("/events");
+      })
+      .catch((err: any) => {
+        toast({
+          title: "Failed to create event",
+          description: err?.message || "Please try again",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setIsSubmitting(false));
   };
 
   const filteredTags = tagSearch
@@ -275,30 +331,6 @@ const CreateEventPage = () => {
 
   const FieldError = ({ name }: { name: string }) =>
     errors[name] ? <p className="text-xs text-destructive mt-1">{errors[name]}</p> : null;
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <main className="flex-1 pt-20 pb-24 flex items-center justify-center">
-          <div className="text-center space-y-6 max-w-md px-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-              <Sparkles size={28} className="text-primary" />
-            </div>
-            <h2 className="text-2xl font-extrabold text-foreground">Event Created!</h2>
-            <p className="text-muted-foreground text-sm">
-              This is a frontend demo. Your event "{form.title}" would appear on the listing page once connected to a backend.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button variant="outline" onClick={() => { setSubmitted(false); setForm(INITIAL); }}>Create Another</Button>
-              <Button onClick={() => navigate("/events")}>Back to Events</Button>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -388,7 +420,7 @@ const CreateEventPage = () => {
                         <img src={form.coverPreview} alt="Cover" className="w-full aspect-[16/9] object-cover" />
                         <button
                           type="button"
-                          onClick={() => set("coverPreview", null)}
+                          onClick={() => { set("coverPreview", null); set("coverData", null); }}
                           className="absolute top-2 right-2 w-7 h-7 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
                         >
                           <X size={14} />
@@ -638,8 +670,8 @@ const CreateEventPage = () => {
                 <Button type="button" variant="outline" onClick={() => navigate("/events")} className="h-11 px-6">
                   Cancel
                 </Button>
-                <Button type="submit" className="h-11 px-8">
-                  Create Event
+                <Button type="submit" className="h-11 px-8" disabled={isSubmitting}>
+                  {isSubmitting ? "Creating..." : "Create Event"}
                 </Button>
               </div>
             </form>
