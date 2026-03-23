@@ -1,10 +1,20 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware";
-import { listBlogs, createBlog, updateBlog, deleteBlog } from "../controllers/blog.controller";
+import {
+	listBlogs,
+	publicListBlogs,
+	getBlogByIdPublic,
+	createBlog,
+	updateBlog,
+	deleteBlog,
+} from "../controllers/blog.controller";
 
 const router = Router();
-router.use(authenticate);
 
+router.get("/public", publicListBlogs);
+router.get("/public/:id", getBlogByIdPublic);
+
+router.use(authenticate);
 router.get("/", listBlogs);
 router.post("/", createBlog);
 router.put("/:id", updateBlog);

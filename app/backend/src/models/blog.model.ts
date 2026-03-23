@@ -7,6 +7,8 @@ export interface IBlog extends Document {
   coverKey?: string;
   excerpt?: string;
   content?: string;
+  tags?: string[];
+  viewCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +21,8 @@ const blogSchema = new Schema<IBlog>(
     coverKey: { type: String, trim: true },
     excerpt: { type: String, trim: true },
     content: { type: String, trim: true },
+    tags: [{ type: String, trim: true }],
+    viewCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -4,6 +4,37 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client
 
 const ensureString = (val: unknown): string | undefined => (typeof val === "string" && val.trim() ? val.trim() : undefined);
 
+const sanitizeTags = (val: unknown): string[] => {
+  if (!Array.isArray(val)) return [];
+  return val
+    .map((t) => (typeof t === "string" ? t.trim() : ""))
+    .filter(Boolean)
+    .slice(0, 20);
+};
+
+const mapBlogResponse = (blog: any) => {
+  const authorDoc = (blog as any).userId as any;
+  const authorName = authorDoc?.profile?.name || authorDoc?.name || "Kollab member";
+  const authorType = authorDoc?.userType === "mentor" ? "mentor" : "member";
+  const authorId = authorDoc?._id?.toString?.() || (typeof blog.userId === "string" ? blog.userId : "");
+
+  return {
+    id: blog._id?.toString?.() ?? String(blog.id ?? ""),
+    title: blog.title,
+    excerpt: blog.excerpt || "",
+    coverImage: blog.coverImage,
+    tags: blog.tags || [],
+    author: {
+      id: authorId,
+      name: authorName,
+      type: authorType,
+    },
+    publishedAt: blog.createdAt,
+    viewCount: blog.viewCount ?? 0,
+    content: blog.content,
+  };
+};
+
 const getR2Config = () => {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -59,18 +90,59 @@ const deleteR2Object = async (key?: string) => {
   }
 };
 
+const getSort = (sortBy?: string) => {
+  if (sortBy === "Oldest") return { createdAt: 1 } as const;
+  if (sortBy === "Popular") return { viewCount: -1, createdAt: -1 } as const;
+  return { createdAt: -1 } as const;
+};
+
 export const listBlogs = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-  const blogs = await Blog.find({ userId }).sort({ createdAt: -1 });
-  return res.json({ success: true, data: { blogs } });
+  const blogs = await Blog.find({ userId })
+    .sort({ createdAt: -1 })
+    .populate({ path: "userId", select: "name userType profile" })
+    .lean();
+
+  return res.json({ success: true, data: { blogs: blogs.map(mapBlogResponse) } });
+};
+
+export const publicListBlogs = async (req: Request, res: Response) => {
+  const { tags, sortBy, page = "1", pageSize = "6" } = req.query;
+
+  const parsedPage = Math.max(parseInt(String(page), 10) || 1, 1);
+  const parsedPageSize = Math.min(Math.max(parseInt(String(pageSize), 10) || 6, 1), 50);
+  const tagFilters = typeof tags === "string" ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+  const sort = getSort(typeof sortBy === "string" ? sortBy : "Newest");
+
+  const query: Record<string, any> = {};
+  if (tagFilters.length) query.tags = { $in: tagFilters };
+
+  const total = await Blog.countDocuments(query);
+  const blogs = await Blog.find(query)
+    .sort(sort)
+    .skip((parsedPage - 1) * parsedPageSize)
+    .limit(parsedPageSize)
+    .populate({ path: "userId", select: "name userType profile" })
+    .lean();
+
+  return res.json({
+    success: true,
+    data: {
+      blogs: blogs.map(mapBlogResponse),
+      total,
+      page: parsedPage,
+      pageSize: parsedPageSize,
+    },
+  });
 };
 
 export const createBlog = async (req: Request, res: Response) => {
   const userId = req.userId;
-  const { title, coverImage, excerpt, content } = req.body || {};
+  const { title, coverImage, excerpt, content, tags } = req.body || {};
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   if (!title) return res.status(400).json({ success: false, message: "Title is required" });
+  const cleanedTags = sanitizeTags(tags);
   let cover: { coverUrl: string; key?: string } | null = null;
   try {
     if (typeof coverImage === "string" && coverImage.startsWith("data:")) {
@@ -87,8 +159,11 @@ export const createBlog = async (req: Request, res: Response) => {
     coverKey: cover?.key,
     excerpt: ensureString(excerpt),
     content: ensureString(content),
+    tags: cleanedTags,
+    viewCount: 0,
   });
-  return res.status(201).json({ success: true, data: { blog } });
+  const populated = await blog.populate({ path: "userId", select: "name userType profile" });
+  return res.status(201).json({ success: true, data: { blog: mapBlogResponse(populated) } });
 };
 
 export const updateBlog = async (req: Request, res: Response) => {
@@ -110,9 +185,30 @@ export const updateBlog = async (req: Request, res: Response) => {
     delete req.body.coverImage;
   }
 
-  Object.assign(blog, req.body || {});
+  const updates: Record<string, any> = { ...req.body };
+  if (Object.prototype.hasOwnProperty.call(updates, "tags")) updates.tags = sanitizeTags(updates.tags);
+  if (updates.excerpt !== undefined) updates.excerpt = ensureString(updates.excerpt);
+  if (updates.content !== undefined) updates.content = ensureString(updates.content);
+
+  Object.assign(blog, updates || {});
   await blog.save();
-  return res.json({ success: true, data: { blog } });
+  const populated = await blog.populate({ path: "userId", select: "name userType profile" });
+  return res.json({ success: true, data: { blog: mapBlogResponse(populated) } });
+};
+
+export const getBlogByIdPublic = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const blog = await Blog.findByIdAndUpdate(
+    id,
+    { $inc: { viewCount: 1 } },
+    { new: true }
+  )
+    .populate({ path: "userId", select: "name userType profile" })
+    .lean();
+
+  if (!blog) return res.status(404).json({ success: false, message: "Blog not found" });
+
+  return res.json({ success: true, data: { blog: mapBlogResponse(blog) } });
 };
 
 export const deleteBlog = async (req: Request, res: Response) => {

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { PenLine, BookOpen } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -8,7 +8,8 @@ import BlogsHeroIllustration from "@/components/blogs/BlogsHeroIllustration";
 import BlogFilterBar, { type BlogFilterState } from "@/components/blogs/BlogFilterBar";
 import BlogListItemCard from "@/components/blogs/BlogListItemCard";
 import PaginationBar from "@/components/projects/PaginationBar";
-import { mockBlogs } from "@/data/blogsData";
+import { type BlogItem } from "@/data/blogsData";
+import { apiGet } from "@/lib/api";
 
 const PAGE_SIZE = 6;
 
@@ -40,26 +41,42 @@ const EmptyState = ({ onClear }: { onClear: () => void }) => (
 const BlogsPage = () => {
   const [filters, setFilters] = useState<BlogFilterState>(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
+  const [blogs, setBlogs] = useState<BlogItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    let result = [...mockBlogs];
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      setLoading(true);
+      setError(null);
 
-    if (filters.tags.length > 0)
-      result = result.filter((b) => filters.tags.some((t) => b.tags.includes(t)));
+      try {
+        const params = new URLSearchParams({
+          page: String(currentPage),
+          pageSize: String(PAGE_SIZE),
+          sortBy: filters.sortBy,
+        });
+        if (filters.tags.length > 0) params.set("tags", filters.tags.join(","));
 
-    if (filters.sortBy === "Newest") {
-      result.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-    } else if (filters.sortBy === "Oldest") {
-      result.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
-    }
+        const response = await apiGet<{
+          success: boolean;
+          data: { blogs: BlogItem[]; total: number; page: number; pageSize: number };
+        }>(`/blogs/public?${params.toString()}`);
 
-    return result;
-  }, [filters]);
+        setBlogs(response.data.blogs || []);
+        setTotal(response.data.total || 0);
+      } catch (err: any) {
+        setError(err?.message || "Failed to load blogs");
+        setBlogs([]);
+        setTotal(0);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+    fetchBlogs();
+  }, [filters, currentPage]);
 
   const handleFilterChange = (f: BlogFilterState) => { setFilters(f); setCurrentPage(1); };
   const handleClear = () => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); };
@@ -104,24 +121,30 @@ const BlogsPage = () => {
 
           {/* Count */}
           <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{filtered.length}</span> blog{filtered.length !== 1 ? "s" : ""} found
+            <span className="font-semibold text-foreground">{total}</span> blog{total !== 1 ? "s" : ""} found
           </p>
 
           {/* List */}
-          {paginated.length === 0 ? (
+          {loading ? (
+            <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">Loading blogs...</div>
+          ) : error ? (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-6 text-sm text-destructive">
+              {error}
+            </div>
+          ) : blogs.length === 0 ? (
             <EmptyState onClear={handleClear} />
           ) : (
             <div className="space-y-4">
-              {paginated.map((blog) => (
+              {blogs.map((blog) => (
                 <BlogListItemCard key={blog.id} blog={blog} />
               ))}
             </div>
           )}
 
           {/* Pagination */}
-          {filtered.length > PAGE_SIZE && (
+          {total > PAGE_SIZE && (
             <PaginationBar
-              totalItems={filtered.length}
+              totalItems={total}
               pageSize={PAGE_SIZE}
               currentPage={currentPage}
               onPageChange={(page) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }); }}

@@ -16,17 +16,25 @@ const BlogListItemCard = ({ blog }: { blog: BlogItem }) => {
   const visibleTags = blog.tags.slice(0, MAX_VISIBLE_TAGS);
   const extraCount = blog.tags.length - MAX_VISIBLE_TAGS;
 
+  const cover = blog.coverImage;
+
   return (
     <article className="group rounded-2xl border border-border bg-card overflow-hidden transition-all duration-200 hover:shadow-[var(--card-shadow-hover)] hover:border-primary/20">
       <div className="flex flex-col sm:flex-row">
         {/* Cover */}
         <div className="relative sm:w-56 md:w-64 lg:w-72 flex-shrink-0">
-          <img
-            src={blog.coverImage}
-            alt={blog.title}
-            className="w-full h-48 sm:h-full object-cover"
-            loading="lazy"
-          />
+          {cover ? (
+            <img
+              src={cover}
+              alt={blog.title}
+              className="w-full h-48 sm:h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-48 sm:h-full bg-gradient-to-br from-primary/15 via-primary/5 to-accent/20 flex items-center justify-center text-xs font-semibold text-primary">
+              No cover
+            </div>
+          )}
         </div>
 
         {/* Content */}
