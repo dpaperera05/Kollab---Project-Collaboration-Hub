@@ -224,14 +224,14 @@ const ProjectsPage = () => {
         </div>
 
         <Container className="py-8 space-y-8">
-          {/* Filters */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <ProjectFilters filters={filters} onChange={handleFilterChange} onClear={handleClear} />
-          </div>
-
           {/* AI Recommended Carousel */}
           <div className="rounded-xl border border-border bg-card/50 p-5">
             <RecommendedCarousel projects={recommendedProjects} />
+          </div>
+
+          {/* Filters */}
+          <div className="rounded-xl border border-border bg-card p-4">
+            <ProjectFilters filters={filters} onChange={handleFilterChange} onClear={handleClear} />
           </div>
 
           {/* Results count */}
