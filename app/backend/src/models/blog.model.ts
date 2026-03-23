@@ -4,6 +4,7 @@ export interface IBlog extends Document {
   userId: string;
   title: string;
   coverImage?: string;
+  coverKey?: string;
   excerpt?: string;
   content?: string;
   createdAt: Date;
@@ -15,6 +16,7 @@ const blogSchema = new Schema<IBlog>(
     userId: { type: String, ref: "User", required: true, index: true },
     title: { type: String, required: true, trim: true },
     coverImage: { type: String, trim: true },
+    coverKey: { type: String, trim: true },
     excerpt: { type: String, trim: true },
     content: { type: String, trim: true },
   },

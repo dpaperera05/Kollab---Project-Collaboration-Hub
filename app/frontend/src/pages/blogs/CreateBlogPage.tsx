@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Upload, X, ImageIcon, PenLine, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, X, ImageIcon, PenLine, ChevronDown, ChevronRight } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { BLOG_DOMAIN_TAGS, BLOG_TOOLS_TAGS, BLOG_SKILLS_TAGS } from "@/data/blogTagOptions";
 import { useToast } from "@/hooks/use-toast";
+import { apiPost } from "@/lib/api";
+import { getSession } from "@/lib/authStore";
 
 /* ── Tag group config ───────────────────────────────────── */
 
@@ -181,6 +183,7 @@ interface FormState {
   tags: string[];
   coverFile: File | null;
   coverPreview: string | null;
+  coverData: string | null;
 }
 
 interface FormErrors {
@@ -196,6 +199,7 @@ const INITIAL: FormState = {
   tags: [],
   coverFile: null,
   coverPreview: null,
+  coverData: null,
 };
 
 /* ── Page ───────────────────────────────────────────────── */
@@ -203,8 +207,9 @@ const INITIAL: FormState = {
 const CreateBlogPage = () => {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -212,12 +217,17 @@ const CreateBlogPage = () => {
   const handleCoverSelect = (file: File) => {
     set("coverFile", file);
     set("coverPreview", URL.createObjectURL(file));
+
+    const reader = new FileReader();
+    reader.onload = () => set("coverData", reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleCoverRemove = () => {
     if (form.coverPreview) URL.revokeObjectURL(form.coverPreview);
     set("coverFile", null);
     set("coverPreview", null);
+    set("coverData", null);
   };
 
   const validate = (): boolean => {
@@ -229,51 +239,33 @@ const CreateBlogPage = () => {
     return Object.keys(e).length === 0;
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!validate()) return;
-    setSubmitted(true);
-    toast({
-      title: "Blog published!",
-      description: "Your blog has been published successfully (frontend demo).",
-    });
-  };
 
-  /* ── Success state ── */
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <main className="flex-1 pt-20 pb-24 flex items-center justify-center">
-          <div className="text-center space-y-6 max-w-md px-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-              <Sparkles size={28} className="text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">Blog Published!</h2>
-              <p className="text-sm text-muted-foreground">
-                Your blog "{form.title}" has been published to the Kollab community (frontend demo).
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                to="/blogs"
-                className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm"
-              >
-                View All Blogs
-              </Link>
-              <button
-                onClick={() => { setSubmitted(false); setForm(INITIAL); setErrors({}); }}
-                className="px-5 py-2.5 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
-              >
-                Write Another
-              </button>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+    const session = getSession();
+    if (!session?.token) {
+      navigate("/login");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await apiPost("/blogs", {
+        title: form.title,
+        excerpt: form.excerpt || undefined,
+        content: form.content,
+        tags: form.tags,
+        coverImage: form.coverData || undefined,
+      });
+
+      toast({ title: "Blog published!", description: "Your blog is now live." });
+      navigate("/blogs");
+    } catch (error: any) {
+      toast({ title: "Failed to publish", description: error?.message || "Please try again", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   /* ── Form state ── */
   return (
@@ -396,10 +388,11 @@ const CreateBlogPage = () => {
               <button
                 type="button"
                 onClick={handlePublish}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 hover:-translate-y-0.5 transition-all duration-200 shadow-sm hover:shadow-md"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 hover:-translate-y-0.5 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={isSubmitting}
               >
                 <PenLine size={15} />
-                Publish
+                {isSubmitting ? "Publishing..." : "Publish"}
               </button>
             </div>
           </div>
