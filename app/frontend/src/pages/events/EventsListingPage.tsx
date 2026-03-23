@@ -9,7 +9,7 @@ import EventsFilterBar, { type EventFilterState } from "@/components/events/Even
 import EventListCard from "@/components/events/EventListCard";
 import PaginationBar from "@/components/projects/PaginationBar";
 import { apiGet } from "@/lib/api";
-import type { EventItem } from "@/data/eventsData";
+import type { EventItem } from "@/data/eventOptions";
 
 type BackendEvent = {
   _id: string;
@@ -25,7 +25,7 @@ type BackendEvent = {
   featured?: boolean;
 };
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 50;
 
 const DEFAULT_FILTERS: EventFilterState = {
   type: "All",

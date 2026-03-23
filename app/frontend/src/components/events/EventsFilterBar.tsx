@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { EVENT_TYPES, EVENT_TAGS, EVENT_LOCATIONS, EVENT_SORT } from "@/data/eventsData";
+import { EVENT_TYPES, EVENT_TAGS, EVENT_LOCATIONS, EVENT_SORT } from "@/data/eventOptions";
 import {
   Sheet,
   SheetContent,

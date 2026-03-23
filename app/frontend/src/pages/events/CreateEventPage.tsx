@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { EVENT_TYPES } from "@/data/eventsData";
+import { EVENT_TYPES } from "@/data/eventOptions";
 import { DOMAIN_TAGS, TOOLS_TECH_TAGS, SKILLS_TAGS, ALL_EVENT_TAGS, TIMEZONE_OPTIONS } from "@/data/eventTagOptions";
 import { apiPost } from "@/lib/api";
 import { getSession } from "@/lib/authStore";

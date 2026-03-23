@@ -1,7 +1,7 @@
 import { ExternalLink, MapPin, Clock, Calendar, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { EventItem } from "@/data/eventsData";
+import type { EventItem } from "@/data/eventOptions";
 
 const TYPE_COLORS: Record<string, string> = {
   Hackathon: "bg-primary/10 text-primary border-primary/20",

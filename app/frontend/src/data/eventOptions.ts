@@ -13,14 +13,32 @@ export interface EventItem {
   description: string;
 }
 
-// Mock data removed; events now come from backend API.
-
 export const EVENT_TYPES = ["Hackathon", "Workshop", "Talk", "Webinar"] as const;
 export const EVENT_TAGS = [
-  "AI", "Machine Learning", "React", "TypeScript", "Python", "DevOps", "Docker",
-  "Blockchain", "Web3", "UX", "Design", "Cybersecurity", "Data Engineering",
-  "Mobile Dev", "Open Source", "Career", "Leadership", "Agile", "Cloud",
-  "Frontend", "Web Dev", "Research", "Beginner-friendly", "Networking",
-];
+  "AI",
+  "Machine Learning",
+  "React",
+  "TypeScript",
+  "Python",
+  "DevOps",
+  "Docker",
+  "Blockchain",
+  "Web3",
+  "UX",
+  "Design",
+  "Cybersecurity",
+  "Data Engineering",
+  "Mobile Dev",
+  "Open Source",
+  "Career",
+  "Leadership",
+  "Agile",
+  "Cloud",
+  "Frontend",
+  "Web Dev",
+  "Research",
+  "Beginner-friendly",
+  "Networking",
+] as const;
 export const EVENT_LOCATIONS = ["Virtual", "City"] as const;
 export const EVENT_SORT = ["Newest", "Soonest", "Furthest"] as const;
