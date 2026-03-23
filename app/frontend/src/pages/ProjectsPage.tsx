@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, FolderOpen } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -99,13 +99,30 @@ const ProjectsPage = () => {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
   const [projects, setProjects] = useState<ProjectCardProject[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadProjects = async () => {
       setIsLoading(true);
       try {
-        const res = await apiGet<{ success: boolean; data: { projects: BackendProject[] } }>("/projects/public");
+        const params = new URLSearchParams();
+        if (search.trim()) params.set("q", search.trim());
+        if (filters.domain !== "All") params.set("domain", filters.domain);
+        if (filters.technologies.length > 0) params.set("technologies", filters.technologies.join(","));
+        if (filters.roleType !== "All") params.set("roleType", filters.roleType);
+        if (filters.difficulty !== "All") params.set("difficulty", filters.difficulty);
+        if (filters.duration !== "All") params.set("duration", filters.duration);
+        if (filters.status !== "All") params.set("status", filters.status);
+        if (filters.tags.length > 0) params.set("tags", filters.tags.join(","));
+        if (filters.sortBy) params.set("sortBy", filters.sortBy);
+        params.set("page", String(currentPage));
+        params.set("pageSize", String(PAGE_SIZE));
+
+        const res = await apiGet<{ success: boolean; data: { projects: BackendProject[]; total: number; page: number; pageSize: number } }>(
+          `/projects/public?${params.toString()}`,
+        );
+
         const mapped = (res?.data?.projects ?? []).map((p) => ({
           id: p._id,
           title: p.title,
@@ -128,79 +145,19 @@ const ProjectsPage = () => {
           })),
         }));
         setProjects(mapped);
+        setTotalCount(res?.data?.total ?? mapped.length);
+        setCurrentPage(res?.data?.page ?? currentPage);
       } catch (err) {
         console.error("Failed to load projects", err);
         setProjects([]);
+        setTotalCount(0);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadProjects();
-  }, []);
-
-  const filteredProjects = useMemo(() => {
-    let result = [...projects];
-
-    // Search
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.summary.toLowerCase().includes(q) ||
-          p.domain.toLowerCase().includes(q) ||
-          p.technologies.some((t) => t.toLowerCase().includes(q)) ||
-          p.tags.some((t) => t.toLowerCase().includes(q)),
-      );
-    }
-
-    // Domain
-    if (filters.domain !== "All") {
-      result = result.filter((p) => p.domain === filters.domain);
-    }
-
-    // Technologies
-    if (filters.technologies.length > 0) {
-      result = result.filter((p) => filters.technologies.every((t) => p.technologies.includes(t)));
-    }
-
-    // Difficulty
-    if (filters.difficulty !== "All") {
-      result = result.filter((p) => p.difficulty === filters.difficulty);
-    }
-
-    // Duration
-    if (filters.duration !== "All") {
-      result = result.filter((p) => p.duration === filters.duration);
-    }
-
-    // Status
-    if (filters.status !== "All") {
-      result = result.filter((p) => p.status === filters.status);
-    }
-
-    // Tags
-    if (filters.tags.length > 0) {
-      result = result.filter((p) => filters.tags.some((t) => p.tags.includes(t)));
-    }
-
-    // Sort
-    if (filters.sortBy === "Newest") {
-      result.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
-    } else if (filters.sortBy === "Oldest") {
-      result.sort((a, b) => new Date(a.postedAt).getTime() - new Date(b.postedAt).getTime());
-    } else if (filters.sortBy === "Top Rated") {
-      result.sort((a, b) => (b.posterRating ?? 0) - (a.posterRating ?? 0));
-    }
-
-    return result;
-  }, [projects, search, filters]);
-
-  const paginatedProjects = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredProjects.slice(start, start + PAGE_SIZE);
-  }, [filteredProjects, currentPage]);
+  }, [search, filters, currentPage]);
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -280,8 +237,8 @@ const ProjectsPage = () => {
           {/* Results count */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">{filteredProjects.length}</span> project
-              {filteredProjects.length !== 1 ? "s" : ""} found
+              <span className="font-semibold text-foreground">{totalCount}</span> project
+              {totalCount !== 1 ? "s" : ""} found
             </p>
           </div>
 
@@ -289,17 +246,17 @@ const ProjectsPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {isLoading ? (
               <ProjectsSkeleton />
-            ) : paginatedProjects.length === 0 ? (
+            ) : projects.length === 0 ? (
               <EmptyState onClear={handleClear} />
             ) : (
-              paginatedProjects.map((project) => <ProjectCard key={project.id} project={project} />)
+              projects.map((project) => <ProjectCard key={project.id} project={project} />)
             )}
           </div>
 
           {/* Pagination */}
-          {!isLoading && filteredProjects.length > 0 && (
+          {!isLoading && totalCount > 0 && (
             <PaginationBar
-              totalItems={filteredProjects.length}
+              totalItems={totalCount}
               pageSize={PAGE_SIZE}
               currentPage={currentPage}
               onPageChange={(page) => {

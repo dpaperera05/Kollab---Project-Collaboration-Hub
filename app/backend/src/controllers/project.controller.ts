@@ -20,9 +20,89 @@ const ensureDeliverables = (val: unknown): string[] => {
   return [];
 };
 
-export const listPublicProjects = async (_req: Request, res: Response) => {
-  const projects = await Project.find({}).sort({ createdAt: -1 });
-  return res.json({ success: true, data: { projects } });
+export const listPublicProjects = async (req: Request, res: Response) => {
+  const {
+    domain,
+    technologies,
+    difficulty,
+    duration,
+    status,
+    tags,
+    roleType,
+    sortBy,
+    q,
+  } = req.query;
+
+  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize || "9"), 10) || 9, 1), 50);
+
+  const filter: Record<string, any> = {};
+
+  if (typeof domain === "string" && domain.trim() && domain !== "All") {
+    filter.domain = domain.trim();
+  }
+
+  if (typeof difficulty === "string" && difficulty.trim() && difficulty !== "All") {
+    filter.difficulty = difficulty.trim();
+  }
+
+  if (typeof duration === "string" && duration.trim() && duration !== "All") {
+    filter.duration = duration.trim();
+  }
+
+  if (typeof status === "string" && status.trim() && status !== "All") {
+    filter.status = status.trim();
+  }
+
+  if (typeof technologies === "string" && technologies.trim().length > 0) {
+    const techList = technologies
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (techList.length > 0) {
+      filter.technologies = { $all: techList };
+    }
+  }
+
+  if (typeof tags === "string" && tags.trim().length > 0) {
+    const tagList = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tagList.length > 0) {
+      filter.tags = { $in: tagList };
+    }
+  }
+
+  if (typeof roleType === "string" && roleType.trim() && roleType !== "All") {
+    filter["roles.title"] = { $regex: new RegExp(roleType.trim(), "i") };
+  }
+
+  if (typeof q === "string" && q.trim()) {
+    const regex = new RegExp(q.trim(), "i");
+    filter.$or = [
+      { title: regex },
+      { summary: regex },
+      { domain: regex },
+      { technologies: regex },
+      { tags: regex },
+    ];
+  }
+
+  const sort: Record<string, 1 | -1> = {};
+  if (sortBy === "Oldest") {
+    sort.createdAt = 1;
+  } else {
+    sort.createdAt = -1; // Newest, Most Relevant, Top Rated fallback
+  }
+
+  const total = await Project.countDocuments(filter);
+  const projects = await Project.find(filter)
+    .sort(sort)
+    .skip((page - 1) * pageSize)
+    .limit(pageSize);
+
+  return res.json({ success: true, data: { projects, total, page, pageSize } });
 };
 
 const getR2Config = () => {
