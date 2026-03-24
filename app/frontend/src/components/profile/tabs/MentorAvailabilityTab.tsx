@@ -44,24 +44,36 @@ const MentorAvailabilityTab = ({ user, onUpdate }: Props) => {
   const [draft, setDraft] = useState<AvailabilitySlot>({ date: "", startTime: "", endTime: "", timezone: defaultTz });
   const [saving, setSaving] = useState(false);
 
-  const addSlot = () => {
+  const addSlot = async () => {
     if (!draft.date || !draft.startTime || !draft.endTime) {
       toast({ title: "Missing fields", description: "Add a date, start time, and end time.", variant: "destructive" });
       return;
     }
     const newSlot: AvailabilitySlot = { ...draft, timezone: draft.timezone || defaultTz };
-    setSlots((prev) => [...prev, newSlot]);
+    const nextSlots = [...slots, newSlot];
+    setSaving(true);
+    setSlots(nextSlots);
     setDraft({ date: "", startTime: "", endTime: "", timezone: draft.timezone || defaultTz });
+    const { success, error } = await saveAvailabilitySlots(nextSlots);
+    setSaving(false);
+    if (!success) {
+      setSlots(slots);
+      toast({ title: "Failed to save", description: error || "Try again", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Availability saved" });
+    onUpdate();
   };
 
-  const removeSlot = (idx: number) => setSlots((prev) => prev.filter((_, i) => i !== idx));
-
-  const handleSave = async () => {
+  const removeSlot = async (idx: number) => {
+    const nextSlots = slots.filter((_, i) => i !== idx);
     setSaving(true);
-    const { success, error } = await saveAvailabilitySlots(slots);
+    setSlots(nextSlots);
+    const { success, error } = await saveAvailabilitySlots(nextSlots);
     setSaving(false);
     if (!success) {
       toast({ title: "Failed to save", description: error || "Try again", variant: "destructive" });
+      // best effort re-fetch via onUpdate; keep local list as-is to avoid bounce
       return;
     }
     toast({ title: "Availability updated" });
@@ -75,10 +87,6 @@ const MentorAvailabilityTab = ({ user, onUpdate }: Props) => {
           <Clock size={18} className="text-primary" />
           Availability
         </h3>
-        <Button onClick={handleSave} className="gap-2" disabled={saving}>
-          <Save size={16} />
-          {saving ? "Saving..." : "Save"}
-        </Button>
       </div>
 
       <Card className="border-border card-shadow">
@@ -114,9 +122,9 @@ const MentorAvailabilityTab = ({ user, onUpdate }: Props) => {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button variant="outline" className="gap-2" onClick={addSlot}>
+            <Button variant="outline" className="gap-2" onClick={addSlot} disabled={saving}>
               <Plus size={14} />
-              Add Slot
+              {saving ? "Saving..." : "Add Slot"}
             </Button>
           </div>
         </CardContent>
