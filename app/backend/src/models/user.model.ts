@@ -18,6 +18,13 @@ export interface IUserProfile {
   links?: { github?: string; linkedin?: string; portfolio?: string };
   availabilityHoursPerWeek?: number;
   domainInterests?: string[];
+  availabilitySlots?: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    timezone?: string;
+    note?: string;
+  }>;
 }
 
 export interface IUser extends Document {
@@ -55,6 +62,15 @@ const profileSchema = new Schema<IUserProfile>(
     },
     availabilityHoursPerWeek: { type: Number, min: 1, max: 80 },
     domainInterests: [{ type: String, trim: true }],
+    availabilitySlots: [
+      {
+        date: { type: String, trim: true },
+        startTime: { type: String, trim: true },
+        endTime: { type: String, trim: true },
+        timezone: { type: String, trim: true },
+        note: { type: String, trim: true },
+      },
+    ],
   },
   { _id: false }
 );

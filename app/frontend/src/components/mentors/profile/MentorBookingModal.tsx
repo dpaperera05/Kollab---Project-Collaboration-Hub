@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2 } from "lucide-react";
-import {type Mentor } from "@/data/mockMentors";
-import {type addBooking } from "@/lib/bookingStore";
+import { type Mentor } from "@/data/mockMentors";
+import { addBooking, requestBooking } from "@/lib/bookingStore";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -23,18 +23,54 @@ const MentorBookingModal = ({ mentor, open, onOpenChange }: MentorBookingModalPr
   const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const slotOptions = useMemo(() => {
+    if (mentor.availabilitySlots?.length) {
+      return mentor.availabilitySlots.map((s, idx) => ({
+        id: String(idx),
+        label: `${new Date(s.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} · ${s.startTime} - ${s.endTime}${s.timezone ? ` (${s.timezone})` : ""}`,
+        slot: s,
+      }));
+    }
+    return mentor.timeSlots.map((s) => ({ id: s, label: s }));
+  }, [mentor]);
+
+  const selectedLabel = useMemo(() => slotOptions.find((s) => s.id === slot)?.label || slot, [slotOptions, slot]);
+
+  const handleSubmit = async () => {
     if (!slot || !agenda.trim()) return;
-    addBooking({
-      mentorId: mentor.id,
-      mentorName: mentor.name,
-      slot,
-      agenda,
-      summary,
-      notes,
-      createdAt: new Date().toISOString(),
-    });
+
+    const hasAvailability = mentor.availabilitySlots && mentor.availabilitySlots.length > 0;
+    if (hasAvailability) {
+      const selected = slotOptions.find((s) => s.id === slot)?.slot;
+      if (!selected) return;
+      setIsSubmitting(true);
+      const { success, error } = await requestBooking({
+        mentorId: mentor.id,
+        date: selected.date,
+        time: `${selected.startTime}-${selected.endTime}${selected.timezone ? ` (${selected.timezone})` : ""}`,
+        agenda,
+        summary,
+        notes,
+      });
+      setIsSubmitting(false);
+      if (!success) {
+        toast({ title: "Booking failed", description: error || "Please try again", variant: "destructive" });
+        return;
+      }
+    } else {
+      addBooking({
+        mentorId: mentor.id,
+        mentorName: mentor.name,
+        slot,
+        agenda,
+        summary,
+        notes,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     setSubmitted(true);
     toast({ title: "Booking requested!", description: `Confirmation email sent to you and ${mentor.name}.` });
   };
@@ -55,7 +91,7 @@ const MentorBookingModal = ({ mentor, open, onOpenChange }: MentorBookingModalPr
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-foreground">Booking Requested!</h3>
               <p className="text-sm text-muted-foreground">
-                Your session with <span className="font-semibold text-foreground">{mentor.name}</span> on <span className="font-semibold text-foreground">{slot}</span> has been requested.
+                Your session with <span className="font-semibold text-foreground">{mentor.name}</span> on <span className="font-semibold text-foreground">{selectedLabel}</span> has been requested.
               </p>
             </div>
             <button onClick={() => handleClose(false)} className="mt-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
@@ -76,7 +112,7 @@ const MentorBookingModal = ({ mentor, open, onOpenChange }: MentorBookingModalPr
                 <label className="text-xs font-semibold text-foreground">Time Slot *</label>
                 <select value={slot} onChange={(e) => setSlot(e.target.value)} className="w-full h-9 pl-3 pr-8 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                   <option value="">Select a time slot</option>
-                  {mentor.timeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {slotOptions.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
@@ -91,8 +127,8 @@ const MentorBookingModal = ({ mentor, open, onOpenChange }: MentorBookingModalPr
                 <label className="text-xs font-semibold text-foreground">Notes <span className="text-muted-foreground font-normal">(optional)</span></label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any additional notes..." rows={2} className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none" />
               </div>
-              <button onClick={handleSubmit} disabled={!slot || !agenda.trim()} className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-brand-sm">
-                Request Booking
+              <button onClick={handleSubmit} disabled={!slot || !agenda.trim() || isSubmitting} className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-brand-sm">
+                {isSubmitting ? "Requesting..." : "Request Booking"}
               </button>
             </div>
           </>

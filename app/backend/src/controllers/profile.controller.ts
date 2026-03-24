@@ -30,11 +30,39 @@ const sanitizeLinks = (value?: unknown) => {
   return hasAny ? links : undefined;
 };
 
+const sanitizeAvailabilitySlots = (value?: unknown) => {
+  if (!Array.isArray(value)) return undefined;
+  const cleaned = value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const slot = entry as Record<string, unknown>;
+      const date = typeof slot.date === "string" ? slot.date.trim() : "";
+      const startTime = typeof slot.startTime === "string" ? slot.startTime.trim() : "";
+      const endTime = typeof slot.endTime === "string" ? slot.endTime.trim() : "";
+      const timezone = typeof slot.timezone === "string" ? slot.timezone.trim() : undefined;
+      const note = typeof slot.note === "string" ? slot.note.trim() : undefined;
+      if (!date || !startTime || !endTime) return null;
+      return { date, startTime, endTime, timezone, note };
+    })
+    .filter(Boolean) as Array<{ date: string; startTime: string; endTime: string; timezone?: string; note?: string }>;
+
+  return cleaned.slice(0, 50);
+};
+
 export const getMe = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   const user = await User.findById(userId);
   if (!user) return res.status(404).json({ success: false, message: "User not found" });
+  return res.json({ success: true, data: { user: toUserResponse(user) } });
+};
+
+export const getPublicProfile = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const user = await User.findById(id);
+  if (!user || user.userType !== "mentor" || user.isProfilePublic === false) {
+    return res.status(404).json({ success: false, message: "Profile not found" });
+  }
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
 
@@ -137,6 +165,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     availabilityHoursPerWeek,
     domainInterests,
     isProfilePublic,
+    availabilitySlots,
   } = req.body as Record<string, unknown>;
 
   const profile = user.profile && typeof (user.profile as any).toObject === "function"
@@ -168,6 +197,7 @@ export const updateProfile = async (req: Request, res: Response) => {
           ? Number(availabilityHoursPerWeek)
           : profile.availabilityHoursPerWeek,
     domainInterests: sanitizeStringArray(domainInterests) ?? profile.domainInterests,
+    availabilitySlots: sanitizeAvailabilitySlots(availabilitySlots) ?? profile.availabilitySlots,
   };
 
   if (

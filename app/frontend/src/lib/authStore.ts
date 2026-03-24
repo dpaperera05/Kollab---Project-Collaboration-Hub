@@ -16,6 +16,15 @@ export interface KollabUserProfile {
   links?: { github?: string; linkedin?: string; portfolio?: string };
   availabilityHoursPerWeek?: number;
   domainInterests?: string[];
+  availabilitySlots?: AvailabilitySlot[];
+}
+
+export interface AvailabilitySlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  timezone?: string;
+  note?: string;
 }
 
 export interface KollabUser {

@@ -29,6 +29,7 @@ export const toUserResponse = (user: IUser) => {
           links: user.profile.links,
           availabilityHoursPerWeek: user.profile.availabilityHoursPerWeek,
           domainInterests: user.profile.domainInterests,
+          availabilitySlots: (user.profile as any).availabilitySlots,
         }
       : undefined,
   };
