@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,17 @@ import TimePicker from "@/components/ui/time-picker";
 import { CalendarRange, Clock, MapPin, Plus, Save, Trash2 } from "lucide-react";
 import type { KollabUser, AvailabilitySlot } from "@/lib/authStore";
 import { saveAvailabilitySlots } from "@/lib/profileStore";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const Field = ({ label, icon, className, children }: { label: string; icon?: React.ReactNode; className?: string; children: React.ReactNode }) => (
+  <div className={cn("space-y-1", className)}>
+    <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+      {icon}
+      {label}
+    </label>
+    {children}
+  </div>
+);
 
 interface Props {
   user: KollabUser;
@@ -94,33 +106,42 @@ const MentorAvailabilityTab = ({ user, onUpdate }: Props) => {
         <CardHeader className="pb-4">
           <CardTitle className="text-base flex items-center gap-2"><CalendarRange size={16} className="text-primary" /> Add a slot</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Date</label>
-              <Input type="date" value={draft.date} onChange={(e) => setDraft((p) => ({ ...p, date: e.target.value }))} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Start</label>
-              <TimePicker value={draft.startTime} onChange={(val) => setDraft((p) => ({ ...p, startTime: val }))} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">End</label>
-              <TimePicker value={draft.endTime} onChange={(val) => setDraft((p) => ({ ...p, endTime: val }))} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground flex items-center gap-1"><MapPin size={12} /> Timezone</label>
-              <select
-                value={draft.timezone || ""}
-                onChange={(e) => setDraft((p) => ({ ...p, timezone: e.target.value }))}
-                className="w-full h-9 pl-3 pr-8 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">Select timezone</option>
-                {timezoneOptions.map((tz) => (
-                  <option key={tz} value={tz}>{tz}</option>
-                ))}
-              </select>
-            </div>
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 lg:grid-cols-12">
+            <Field label="Date" className="lg:col-span-3">
+              <Input
+                type="date"
+                value={draft.date}
+                onChange={(e) => setDraft((p) => ({ ...p, date: e.target.value }))}
+                className="h-11 text-base"
+              />
+            </Field>
+            <Field label="Start" className="lg:col-span-3">
+              <TimePicker
+                value={draft.startTime}
+                onChange={(val) => setDraft((p) => ({ ...p, startTime: val }))}
+                className="h-11"
+              />
+            </Field>
+            <Field label="End" className="lg:col-span-3">
+              <TimePicker
+                value={draft.endTime}
+                onChange={(val) => setDraft((p) => ({ ...p, endTime: val }))}
+                className="h-11"
+              />
+            </Field>
+            <Field label="Timezone" icon={<MapPin size={12} />} className="lg:col-span-3">
+              <Select value={draft.timezone || ""} onValueChange={(val) => setDraft((p) => ({ ...p, timezone: val }))}>
+                <SelectTrigger className="h-11 text-base">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezoneOptions.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
           </div>
           <div className="flex justify-end">
             <Button variant="outline" className="gap-2" onClick={addSlot} disabled={saving}>
