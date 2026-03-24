@@ -1,10 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { Briefcase, Layers, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { PersonProfile } from "@/data/mockPeople";
+
+export interface PeoplePerson {
+  id: string;
+  name: string;
+  avatar: string;
+  bio: string;
+  preferredRoles: string[];
+  skills: string[];
+  techStack: string[];
+  domainInterests: string[];
+  stats?: { projectsCount?: number; showcasesCount?: number };
+}
 
 interface PeopleCardProps {
-  person: PersonProfile;
+  person: PeoplePerson;
 }
 
 const PeopleCard = ({ person }: PeopleCardProps) => {
@@ -13,6 +24,9 @@ const PeopleCard = ({ person }: PeopleCardProps) => {
   const skillChips = [...person.skills, ...person.techStack]
     .filter((v, i, a) => a.indexOf(v) === i)
     .slice(0, 5);
+
+  const projects = person.stats?.projectsCount ?? 0;
+  const showcases = person.stats?.showcasesCount ?? 0;
 
   return (
     <article className="group flex flex-col rounded-2xl border border-border bg-card card-shadow hover:card-shadow-hover hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
@@ -62,11 +76,11 @@ const PeopleCard = ({ person }: PeopleCardProps) => {
       <div className="px-5 pt-4 flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Briefcase size={12} />
-          Projects: <span className="font-semibold text-foreground">{person.stats.projectsCount}</span>
+          Projects: <span className="font-semibold text-foreground">{projects}</span>
         </span>
         <span className="flex items-center gap-1">
           <Layers size={12} />
-          Showcases: <span className="font-semibold text-foreground">{person.stats.showcasesCount}</span>
+          Showcases: <span className="font-semibold text-foreground">{showcases}</span>
         </span>
       </div>
 

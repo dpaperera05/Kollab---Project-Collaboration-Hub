@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware";
-import { changePassword, getMe, updateProfile, deleteAccount, uploadAvatar, getPublicProfile } from "../controllers/profile.controller";
+import { changePassword, getMe, updateProfile, deleteAccount, uploadAvatar, getPublicProfile, listPublicMembers } from "../controllers/profile.controller";
 
 const router = Router();
 
 router.get("/public/:id", getPublicProfile);
+router.get("/members", listPublicMembers);
 router.use(authenticate);
 router.get("/me", getMe);
 router.put("/me", updateProfile);

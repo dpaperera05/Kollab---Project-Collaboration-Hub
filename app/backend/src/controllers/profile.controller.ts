@@ -66,6 +66,12 @@ export const getPublicProfile = async (req: Request, res: Response) => {
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
 
+export const listPublicMembers = async (_req: Request, res: Response) => {
+  const users = await User.find({ userType: "member", isProfilePublic: { $ne: false } });
+  const payload = users.map((u) => toUserResponse(u));
+  return res.json({ success: true, data: { users: payload } });
+};
+
 export const uploadAvatar = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
