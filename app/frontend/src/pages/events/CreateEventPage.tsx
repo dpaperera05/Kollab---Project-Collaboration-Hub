@@ -10,6 +10,7 @@ import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import TimePicker from "@/components/ui/time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -489,7 +490,7 @@ const CreateEventPage = () => {
                   {/* Start Time */}
                   <div>
                     <Label className="text-sm font-semibold">Start Time <span className="text-destructive">*</span></Label>
-                    <Input type="time" value={form.startTime} onChange={(e) => set("startTime", e.target.value)} className="mt-1.5 h-11" />
+                    <TimePicker value={form.startTime} onChange={(val) => set("startTime", val)} className="mt-1.5 h-11" />
                     <FieldError name="startTime" />
                   </div>
 
@@ -523,7 +524,7 @@ const CreateEventPage = () => {
                   {/* End Time */}
                   <div>
                     <Label className="text-sm font-semibold">End Time</Label>
-                    <Input type="time" value={form.endTime} onChange={(e) => set("endTime", e.target.value)} className="mt-1.5 h-11" />
+                    <TimePicker value={form.endTime} onChange={(val) => set("endTime", val)} className="mt-1.5 h-11" />
                   </div>
 
                   {/* Timezone */}

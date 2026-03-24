@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import TimePicker from "@/components/ui/time-picker";
 import { CalendarRange, Clock, MapPin, Plus, Save, Trash2 } from "lucide-react";
 import type { KollabUser, AvailabilitySlot } from "@/lib/authStore";
 import { saveAvailabilitySlots } from "@/lib/profileStore";
@@ -101,11 +102,11 @@ const MentorAvailabilityTab = ({ user, onUpdate }: Props) => {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold text-foreground">Start</label>
-              <Input type="time" value={draft.startTime} onChange={(e) => setDraft((p) => ({ ...p, startTime: e.target.value }))} />
+              <TimePicker value={draft.startTime} onChange={(val) => setDraft((p) => ({ ...p, startTime: val }))} />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold text-foreground">End</label>
-              <Input type="time" value={draft.endTime} onChange={(e) => setDraft((p) => ({ ...p, endTime: e.target.value }))} />
+              <TimePicker value={draft.endTime} onChange={(val) => setDraft((p) => ({ ...p, endTime: val }))} />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1"><MapPin size={12} /> Timezone</label>
