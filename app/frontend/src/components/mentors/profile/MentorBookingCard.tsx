@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2 } from "lucide-react";
 import { type Mentor } from "@/types/mentor";
-import { addBooking, requestBooking } from "@/lib/bookingStore";
+import { requestBooking } from "@/lib/bookingStore";
 import { toast } from "@/hooks/use-toast";
+import { getSession } from "@/lib/authStore";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface MentorBookingCardProps {
   mentor: Mentor;
@@ -15,6 +17,8 @@ const MentorBookingCard = ({ mentor }: MentorBookingCardProps) => {
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const slotOptions = useMemo(() => {
     if (mentor.availabilitySlots?.length) {
@@ -31,6 +35,13 @@ const MentorBookingCard = ({ mentor }: MentorBookingCardProps) => {
 
   const handleSubmit = async () => {
     if (!slot || !agenda.trim()) return;
+
+    const session = getSession();
+    if (!session?.token) {
+      toast({ title: "Login required", description: "Please login to book a session.", variant: "destructive" });
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
 
     const hasAvailability = mentor.availabilitySlots && mentor.availabilitySlots.length > 0;
     if (hasAvailability) {
@@ -51,15 +62,25 @@ const MentorBookingCard = ({ mentor }: MentorBookingCardProps) => {
         return;
       }
     } else {
-      addBooking({
+      const selected = slotOptions.find((s) => s.id === slot);
+      if (!selected) return;
+      const parts = selected.label.split("·").map((p) => p.trim());
+      const date = parts[0] || selected.label;
+      const time = parts[1] || selected.label;
+      setIsSubmitting(true);
+      const { success, error } = await requestBooking({
         mentorId: mentor.id,
-        mentorName: mentor.name,
-        slot,
+        date,
+        time,
         agenda,
         summary,
         notes,
-        createdAt: new Date().toISOString(),
       });
+      setIsSubmitting(false);
+      if (!success) {
+        toast({ title: "Booking failed", description: error || "Please try again", variant: "destructive" });
+        return;
+      }
     }
 
     setSubmitted(true);

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import type { Mentor } from "@/types/mentor";
@@ -14,6 +14,8 @@ import MentorChatWidget from "@/components/mentors/profile/MentorChatWidget";
 import { apiGet } from "@/lib/api";
 import type { KollabUser } from "@/lib/authStore";
 import { mapUserToMentor } from "@/lib/mentorMapper";
+import { getSession } from "@/lib/authStore";
+import { toast } from "@/hooks/use-toast";
 
 function getMergedReviews(mentorId: string): MentorReview[] {
   const localReviews = getLocalReviewsForMentor(mentorId);
@@ -27,6 +29,8 @@ const MentorProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [bookModalOpen, setBookModalOpen] = useState(false);
   const [reviewKey, setReviewKey] = useState(0);
+  const navigate = useNavigate();
+  const location = useLocation();
 
 
   useEffect(() => {
@@ -48,6 +52,16 @@ const MentorProfilePage = () => {
   }, [id]);
 
   const refreshReviews = useCallback(() => setReviewKey((k) => k + 1), []);
+
+  const openBookingModal = () => {
+    const session = getSession();
+    if (!session?.token) {
+      toast({ title: "Login required", description: "Please login to book a session.", variant: "destructive" });
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    setBookModalOpen(true);
+  };
 
   if (loading) {
     return (
@@ -80,7 +94,7 @@ const MentorProfilePage = () => {
           colorIndex={colorIndex}
           avgRating={avg}
           reviewCount={reviews.length}
-          onBook={() => setBookModalOpen(true)}
+          onBook={openBookingModal}
           onMessage={scrollToChat}
         />
 
