@@ -72,6 +72,45 @@ export const listPublicMembers = async (_req: Request, res: Response) => {
   return res.json({ success: true, data: { users: payload } });
 };
 
+export const getMemberProfile = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const user = await User.findById(id);
+  if (!user || user.userType !== "member" || user.isProfilePublic === false) {
+    return res.status(404).json({ success: false, message: "Profile not found" });
+  }
+
+  const [ownedProjects, memberProjects, portfolioCount, pinnedPortfolio] = await Promise.all([
+    Project.countDocuments({ ownerId: id }),
+    Project.countDocuments({ "members.userId": id }),
+    PortfolioItem.countDocuments({ userId: id, isPublished: { $ne: false } }),
+    PortfolioItem.find({ userId: id, isPublished: { $ne: false } })
+      .sort({ createdAt: -1 })
+      .limit(4),
+  ]);
+
+  const stats = {
+    projectsCount: ownedProjects + memberProjects,
+    showcasesCount: portfolioCount,
+  };
+
+  const pinnedShowcases = pinnedPortfolio.map((item) => ({
+    id: item.id,
+    title: item.title,
+    summary: item.summary || item.problem || "",
+    techStack: item.techStack || [],
+    tags: (item.techStack || []).slice(0, 4),
+  }));
+
+  return res.json({
+    success: true,
+    data: {
+      user: toUserResponse(user),
+      stats,
+      pinnedShowcases,
+    },
+  });
+};
+
 export const uploadAvatar = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -6,18 +7,75 @@ import Container from "@/components/ui/Container";
 import ProfileSidebar from "@/components/people/profile/ProfileSidebar";
 import ReadmeAboutCard from "@/components/people/profile/ReadmeAboutCard";
 import TechBadges from "@/components/people/profile/TechBadges";
-import SkillEvidenceGraph from "@/components/people/profile/SkillEvidenceGraph";
 import PinnedShowcases from "@/components/people/profile/PinnedShowcases";
-
-import ActivityTimeline from "@/components/people/profile/ActivityTimeline";
-import { mockPeople } from "@/data/mockPeople";
+import type { PersonProfile, PinnedShowcase } from "@/data/mockPeople";
+import { apiGet } from "@/lib/api";
 import NotFound from "@/pages/NotFound";
+
+type MemberProfileResponse = {
+  success: boolean;
+  data: {
+    user: any;
+    stats?: { projectsCount?: number; showcasesCount?: number };
+    pinnedShowcases?: PinnedShowcase[];
+  };
+};
 
 const PersonProfilePage = () => {
   const { id } = useParams<{ id: string }>();
-  const person = mockPeople.find((p) => p.id === id);
+  const [person, setPerson] = useState<PersonProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!person) return <NotFound />;
+  useEffect(() => {
+    if (!id) return;
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const res = await apiGet<MemberProfileResponse>(`/profile/members/${id}`);
+        const profile = res.data.user?.profile || {};
+        const name = profile.name || res.data.user?.name || "Member";
+        const avatar = profile.avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(name)}`;
+        const stats = {
+          projectsCount: res.data.stats?.projectsCount ?? 0,
+          showcasesCount: res.data.stats?.showcasesCount ?? 0,
+        };
+
+        const mapped: PersonProfile = {
+          id,
+          name,
+          avatar,
+          bio: profile.bio || "",
+          headline: profile.headline || "",
+          preferredRoles: profile.preferredRoles || [],
+          skills: profile.skills || [],
+          techStack: profile.techStack || [],
+          domainInterests: profile.domainInterests || [],
+          availabilityHoursPerWeek: profile.availabilityHoursPerWeek || 0,
+          isProfilePublic: res.data.user?.isProfilePublic !== false,
+          stats,
+          links: profile.links || {},
+          pinnedShowcases: res.data.pinnedShowcases || [],
+          skillEvidenceScores: {},
+          activity: [],
+        };
+
+        setPerson(mapped);
+        setError(null);
+      } catch (err: any) {
+        setError(err?.message || "Failed to load profile");
+        setPerson(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [id]);
+
+  const hasPinned = useMemo(() => (person?.pinnedShowcases?.length ?? 0) > 0, [person]);
+
+  if (!loading && (!person || error)) return <NotFound />;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -43,23 +101,24 @@ const PersonProfilePage = () => {
             {/* Sidebar */}
             <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0">
               <div className="lg:sticky lg:top-24">
-                <ProfileSidebar person={person} />
+                {loading || !person ? (
+                  <div className="rounded-xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">Loading profile...</div>
+                ) : (
+                  <ProfileSidebar person={person} />
+                )}
               </div>
             </aside>
 
             {/* Main content */}
             <div className="flex-1 min-w-0 space-y-6">
-              <ReadmeAboutCard person={person} />
-              <TechBadges techStack={person.techStack} />
-              {person.skillEvidenceScores && Object.keys(person.skillEvidenceScores).length > 0 && (
-                <SkillEvidenceGraph scores={person.skillEvidenceScores} />
-              )}
-              {person.pinnedShowcases && person.pinnedShowcases.length > 0 && (
-                <PinnedShowcases showcases={person.pinnedShowcases} />
-              )}
-              
-              {person.activity && person.activity.length > 0 && (
-                <ActivityTimeline activities={person.activity} />
+              {loading || !person ? (
+                <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">Loading profile...</div>
+              ) : (
+                <>
+                  <ReadmeAboutCard person={person} />
+                  <TechBadges techStack={person.techStack} />
+                  {hasPinned && <PinnedShowcases showcases={person.pinnedShowcases!} />}
+                </>
               )}
             </div>
           </div>
