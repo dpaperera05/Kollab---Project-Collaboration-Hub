@@ -31,6 +31,7 @@ type BackendProject = {
   duration?: string;
   roles?: Array<{ title: string; status?: "Open" | "Filled"; seats?: number }>;
   ownerId?: string;
+  owner?: { id?: string; name?: string; avatar?: string; rating?: number };
 };
 
 const recommendedProjects = mockProjects;
@@ -136,7 +137,8 @@ const ProjectsPage = () => {
           compensation: p.compensation,
           weeklyHours: p.weeklyHours,
           duration: p.duration,
-          posterName: p.ownerId ? "Project owner" : undefined,
+          posterName: p.owner?.name || "Project owner",
+          posterAvatar: p.owner?.avatar,
           roles: (p.roles ?? []).map((role) => ({
             title: role.title,
             status: role.status,

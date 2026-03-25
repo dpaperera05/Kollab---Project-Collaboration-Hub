@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware";
 import {
   listPublicProjects,
+  getPublicProjectById,
   listOwnedProjects,
   listJoinedProjects,
   createProject,
@@ -15,6 +16,7 @@ import {
 const router = Router();
 
 router.get("/public", listPublicProjects);
+router.get("/public/:id", getPublicProjectById);
 
 router.use(authenticate);
 router.get("/owned", listOwnedProjects);
