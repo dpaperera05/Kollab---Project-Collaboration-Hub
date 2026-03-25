@@ -13,6 +13,9 @@ const STATUS_STYLES: Record<string, string> = {
   Pending: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   Accepted: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
   Rejected: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  Completed: "bg-primary/10 text-primary border-primary/30",
+  NotCompleted: "bg-muted text-muted-foreground border-border",
+  Canceled: "bg-muted text-muted-foreground border-border",
 };
 
 type ApiBooking = {
@@ -24,7 +27,7 @@ type ApiBooking = {
   agenda?: string;
   summary?: string;
   notes?: string;
-  status: "Pending" | "Accepted" | "Rejected" | "Canceled";
+  status: "Pending" | "Accepted" | "Rejected" | "Canceled" | "Completed" | "NotCompleted";
   rejectionReason?: string;
 };
 
@@ -44,9 +47,8 @@ const BookingsMentorTab = () => {
   const [error, setError] = useState<string | null>(null);
 
   const pending = useMemo(() => bookings.filter(b => b.status === "Pending"), [bookings]);
-  const now = useMemo(() => new Date(), []);
-  const upcoming = useMemo(() => bookings.filter(b => b.status === "Accepted" && toDate(b.date) >= now), [bookings, now]);
-  const past = useMemo(() => bookings.filter(b => (b.status === "Accepted" && toDate(b.date) < now) || b.status === "Rejected" || b.status === "Canceled"), [bookings, now]);
+  const upcoming = useMemo(() => bookings.filter(b => b.status === "Accepted"), [bookings]);
+  const past = useMemo(() => bookings.filter(b => b.status === "Completed" || b.status === "NotCompleted" || b.status === "Rejected" || b.status === "Canceled"), [bookings]);
   useEffect(() => {
     const fetchBookings = async () => {
       try {
@@ -120,6 +122,13 @@ const BookingsMentorTab = () => {
               </div>
             )}
           </>
+        )}
+
+        {!showActions && b.status === "Accepted" && (
+          <div className="flex gap-2 pt-1">
+            <Button size="sm" className="gap-1" onClick={() => updateStatus(b._id, "Completed").then(() => toast({ title: "Marked completed" }))}><Check size={12} /> Completed</Button>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => updateStatus(b._id, "NotCompleted").then(() => toast({ title: "Marked not completed" }))}>Not completed</Button>
+          </div>
         )}
       </CardContent>
     </Card>

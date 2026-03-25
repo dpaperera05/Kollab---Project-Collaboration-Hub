@@ -41,6 +41,10 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
     if (!isMentor) return res.status(403).json({ success: false, message: "Only mentor can accept or reject" });
     booking.status = status;
     booking.rejectionReason = status === "Rejected" ? (typeof rejectionReason === "string" ? rejectionReason.trim() : undefined) : undefined;
+  } else if (status === "Completed" || status === "NotCompleted") {
+    if (!isMentor) return res.status(403).json({ success: false, message: "Only mentor can complete or mark not completed" });
+    booking.status = status;
+    booking.rejectionReason = undefined;
   } else if (status === "Canceled") {
     booking.status = "Canceled";
   } else {

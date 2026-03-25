@@ -1,6 +1,6 @@
 import { Schema, model, Document } from "mongoose";
 
-export type BookingStatus = "Pending" | "Accepted" | "Rejected" | "Canceled";
+export type BookingStatus = "Pending" | "Accepted" | "Rejected" | "Canceled" | "Completed" | "NotCompleted";
 
 export interface IBooking extends Document {
   memberId: string;
@@ -25,7 +25,7 @@ const bookingSchema = new Schema<IBooking>(
     agenda: { type: String, trim: true },
     summary: { type: String, trim: true },
     notes: { type: String, trim: true },
-    status: { type: String, enum: ["Pending", "Accepted", "Rejected", "Canceled"], default: "Pending" },
+    status: { type: String, enum: ["Pending", "Accepted", "Rejected", "Canceled", "Completed", "NotCompleted"], default: "Pending" },
     rejectionReason: { type: String, trim: true },
   },
   { timestamps: true }

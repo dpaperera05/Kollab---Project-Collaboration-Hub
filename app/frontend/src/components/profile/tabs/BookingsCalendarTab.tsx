@@ -23,7 +23,7 @@ type ApiBooking = {
   agenda?: string;
   summary?: string;
   notes?: string;
-  status: "Pending" | "Accepted" | "Rejected" | "Canceled";
+  status: "Pending" | "Accepted" | "Rejected" | "Canceled" | "Completed" | "NotCompleted";
 };
 
 const toDate = (dateStr: string) => {
@@ -67,11 +67,17 @@ const BookingsCalendarTab = () => {
     return days;
   }, [month]);
 
-  const bookingsByDate = useMemo(() => bookings.reduce<Record<string, ApiBooking[]>>((acc, b) => {
+  const upcomingAndPending = useMemo(() => bookings.filter(b => {
+    const isPending = b.status === "Pending";
+    const isAcceptedActive = b.status === "Accepted"; // stays until explicitly completed/not completed
+    return isPending || isAcceptedActive;
+  }), [bookings]);
+
+  const bookingsByDate = useMemo(() => upcomingAndPending.reduce<Record<string, ApiBooking[]>>((acc, b) => {
     const key = b.date;
     acc[key] = acc[key] ? [...acc[key], b] : [b];
     return acc;
-  }, {}), [bookings]);
+  }, {}), [upcomingAndPending]);
 
   const monthLabel = format(month, "MMMM yyyy");
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
