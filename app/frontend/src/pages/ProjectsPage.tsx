@@ -12,7 +12,7 @@ import PaginationBar from "@/components/projects/PaginationBar";
 import ProjectsHeroIllustration from "@/components/projects/ProjectsHeroIllustration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { mockProjects } from "@/data/mockProjects";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { getSession } from "@/lib/authStore";
 
 type BackendProject = {
@@ -102,6 +102,28 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState<ProjectCardProject[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadBookmarks = async () => {
+      const session = getSession();
+      if (!session) {
+        setBookmarkedIds([]);
+        return;
+      }
+
+      try {
+        const res = await apiGet<{ success: boolean; data?: { projects?: BackendProject[] } }>("/bookmarks");
+        const ids = (res?.data?.projects ?? []).map((p) => p._id);
+        setBookmarkedIds(ids);
+      } catch (err) {
+        console.error("Failed to load bookmarks", err);
+        setBookmarkedIds([]);
+      }
+    };
+
+    loadBookmarks();
+  }, []);
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -186,6 +208,28 @@ const ProjectsPage = () => {
     navigate("/projects/new");
   };
 
+  const handleToggleBookmark = async (projectId: string) => {
+    const session = getSession();
+    if (!session) {
+      navigate("/login");
+      return;
+    }
+
+    const isBookmarked = bookmarkedIds.includes(projectId);
+    setBookmarkedIds((prev) => (isBookmarked ? prev.filter((id) => id !== projectId) : [...prev, projectId]));
+
+    try {
+      if (isBookmarked) {
+        await apiDelete(`/bookmarks/${projectId}`);
+      } else {
+        await apiPost(`/bookmarks/${projectId}`, {});
+      }
+    } catch (err) {
+      console.error("Failed to toggle bookmark", err);
+      setBookmarkedIds((prev) => (isBookmarked ? [...prev, projectId] : prev.filter((id) => id !== projectId)));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -251,7 +295,14 @@ const ProjectsPage = () => {
             ) : projects.length === 0 ? (
               <EmptyState onClear={handleClear} />
             ) : (
-              projects.map((project) => <ProjectCard key={project.id} project={project} />)
+              projects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  bookmarked={bookmarkedIds.includes(project.id)}
+                  onToggleBookmark={() => handleToggleBookmark(project.id)}
+                />
+              ))
             )}
           </div>
 

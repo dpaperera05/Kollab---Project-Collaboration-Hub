@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, Sun, Moon, UserRound, ChevronDown, LogOut } from "lucide-react";
+import { Menu, X, Sun, Moon, UserRound, ChevronDown, LogOut, Bookmark } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Link, useLocation } from "react-router-dom";
 import Container from "@/components/ui/Container";
@@ -113,6 +113,13 @@ const Navbar = () => {
 
           {/* Desktop right actions */}
           <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+            <Link
+              to="/bookmarks"
+              className="p-2 rounded-full border border-border/70 text-muted-foreground hover:text-primary hover:border-primary/60 hover:bg-primary/5 transition-colors"
+              aria-label="Bookmarked projects"
+            >
+              <Bookmark size={18} />
+            </Link>
             {session ? (
               <div className="relative" ref={accountRef}>
                 <button
@@ -212,6 +219,13 @@ const Navbar = () => {
 
           {/* Mobile right */}
           <div className="flex lg:hidden items-center gap-2">
+            <Link
+              to="/bookmarks"
+              className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+              aria-label="Bookmarked projects"
+            >
+              <Bookmark size={18} />
+            </Link>
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"

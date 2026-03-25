@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Bookmark, BookmarkCheck, Calendar, ChevronRight, Clock, DollarSign, GraduationCap, Star } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 export type ProjectCardProject = {
   id: string;
@@ -40,11 +41,29 @@ const STATUS_CONFIG = {
 
 interface ProjectCardProps {
   project: ProjectCardProject;
+  bookmarked?: boolean;
+  onToggleBookmark?: (projectId: string, next: boolean) => Promise<void> | void;
 }
 
-const ProjectCard = ({ project }: ProjectCardProps) => {
+const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectCardProps) => {
   const navigate = useNavigate();
-  const [bookmarked, setBookmarked] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(bookmarked);
+
+  useEffect(() => {
+    setIsBookmarked(bookmarked);
+  }, [bookmarked]);
+
+  const handleBookmark = async () => {
+    const next = !isBookmarked;
+    setIsBookmarked(next);
+    try {
+      await onToggleBookmark?.(project.id, next);
+    } catch (err) {
+      // revert on failure
+      setIsBookmarked(!next);
+      console.error("Bookmark toggle failed", err);
+    }
+  };
 
   const difficultyConfig = DIFFICULTY_CONFIG[project.difficulty as keyof typeof DIFFICULTY_CONFIG] ?? DIFFICULTY_CONFIG.Beginner;
   const statusConfig = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.Open;
@@ -160,14 +179,14 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
           <ChevronRight size={13} />
         </button>
         <button
-          onClick={() => setBookmarked(!bookmarked)}
+          onClick={handleBookmark}
           className={cn(
             "h-9 w-9 flex items-center justify-center rounded-lg border transition-colors",
-            bookmarked ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
+            isBookmarked ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
           )}
-          aria-label={bookmarked ? "Remove bookmark" : "Bookmark project"}
+          aria-label={isBookmarked ? "Remove bookmark" : "Bookmark project"}
         >
-          {bookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+          {isBookmarked ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
         </button>
       </div>
 

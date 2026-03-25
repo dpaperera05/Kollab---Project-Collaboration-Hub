@@ -37,6 +37,7 @@ export interface IUser extends Document {
   onboardingStep?: string;
   isProfilePublic?: boolean;
   profile?: IUserProfile;
+  bookmarkedProjects?: string[];
 }
 
 const profileSchema = new Schema<IUserProfile>(
@@ -86,6 +87,7 @@ const userSchema = new Schema<IUser>(
     onboardingStep: { type: String, default: "/onboarding/role" },
     isProfilePublic: { type: Boolean, default: true },
     profile: { type: profileSchema, default: {} },
+    bookmarkedProjects: [{ type: Schema.Types.ObjectId, ref: "Project", index: true }],
   },
   {
     timestamps: true,
