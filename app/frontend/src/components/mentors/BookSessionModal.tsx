@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CalendarCheck, CheckCircle2 } from "lucide-react";
-import type { Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, CalendarCheck, ChevronRight, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 import BookSessionModal from "./BookSessionModal";
 
 const avatarColors = [
@@ -30,9 +30,18 @@ const MentorCard = ({ mentor, index }: MentorCardProps) => {
         <div className="p-5 space-y-3 flex-1">
           {/* Avatar + name */}
           <div className="flex items-start gap-3">
-            <div className={cn("flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br text-white text-sm font-bold shadow-brand-sm", avatarColors[colorIdx])}>
-              {mentor.avatar}
-            </div>
+            {mentor.avatarUrl ? (
+              <img
+                src={mentor.avatarUrl}
+                alt={mentor.name}
+                className="w-12 h-12 rounded-full border border-border bg-muted flex-shrink-0 object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className={cn("flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br text-white text-sm font-bold shadow-brand-sm", avatarColors[colorIdx])}>
+                {mentor.avatar}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-foreground truncate">{mentor.name}</h3>
               <p className="text-xs text-muted-foreground truncate mt-0.5">{mentor.headline}</p>

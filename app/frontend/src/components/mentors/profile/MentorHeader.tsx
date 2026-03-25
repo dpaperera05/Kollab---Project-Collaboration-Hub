@@ -1,7 +1,7 @@
 import { ArrowLeft, Star, CalendarCheck, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import type { Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 
 const avatarColors = [
   "from-violet-500 to-pink-500",

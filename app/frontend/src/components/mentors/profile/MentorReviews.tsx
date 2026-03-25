@@ -1,7 +1,7 @@
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MentorReview, getReviewsForMentor } from "@/lib/reviewStore";
-import {type Mentor } from "@/data/mockMentors";
+import {type Mentor } from "@/types/mentor";
 import AddReviewForm from "./AddReviewForm";
 import { formatDistanceToNow } from "date-fns";
 

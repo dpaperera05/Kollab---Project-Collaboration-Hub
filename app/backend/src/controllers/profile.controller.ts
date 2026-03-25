@@ -72,6 +72,12 @@ export const listPublicMembers = async (_req: Request, res: Response) => {
   return res.json({ success: true, data: { users: payload } });
 };
 
+export const listPublicMentors = async (_req: Request, res: Response) => {
+  const users = await User.find({ userType: "mentor", isProfilePublic: { $ne: false } });
+  const payload = users.map((u) => toUserResponse(u));
+  return res.json({ success: true, data: { users: payload } });
+};
+
 export const getMemberProfile = async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = await User.findById(id);

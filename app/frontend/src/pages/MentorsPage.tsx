@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GraduationCap } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -7,7 +7,10 @@ import MentorsHero from "@/components/mentors/MentorsHero";
 import MentorFilters, { type MentorFilterState } from "@/components/mentors/MentorFilters";
 import MentorCard from "@/components/mentors/MentorCard";
 import PaginationBar from "@/components/projects/PaginationBar";
-import { mockMentors, type Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
+import { apiGet } from "@/lib/api";
+import type { KollabUser } from "@/lib/authStore";
+import { mapUserToMentor } from "@/lib/mentorMapper";
 
 const PAGE_SIZE = 9;
 
@@ -42,9 +45,31 @@ const MentorsPage = () => {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<MentorFilterState>(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchMentors = async () => {
+      try {
+        setLoading(true);
+        const res = await apiGet<{ success: boolean; data: { users: KollabUser[] } }>("/profile/mentors");
+        const mapped = (res.data.users || []).map(mapUserToMentor);
+        setMentors(mapped);
+        setError(null);
+      } catch (err: any) {
+        setError(err?.message || "Failed to load mentors");
+        setMentors([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMentors();
+  }, []);
 
   const filtered = useMemo(() => {
-    let result = [...mockMentors];
+    let result = [...mentors];
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -71,7 +96,7 @@ const MentorsPage = () => {
       result = result.filter((m) => m.rate !== "Free");
 
     return result;
-  }, [search, filters]);
+  }, [search, filters, mentors]);
 
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -100,13 +125,23 @@ const MentorsPage = () => {
           {/* Results count */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">{filtered.length}</span> mentor{filtered.length !== 1 ? "s" : ""} found
+              {loading ? "Loading mentors..." : error ? (
+                <span className="text-destructive">{error}</span>
+              ) : (
+                <>
+                  <span className="font-semibold text-foreground">{filtered.length}</span> mentor{filtered.length !== 1 ? "s" : ""} found
+                </>
+              )}
             </p>
           </div>
 
           {/* Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {paginated.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full py-12 text-center text-sm text-muted-foreground">Loading mentors...</div>
+            ) : error ? (
+              <div className="col-span-full py-12 text-center text-sm text-destructive">{error}</div>
+            ) : paginated.length === 0 ? (
               <EmptyState onClear={handleClear} />
             ) : (
               paginated.map((mentor, idx) => (
