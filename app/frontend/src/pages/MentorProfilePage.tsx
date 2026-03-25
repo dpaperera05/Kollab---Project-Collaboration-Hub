@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useLayoutEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -28,12 +28,6 @@ const MentorProfilePage = () => {
   const [bookModalOpen, setBookModalOpen] = useState(false);
   const [reviewKey, setReviewKey] = useState(0);
 
-  useLayoutEffect(() => {
-    // Force scroll reset when landing on a mentor profile
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  }, [id]);
 
   useEffect(() => {
     if (!id) return;
