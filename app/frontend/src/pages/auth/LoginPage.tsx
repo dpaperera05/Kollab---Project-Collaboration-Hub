@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,7 +67,9 @@ const LoginPage = () => {
     } else if (!(result.user as any).onboardingCompleted) {
       navigate((result.user as any).onboardingStep || "/onboarding/role");
     } else {
-      navigate("/profile");
+      const locationState = location.state as { from?: string } | null;
+      const redirectTo = locationState?.from || "/profile";
+      navigate(redirectTo, { replace: true });
     }
   };
 
