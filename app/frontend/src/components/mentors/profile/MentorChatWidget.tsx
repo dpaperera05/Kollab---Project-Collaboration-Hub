@@ -33,10 +33,11 @@ interface MentorChatWidgetProps {
 const MentorChatWidget = ({ mentorId, mentorName }: MentorChatWidgetProps) => {
   const [messages, setMessages] = useState<MentorMessage[]>(() => getMessages(mentorId));
   const [text, setText] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
   }, [messages]);
 
   const handleSend = () => {
@@ -62,7 +63,7 @@ const MentorChatWidget = ({ mentorId, mentorName }: MentorChatWidgetProps) => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+      <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
         {messages.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-6">No messages yet. Say hello!</p>
         )}
@@ -77,7 +78,6 @@ const MentorChatWidget = ({ mentorId, mentorName }: MentorChatWidgetProps) => {
             </div>
           </div>
         ))}
-        <div ref={endRef} />
       </div>
 
       {/* Input */}
