@@ -4,12 +4,21 @@ import { cn } from "@/lib/utils";
 import type { Project } from "@/data/mockProjects";
 import { Separator } from "@/components/ui/separator";
 
-const PROJECT_TYPE_CONFIG = {
-  "Real-world": { color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800" },
-  "Coursework": { color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800" },
-  "Hackathon": { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800" },
-  "Practice": { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800" },
+const PROJECT_TYPE_CONFIG: Record<string, { color: string; bg: string }> = {
+  "Real-World Project": { color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800" },
+  "Startup / Product Idea": { color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800" },
+  "Hackathon Project": { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800" },
+  "Open Source Contribution": { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800" },
+  "Practice / Learning Project": { color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800" },
+  "Research Project": { color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800" },
+  "Prototype / MVP": { color: "text-fuchsia-600 dark:text-fuchsia-400", bg: "bg-fuchsia-50 dark:bg-fuchsia-950/40 border-fuchsia-200 dark:border-fuchsia-800" },
+  "Competition Project": { color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800" },
+  "Freelance Client Project": { color: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800" },
+  "Experimental / Exploration": { color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800" },
+  "Community / Social Impact Project": { color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800" },
 };
+
+const DEFAULT_TYPE_CONFIG = { color: "text-muted-foreground", bg: "bg-muted/50 border-border" };
 
 interface ProjectOverviewProps {
   project: Project;
@@ -35,7 +44,8 @@ const MetaChip = ({
 );
 
 const ProjectOverview = ({ project }: ProjectOverviewProps) => {
-  const typeConfig = PROJECT_TYPE_CONFIG[project.projectType];
+  const typeConfig = PROJECT_TYPE_CONFIG[project.projectType] ?? DEFAULT_TYPE_CONFIG;
+  const safeDuration = project.duration ? project.duration.replace("-", " ") : "Not specified";
 
   return (
     <section className="space-y-7">
@@ -84,7 +94,7 @@ const ProjectOverview = ({ project }: ProjectOverviewProps) => {
           </div>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Duration</p>
-            <p className="text-sm font-medium text-foreground capitalize">{project.duration.replace("-", " ")}</p>
+            <p className="text-sm font-medium text-foreground capitalize">{safeDuration}</p>
           </div>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Time / Week</p>
