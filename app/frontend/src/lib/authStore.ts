@@ -1,3 +1,5 @@
+import { buildApiUrl } from "./apiConfig";
+
 export interface KollabUserProfile {
   name?: string;
   bio?: string;
@@ -45,8 +47,6 @@ export interface KollabUser {
 type LoginResult =
   | { success: true; user: KollabUser }
   | { success: false; error: string };
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 type RegisterResult =
   | { success: true; user: KollabUser }
@@ -105,7 +105,7 @@ const clearVerificationToken = () => {
 
 export async function login(email: string, password: string): Promise<LoginResult> {
   try {
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await fetch(buildApiUrl("/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -150,7 +150,7 @@ export async function register(
   userType: "member" | "mentor"
 ): Promise<RegisterResult> {
   try {
-    const response = await fetch(`${API_BASE}/auth/register`, {
+    const response = await fetch(buildApiUrl("/auth/register"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, userType }),
@@ -225,7 +225,7 @@ export async function verifyEmail(code: string): Promise<VerifyResult> {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/auth/verify-email`, {
+    const response = await fetch(buildApiUrl("/auth/verify-email"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: session.email, code, verificationToken }),
@@ -305,7 +305,7 @@ export function updateUserProfile(partial: Partial<KollabUserProfile>): void {
 
   const headers = getAuthHeaders();
   if (!headers) return;
-  void fetch(`${API_BASE}/onboarding/me`, {
+  void fetch(buildApiUrl("/onboarding/me"), {
     method: "PUT",
     headers,
     body: JSON.stringify({ ...partial }),
@@ -332,7 +332,7 @@ export function setOnboardingStep(step: string): void {
 
   const headers = getAuthHeaders();
   if (!headers) return;
-  void fetch(`${API_BASE}/onboarding/me`, {
+  void fetch(buildApiUrl("/onboarding/me"), {
     method: "PUT",
     headers,
     body: JSON.stringify({ onboardingStep: step }),
@@ -359,7 +359,7 @@ export function setOnboardingCompleted(): void {
 
   const headers = getAuthHeaders();
   if (!headers) return;
-  void fetch(`${API_BASE}/onboarding/complete`, {
+  void fetch(buildApiUrl("/onboarding/complete"), {
     method: "POST",
     headers,
   })
