@@ -16,6 +16,9 @@ type Applicant = {
   role: string;
   motivation?: string;
   links?: { github?: string; linkedin?: string };
+  evidenceLinks?: string[];
+  resumeUrl?: string;
+  resumeName?: string;
   status: "pending" | "approved" | "rejected";
   rejectionReason?: string;
 };

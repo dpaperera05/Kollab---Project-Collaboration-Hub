@@ -219,6 +219,39 @@ const uploadPosterToR2 = async (base64: string) => {
   return { imageUrl, key } as const;
 };
 
+const uploadResumeToR2 = async (base64: string, originalName?: string) => {
+  const cfg = getR2Config();
+  if (!cfg) throw new Error("R2 not configured");
+
+  const base64Match = base64.match(/^data:(.+);base64,(.+)$/);
+  const base64Data = base64Match ? base64Match[2] : base64;
+  const contentType = base64Match?.[1] || "application/pdf";
+
+  if (contentType !== "application/pdf") {
+    throw new Error("Resume must be a PDF");
+  }
+
+  const buffer = Buffer.from(base64Data, "base64");
+  if (buffer.byteLength > 8 * 1024 * 1024) {
+    throw new Error("Resume too large (max 8MB)");
+  }
+
+  const safeName = (originalName || "resume.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const key = `resumes/${Date.now()}-${Math.floor(Math.random() * 10000)}-${safeName.endsWith(".pdf") ? safeName : `${safeName}.pdf`}`;
+  await cfg.client.send(new PutObjectCommand({
+    Bucket: cfg.bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+  }));
+
+  const url = cfg.publicBase
+    ? `${cfg.publicBase.replace(/\/$/, "")}/${key}`
+    : `https://${cfg.bucket}.r2.cloudflarestorage.com/${key}`;
+
+  return { url, key } as const;
+};
+
 const deleteR2Object = async (key?: string) => {
   const cfg = getR2Config();
   if (!cfg || !key) return;
@@ -386,18 +419,57 @@ export const updateApplicant = async (req: Request, res: Response) => {
 export const addApplicant = async (req: Request, res: Response) => {
   const userId = req.userId;
   const { id } = req.params;
-  const { name, role, motivation, links, applicantId } = req.body || {};
+  const { name, role, motivation, links, applicantId, resumeFile, resumeName, confirmed } = req.body || {};
+
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   const project = await Project.findById(id);
   if (!project) return res.status(404).json({ success: false, message: "Project not found" });
-  if (!name || !role) return res.status(400).json({ success: false, message: "Name and role are required" });
+
+  if (project.status === "Filled") {
+    return res.status(400).json({ success: false, message: "Project is not accepting applicants" });
+  }
+
+  if (!role || typeof role !== "string") {
+    return res.status(400).json({ success: false, message: "Role is required" });
+  }
+  if (!motivation || typeof motivation !== "string" || motivation.trim().length < 20) {
+    return res.status(400).json({ success: false, message: "Motivation must be at least 20 characters" });
+  }
+  if (!confirmed) {
+    return res.status(400).json({ success: false, message: "You must agree to the terms" });
+  }
+
+  const evidenceLinks = ensureStringArray(links).filter((l) => /^https?:\/\//i.test(l));
+  if (evidenceLinks.length === 0) {
+    return res.status(400).json({ success: false, message: "At least one evidence link is required" });
+  }
+
+  if (!resumeFile || typeof resumeFile !== "string") {
+    return res.status(400).json({ success: false, message: "Resume PDF is required" });
+  }
+
+  const user = await User.findById(userId, "name email profile.name").lean();
+  const applicantName = typeof name === "string" && name.trim()
+    ? name.trim()
+    : (user?.profile?.name || user?.name || user?.email || "Applicant");
+
+  let resumeUpload: { url: string; key?: string } | null = null;
+  try {
+    resumeUpload = await uploadResumeToR2(resumeFile, resumeName);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err?.message || "Resume upload failed" });
+  }
+
   project.applicants.push({
     id: applicantId || `app-${Date.now()}`,
     userId,
-    name,
+    name: applicantName,
     role,
-    motivation,
-    links,
+    motivation: motivation.trim(),
+    evidenceLinks,
+    resumeUrl: resumeUpload.url,
+    resumeKey: resumeUpload.key,
+    resumeName: resumeName || "resume.pdf",
     status: "pending",
   });
   await project.save();

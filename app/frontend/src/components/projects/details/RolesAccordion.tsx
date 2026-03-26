@@ -19,10 +19,11 @@ const STATUS_CONFIG = {
 interface RoleCardProps {
   role: ProjectRole;
   projectTitle: string;
+  projectId: string;
   defaultOpen?: boolean;
 }
 
-const RoleCard = ({ role, projectTitle, defaultOpen = false }: RoleCardProps) => {
+const RoleCard = ({ role, projectTitle, projectId, defaultOpen = false }: RoleCardProps) => {
   const [open, setOpen] = useState(defaultOpen);
   const [applyOpen, setApplyOpen] = useState(false);
 
@@ -148,6 +149,7 @@ const RoleCard = ({ role, projectTitle, defaultOpen = false }: RoleCardProps) =>
         onClose={() => setApplyOpen(false)}
         roleTitle={role.title}
         projectTitle={projectTitle}
+        projectId={projectId}
       />
     </>
   );
@@ -156,9 +158,10 @@ const RoleCard = ({ role, projectTitle, defaultOpen = false }: RoleCardProps) =>
 interface RolesAccordionProps {
   roles: ProjectRole[];
   projectTitle: string;
+  projectId: string;
 }
 
-const RolesAccordion = ({ roles, projectTitle }: RolesAccordionProps) => {
+const RolesAccordion = ({ roles, projectTitle, projectId }: RolesAccordionProps) => {
   const openRoles = roles.filter((r) => r.status === "Open").length;
 
   return (
@@ -178,6 +181,7 @@ const RolesAccordion = ({ roles, projectTitle }: RolesAccordionProps) => {
             key={i}
             role={role}
             projectTitle={projectTitle}
+            projectId={projectId}
             defaultOpen={i === 0 && role.status === "Open"}
           />
         ))}
