@@ -159,6 +159,7 @@ const ProjectsPage = () => {
           compensation: p.compensation,
           weeklyHours: p.weeklyHours,
           duration: p.duration,
+          posterImage: p.posterImage,
           posterName: p.owner?.name || "Project owner",
           posterAvatar: p.owner?.avatar,
           roles: (p.roles ?? []).map((role) => ({

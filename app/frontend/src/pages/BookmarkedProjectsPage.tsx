@@ -87,6 +87,7 @@ const BookmarkedProjectsPage = () => {
           compensation: p.compensation,
           weeklyHours: p.weeklyHours,
           duration: p.duration,
+          posterImage: p.posterImage,
           posterName: p.owner?.name || "Project owner",
           posterAvatar: p.owner?.avatar,
           posterRating: p.owner?.rating,

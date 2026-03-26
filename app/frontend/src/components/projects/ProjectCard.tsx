@@ -18,6 +18,7 @@ export type ProjectCardProject = {
   compensation?: string;
   weeklyHours?: number;
   duration?: string;
+  posterImage?: string;
   posterName?: string;
   posterAvatar?: string;
   posterRating?: number;
@@ -68,7 +69,7 @@ const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectC
   const difficultyConfig = DIFFICULTY_CONFIG[project.difficulty as keyof typeof DIFFICULTY_CONFIG] ?? DIFFICULTY_CONFIG.Beginner;
   const statusConfig = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.Open;
   const topTechs = (project.technologies ?? []).slice(0, 3);
-  const displayedRoles = (project.roles ?? []).slice(0, 3);
+  const displayedRoles = (project.roles ?? []).slice(0, 2);
   const postedAgo = formatDistanceToNow(new Date(project.postedAt), { addSuffix: true });
   const timeLabel = project.weeklyHours ? `${project.weeklyHours} hrs/week` : project.timeCommitment ?? "Time commitment TBD";
   const durationLabel = project.duration ?? "Duration TBD";
@@ -76,9 +77,23 @@ const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectC
   const posterName = project.posterName || "Project team";
   const posterInitial = (posterName[0] || "?").toUpperCase();
 
+  const posterSrc = project.posterImage || project.posterAvatar;
+
   return (
     <article className="group flex flex-col rounded-2xl border border-border bg-card card-shadow hover:card-shadow-hover hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
-      <div className="p-5 pb-0 space-y-3">
+      {posterSrc && (
+        <div className="relative w-full h-32 overflow-hidden">
+          <img
+            src={posterSrc}
+            alt={`${project.title} poster`}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
+        </div>
+      )}
+
+      <div className="p-4 pb-0 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             {project.posterAvatar ? (
@@ -126,11 +141,11 @@ const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectC
         </div>
       </div>
 
-      <div className="px-5 pt-3">
+      <div className="px-4 pt-2">
         <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{project.summary}</p>
       </div>
 
-      <div className="px-5 pt-3 flex flex-wrap gap-x-3 gap-y-1.5">
+      <div className="px-4 pt-2 flex flex-wrap gap-x-3 gap-y-1.5">
         <MetaItem icon={<Clock size={12} />} label={timeLabel} />
         <MetaItem icon={<GraduationCap size={12} />} label={durationLabel} />
         <MetaItem
@@ -149,7 +164,7 @@ const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectC
         </div>
       </div>
 
-      <div className="px-5 pt-3 space-y-1.5">
+      <div className="px-4 pt-2 space-y-1.5">
         {displayedRoles.map((role, i) => {
           const filled = role.filled ?? 0;
           const total = role.total ?? role.seats ?? 0;
@@ -170,7 +185,7 @@ const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectC
 
       <div className="flex-1" />
 
-      <div className="px-5 pt-4 pb-4 flex items-center gap-2">
+      <div className="px-4 pt-3 pb-3 flex items-center gap-2">
         <button
           onClick={() => navigate(`/projects/${project.id}`)}
           className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-brand-sm"
@@ -190,7 +205,7 @@ const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectC
         </button>
       </div>
 
-      <div className="px-5 pb-4 flex items-center justify-between gap-3 border-t border-border pt-3">
+      <div className="px-4 pb-3 flex items-center justify-between gap-3 border-t border-border pt-3">
         <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
           <Calendar size={11} />
           <span>Posted {postedAgo}</span>
