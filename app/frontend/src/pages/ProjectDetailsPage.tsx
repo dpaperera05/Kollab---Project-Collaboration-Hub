@@ -258,6 +258,7 @@ const ProjectDetailsPage = () => {
               <div className="lg:hidden space-y-4">
                 <OwnerCard owner={project.owner} />
                 <MessageOwnerWidget
+                  ownerId={project.owner.id}
                   ownerName={project.owner.name}
                   ownerAvatar={project.owner.avatar}
                 />
@@ -269,6 +270,7 @@ const ProjectDetailsPage = () => {
             <aside className="hidden lg:flex flex-col gap-4 sticky top-24">
               <OwnerCard owner={project.owner} />
               <MessageOwnerWidget
+                ownerId={project.owner.id}
                 ownerName={project.owner.name}
                 ownerAvatar={project.owner.avatar}
               />

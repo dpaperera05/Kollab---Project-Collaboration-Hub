@@ -28,14 +28,23 @@ export const createChat = async (req: Request, res: Response) => {
   const { participantId, participantName } = req.body || {};
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   if (!participantId) return res.status(400).json({ success: false, message: "participantId is required" });
+  if (participantId === userId) return res.status(400).json({ success: false, message: "Cannot create chat with yourself" });
+  const participants = [userId, participantId].sort();
+  const conversationKey = participants.join(":");
 
-  const existing = await Chat.findOne({ participantIds: { $all: [userId, participantId] } });
-  if (existing) return res.json({ success: true, data: { chat: existing } });
+  // Atomic upsert to avoid duplicate docs when multiple requests fire
+  const chat = await Chat.findOneAndUpdate(
+    { conversationKey },
+    {
+      $setOnInsert: {
+        participantIds: participants,
+        participantNames: participantName ? { [participantId]: participantName } : undefined,
+        conversationKey,
+        messages: [],
+      },
+    },
+    { new: true, upsert: true }
+  );
 
-  const chat = await Chat.create({
-    participantIds: [userId, participantId],
-    participantNames: participantName ? { [participantId]: participantName } : undefined,
-    messages: [],
-  });
   return res.status(201).json({ success: true, data: { chat } });
 };
