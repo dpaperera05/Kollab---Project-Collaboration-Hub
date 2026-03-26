@@ -245,13 +245,13 @@ const ProjectDetailsPage = () => {
 
               <Separator />
 
-              {/* Roles */}
-              <RolesAccordion roles={project.roles} projectTitle={project.title} projectId={project.id} />
+              {/* Team */}
+              <TeamRow members={project.teamMembers} />
 
               <Separator />
 
-              {/* Team */}
-              <TeamRow members={project.teamMembers} />
+              {/* Roles */}
+              <RolesAccordion roles={project.roles} projectTitle={project.title} projectId={project.id} />
 
               <Separator />
 
