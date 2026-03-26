@@ -14,6 +14,7 @@ const ProfilePage = () => {
   useEffect(() => {
     const s = getSession();
     if (!s) { navigate("/login", { replace: true }); return; }
+    if (!s.isEmailVerified) { navigate("/verify-email", { replace: true }); return; }
     if (!s.onboardingCompleted && s.onboardingStep) {
       navigate(s.onboardingStep, { replace: true }); return;
     }

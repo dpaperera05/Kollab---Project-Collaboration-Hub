@@ -26,6 +26,10 @@ export function checkOnboardingAccess(currentPath: string): OnboardingGuardResul
     return { status: "redirect", to: "/login" };
   }
 
+  if (!session.isEmailVerified) {
+    return { status: "redirect", to: "/verify-email" };
+  }
+
   const isOnboardingRoute = ONBOARDING_ROUTES.some((r) => currentPath.startsWith(r));
   const completed = !!(session as any).onboardingCompleted;
   const currentStep: string = (session as any).onboardingStep || "/onboarding/role";
