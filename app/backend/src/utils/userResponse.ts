@@ -2,7 +2,7 @@ import { IUser } from "../models/user.model";
 
 export const toUserResponse = (user: IUser) => {
   return {
-    id: user.id,
+    id: user._id?.toString?.() ?? (user as any).id,
     name: user.name,
     email: user.email,
     userType: user.userType,
