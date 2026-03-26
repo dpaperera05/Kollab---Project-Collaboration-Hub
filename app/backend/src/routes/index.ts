@@ -9,6 +9,7 @@ import blogRoutes from "./blog.routes";
 import eventRoutes from "./event.routes";
 import chatRoutes from "./chat.routes";
 import bookmarkRoutes from "./bookmark.routes";
+import newsletterRoutes from "./newsletter.routes";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.use("/portfolio", portfolioRoutes);
 router.use("/bookings", bookingRoutes);
 router.use("/projects", projectRoutes);
 router.use("/bookmarks", bookmarkRoutes);
+router.use("/newsletter", newsletterRoutes);
 router.use("/blogs", blogRoutes);
 router.use("/events", eventRoutes);
 router.use("/chats", chatRoutes);

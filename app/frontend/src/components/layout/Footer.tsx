@@ -3,6 +3,7 @@ import { Github, Twitter, Linkedin, Youtube, ArrowRight, Send } from "lucide-rea
 import { Link } from "react-router-dom";
 import Container from "@/components/ui/Container";
 import KollabLogo from "@/components/ui/KollabLogo";
+import { apiPost } from "@/lib/api";
 
 const discoverLinks = [
 { label: "Projects", href: "/projects" },
@@ -62,13 +63,32 @@ const FooterLinkGroup = ({
 const Footer = () => {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    setSubscribed(true);
-    setEmail("");
-    setTimeout(() => setSubscribed(false), 3000);
+    const trimmed = email.trim();
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    if (!trimmed || !isValidEmail) {
+      setError("Please enter a valid email address.");
+      setSubscribed(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      await apiPost("/newsletter/subscribe", { email: trimmed });
+      setSubscribed(true);
+      setEmail("");
+      setTimeout(() => setSubscribed(false), 3000);
+    } catch (err) {
+      console.error("Failed to subscribe", err);
+      setError("Could not subscribe right now. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -122,21 +142,27 @@ const Footer = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors" />
+                  className="flex-1 min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  aria-label="Email address"
+                />
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 shadow-brand-sm transition-all duration-150 disabled:opacity-50"
                   aria-label="Subscribe">
 
                   <Send size={14} />
                 </button>
               </div>
-              {subscribed &&
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              {error && (
+                <p className="text-xs text-destructive font-medium">{error}</p>
+              )}
+              {subscribed && !error && (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                   ✓ You're subscribed!
                 </p>
-              }
+              )}
             </form>
 
             {/* Socials */}
