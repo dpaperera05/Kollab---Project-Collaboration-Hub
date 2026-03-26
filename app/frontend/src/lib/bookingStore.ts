@@ -1,25 +1,26 @@
-const STORAGE_KEY = "kollab_bookings";
+import { apiPost } from "./api";
+import { getSession } from "./authStore";
 
-export interface Booking {
+export interface BookingRequest {
   mentorId: string;
-  mentorName: string;
-  slot: string;
+  date: string;
+  time: string;
   agenda: string;
-  summary: string;
-  notes: string;
-  createdAt: string;
+  summary?: string;
+  notes?: string;
 }
 
-export function getBookings(): Booking[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-  catch { return []; }
-}
+export async function requestBooking(payload: BookingRequest): Promise<{ success: boolean; error?: string }> {
+  const session = getSession();
+  if (!session?.token) {
+    return { success: false, error: "Login required" };
+  }
 
-export function getBookingsForMentor(mentorId: string): Booking[] {
-  return getBookings().filter((b) => b.mentorId === mentorId);
-}
-
-export function addBooking(booking: Booking): void {
-  const all = getBookings();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([booking, ...all]));
+  try {
+    await apiPost<{ success: boolean; data: { booking: unknown } }>("/bookings", payload);
+    return { success: true };
+  } catch (err: any) {
+    const message = err?.message || "Failed to create booking";
+    return { success: false, error: message };
+  }
 }

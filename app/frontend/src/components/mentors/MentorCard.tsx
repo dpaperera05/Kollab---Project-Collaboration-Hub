@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Star, CalendarCheck, ChevronRight, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 import BookSessionModal from "./BookSessionModal";
+import { getSession } from "@/lib/authStore";
+import { toast } from "@/hooks/use-toast";
 
 const avatarColors = [
   "from-violet-500 to-pink-500",
@@ -21,8 +23,19 @@ interface MentorCardProps {
 
 const MentorCard = ({ mentor, index }: MentorCardProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [bookOpen, setBookOpen] = useState(false);
   const colorIdx = index % avatarColors.length;
+
+  const handleBookClick = () => {
+    const session = getSession();
+    if (!session?.token) {
+      toast({ title: "Login required", description: "Please login to book a session.", variant: "destructive" });
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    setBookOpen(true);
+  };
 
   return (
     <>
@@ -30,9 +43,18 @@ const MentorCard = ({ mentor, index }: MentorCardProps) => {
         <div className="p-5 space-y-3 flex-1">
           {/* Avatar + name */}
           <div className="flex items-start gap-3">
-            <div className={cn("flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br text-white text-sm font-bold shadow-brand-sm", avatarColors[colorIdx])}>
-              {mentor.avatar}
-            </div>
+            {mentor.avatarUrl ? (
+              <img
+                src={mentor.avatarUrl}
+                alt={mentor.name}
+                className="w-12 h-12 rounded-full border border-border bg-muted flex-shrink-0 object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className={cn("flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br text-white text-sm font-bold shadow-brand-sm", avatarColors[colorIdx])}>
+                {mentor.avatar}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-foreground truncate">{mentor.name}</h3>
               <p className="text-xs text-muted-foreground truncate mt-0.5">{mentor.headline}</p>
@@ -88,7 +110,7 @@ const MentorCard = ({ mentor, index }: MentorCardProps) => {
         {/* CTA buttons */}
         <div className="px-5 pb-5 flex items-center gap-2">
           <button
-            onClick={() => setBookOpen(true)}
+            onClick={handleBookClick}
             className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-brand-sm"
           >
             <CalendarCheck size={13} />

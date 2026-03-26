@@ -1,6 +1,6 @@
 import { Star, CalendarCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockMentors, type Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 
 const avatarColors = [
   "from-violet-500 to-pink-500",
@@ -11,8 +11,8 @@ const avatarColors = [
   "from-indigo-500 to-violet-500",
 ];
 
-const RecommendedMentorsCarousel = ({ onBook }: { onBook: (mentor: Mentor) => void }) => {
-  const recommended = mockMentors.filter((m) => m.rating >= 4.8).slice(0, 6);
+const RecommendedMentorsCarousel = ({ mentors, onBook }: { mentors: Mentor[]; onBook: (mentor: Mentor) => void }) => {
+  const recommended = mentors.filter((m) => m.rating >= 4.8).slice(0, 6);
 
   return (
     <div className="space-y-3">
@@ -26,9 +26,18 @@ const RecommendedMentorsCarousel = ({ onBook }: { onBook: (mentor: Mentor) => vo
             className="flex-shrink-0 w-56 rounded-xl border border-border bg-card p-4 space-y-2 card-shadow hover:card-shadow-hover hover:-translate-y-0.5 transition-all duration-200"
           >
             <div className="flex items-center gap-2.5">
-              <div className={cn("w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold", avatarColors[idx % avatarColors.length])}>
-                {m.avatar}
-              </div>
+              {m.avatarUrl ? (
+                <img
+                  src={m.avatarUrl}
+                  alt={m.name}
+                  className="w-9 h-9 rounded-full border border-border object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className={cn("w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold", avatarColors[idx % avatarColors.length])}>
+                  {m.avatar}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-xs font-bold text-foreground truncate">{m.name}</p>
                 <div className="flex items-center gap-1">

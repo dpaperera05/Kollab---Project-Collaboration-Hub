@@ -1,4 +1,4 @@
-import type { Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 
 const MentorAbout = ({ mentor }: { mentor: Mentor }) => (
   <div className="rounded-xl border border-border bg-card p-6 space-y-3">

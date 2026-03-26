@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { mockMentors } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 import { getLocalReviewsForMentor, getAverageRating, type MentorReview } from "@/lib/reviewStore";
 import MentorHeader from "@/components/mentors/profile/MentorHeader";
 import MentorAbout from "@/components/mentors/profile/MentorAbout";
@@ -11,32 +11,73 @@ import MentorBookingCard from "@/components/mentors/profile/MentorBookingCard";
 import MentorBookingModal from "@/components/mentors/profile/MentorBookingModal";
 import MentorReviews from "@/components/mentors/profile/MentorReviews";
 import MentorChatWidget from "@/components/mentors/profile/MentorChatWidget";
+import { apiGet } from "@/lib/api";
+import type { KollabUser } from "@/lib/authStore";
+import { mapUserToMentor } from "@/lib/mentorMapper";
+import { getSession } from "@/lib/authStore";
+import { toast } from "@/hooks/use-toast";
 
 function getMergedReviews(mentorId: string): MentorReview[] {
-  const mentor = mockMentors.find((m) => m.id === mentorId);
-  const mockReviews: MentorReview[] = (mentor?.reviews || []).map((r) => ({
-    id: r.id,
-    mentorId,
-    reviewerName: r.name,
-    rating: r.rating,
-    comment: r.comment,
-    createdAt: r.date,
-  }));
   const localReviews = getLocalReviewsForMentor(mentorId);
-  return [...localReviews, ...mockReviews];
+  return [...localReviews];
 }
+
 
 const MentorProfilePage = () => {
   const { id } = useParams<{ id: string }>();
-  const mentor = mockMentors.find((m) => m.id === id);
+  const [mentor, setMentor] = useState<Mentor | null>(null);
+  const [loading, setLoading] = useState(true);
   const [bookModalOpen, setBookModalOpen] = useState(false);
   const [reviewKey, setReviewKey] = useState(0);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+
+  useEffect(() => {
+    if (!id) return;
+
+    const loadMentor = async () => {
+      setLoading(true);
+      try {
+        const response = await apiGet<{ success: boolean; data: { user: KollabUser } }>(`/profile/public/${id}`);
+        setMentor(mapUserToMentor(response.data.user));
+      } catch (err) {
+        setMentor(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadMentor();
+  }, [id]);
 
   const refreshReviews = useCallback(() => setReviewKey((k) => k + 1), []);
 
+  const openBookingModal = () => {
+    const session = getSession();
+    if (!session?.token) {
+      toast({ title: "Login required", description: "Please login to book a session.", variant: "destructive" });
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    setBookModalOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <main className="flex-1 pt-20 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading mentor...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!mentor) return <Navigate to="/mentors" replace />;
 
-  const colorIndex = mockMentors.indexOf(mentor);
+  const colorIndex = Math.abs(mentor.id?.charCodeAt(0) || 0);
   const reviews = getMergedReviews(mentor.id);
   const { avg } = getAverageRating(reviews, mentor.rating);
 
@@ -53,7 +94,7 @@ const MentorProfilePage = () => {
           colorIndex={colorIndex}
           avgRating={avg}
           reviewCount={reviews.length}
-          onBook={() => setBookModalOpen(true)}
+          onBook={openBookingModal}
           onMessage={scrollToChat}
         />
 

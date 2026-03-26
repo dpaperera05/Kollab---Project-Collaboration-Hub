@@ -1,5 +1,5 @@
 import { Globe } from "lucide-react";
-import type { Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 
 const MentorExpertise = ({ mentor }: { mentor: Mentor }) => (
   <div className="rounded-xl border border-border bg-card p-6 space-y-5">

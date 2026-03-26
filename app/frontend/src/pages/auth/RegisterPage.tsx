@@ -18,41 +18,58 @@ const RegisterPage = () => {
   const [userType, setUserType] = useState<"member" | "mentor" | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    userType?: string;
+    form?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
 
-  const validate = (): string | null => {
-    if (!email.trim()) return "Email is required.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-      return "Please enter a valid email address.";
-    if (email.trim().length > 255) return "Email must be less than 255 characters.";
-    if (!password) return "Password is required.";
-    if (password.length < 8)
-      return "Password must be at least 8 characters.";
-    if (password !== confirmPassword)
-      return "Passwords do not match.";
-    if (!userType) return "Please select a user type.";
-    return null;
+  const validateAll = () => {
+    const emailError = !email.trim()
+      ? "Email is required."
+      : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+        ? "Please enter a valid email address."
+        : email.trim().length > 255
+          ? "Email must be less than 255 characters."
+          : undefined;
+
+    const passwordError = !password
+      ? "Password is required."
+      : password.length < 8
+        ? "Password must be at least 8 characters."
+        : undefined;
+
+    const confirmError = confirmPassword !== password ? "Passwords do not match." : undefined;
+
+    const typeError = !userType ? "Please select a user type." : undefined;
+
+    const nextErrors = {
+      email: emailError,
+      password: passwordError,
+      confirmPassword: confirmError,
+      userType: typeError,
+    };
+
+    setErrors((prev) => ({ ...prev, ...nextErrors, form: undefined }));
+    return nextErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    const validationErrors = validateAll();
+    if (Object.values(validationErrors).some(Boolean)) return;
 
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
 
-    const result = register(email.trim(), password, userType!);
+    const result = await register(email.trim(), password, userType!);
     setLoading(false);
 
     if (!result.success) {
-      setError((result as { success: false; error: string }).error);
+      setErrors({ form: (result as { success: false; error: string }).error });
       return;
     }
 
@@ -92,13 +109,6 @@ const RegisterPage = () => {
             </p>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
@@ -112,9 +122,21 @@ const RegisterPage = () => {
                 autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmail(value);
+                  const nextError = !value.trim()
+                    ? "Email is required."
+                    : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+                      ? "Please enter a valid email address."
+                      : value.trim().length > 255
+                        ? "Email must be less than 255 characters."
+                        : undefined;
+                  setErrors((prev) => ({ ...prev, email: nextError, form: undefined }));
+                }}
                 className="h-12 rounded-xl bg-background/60 text-base placeholder:text-muted-foreground/60 focus-visible:ring-primary"
               />
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
 
             {/* Password */}
@@ -129,7 +151,17 @@ const RegisterPage = () => {
                   autoComplete="new-password"
                   placeholder="Min. 8 characters"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPassword(value);
+                    const pwdError = !value
+                      ? "Password is required."
+                      : value.length < 8
+                        ? "Password must be at least 8 characters."
+                        : undefined;
+                    const confirmError = confirmPassword && confirmPassword !== value ? "Passwords do not match." : undefined;
+                    setErrors((prev) => ({ ...prev, password: pwdError, confirmPassword: confirmError, form: undefined }));
+                  }}
                   className="h-12 rounded-xl bg-background/60 pr-11 text-base placeholder:text-muted-foreground/60 focus-visible:ring-primary"
                 />
                 <button
@@ -141,6 +173,7 @@ const RegisterPage = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
             </div>
 
             {/* Confirm Password */}
@@ -155,7 +188,12 @@ const RegisterPage = () => {
                   autoComplete="new-password"
                   placeholder="Re-enter your password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setConfirmPassword(value);
+                    const confirmError = value && value !== password ? "Passwords do not match." : undefined;
+                    setErrors((prev) => ({ ...prev, confirmPassword: confirmError, form: undefined }));
+                  }}
                   className="h-12 rounded-xl bg-background/60 pr-11 text-base placeholder:text-muted-foreground/60 focus-visible:ring-primary"
                 />
                 <button
@@ -167,6 +205,7 @@ const RegisterPage = () => {
                   {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
             </div>
 
             {/* User Type Selector */}
@@ -179,7 +218,10 @@ const RegisterPage = () => {
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setUserType(type)}
+                    onClick={() => {
+                      setUserType(type);
+                      setErrors((prev) => ({ ...prev, userType: undefined, form: undefined }));
+                    }}
                     className={cn(
                       "relative flex flex-col items-center gap-1.5 rounded-xl border-2 px-4 py-4 text-sm font-semibold transition-all duration-200",
                       userType === type
@@ -199,7 +241,14 @@ const RegisterPage = () => {
                   </button>
                 ))}
               </div>
+              {errors.userType && <p className="text-xs text-destructive">{errors.userType}</p>}
             </div>
+
+            {errors.form && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {errors.form}
+              </div>
+            )}
 
             <Button
               type="submit"

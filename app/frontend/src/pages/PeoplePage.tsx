@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Users } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -9,7 +9,8 @@ import PeopleCard from "@/components/people/PeopleCard";
 
 import PeopleHeroIllustration from "@/components/people/PeopleHeroIllustration";
 import PaginationBar from "@/components/projects/PaginationBar";
-import { mockPeople } from "@/data/mockPeople";
+import type { PeoplePerson } from "@/components/people/PeopleCard";
+import { apiGet } from "@/lib/api";
 
 const PAGE_SIZE = 9;
 
@@ -44,9 +45,44 @@ const PeoplePage = () => {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<PeopleFilterState>(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
+  const [people, setPeople] = useState<PeoplePerson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPeople = async () => {
+      try {
+        setLoading(true);
+        const res = await apiGet<{ success: boolean; data: { users: any[] } }>("/profile/members");
+        const mapped = (res.data.users || []).map((u) => {
+          const profile = u.profile || {};
+          const name = profile.name || u.name || "Member";
+          const avatar = profile.avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(name)}`;
+          return {
+            id: u.id,
+            name,
+            avatar,
+            bio: profile.bio || "",
+            preferredRoles: profile.preferredRoles || [],
+            skills: profile.skills || [],
+            techStack: profile.techStack || [],
+            domainInterests: profile.domainInterests || [],
+            stats: { projectsCount: 0, showcasesCount: 0 },
+          } as PeoplePerson;
+        });
+        setPeople(mapped);
+        setError(null);
+      } catch (err: any) {
+        setError(err?.message || "Failed to load members");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPeople();
+  }, []);
 
   const filtered = useMemo(() => {
-    let result = [...mockPeople];
+    let result = [...people];
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -71,7 +107,7 @@ const PeoplePage = () => {
       result = result.filter((p) => filters.domainInterests.some((d) => p.domainInterests.includes(d)));
 
     return result;
-  }, [search, filters]);
+  }, [search, filters, people]);
 
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -131,14 +167,26 @@ const PeoplePage = () => {
           {/* Results count */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">{filtered.length}</span> member
-              {filtered.length !== 1 ? "s" : ""} found
+              {loading ? (
+                "Loading members..."
+              ) : error ? (
+                <span className="text-destructive">{error}</span>
+              ) : (
+                <>
+                  <span className="font-semibold text-foreground">{filtered.length}</span> member
+                  {filtered.length !== 1 ? "s" : ""} found
+                </>
+              )}
             </p>
           </div>
 
           {/* Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {paginated.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full py-12 text-center text-sm text-muted-foreground">Loading members...</div>
+            ) : error ? (
+              <div className="col-span-full py-12 text-center text-sm text-destructive">{error}</div>
+            ) : paginated.length === 0 ? (
               <EmptyState onClear={handleClear} />
             ) : (
               paginated.map((person) => <PeopleCard key={person.id} person={person} />)

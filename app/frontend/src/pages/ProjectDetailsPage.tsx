@@ -8,8 +8,9 @@ import Container from "@/components/ui/Container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 
-import { mockProjects, type Project } from "@/data/mockProjects";
+import { mockProjects, type Project, type ProjectRole, type TeamMember } from "@/data/mockProjects";
 import { getAllProjects } from "@/lib/localProjects";
+import { apiGet } from "@/lib/api";
 import ProjectHero from "@/components/projects/details/ProjectHero";
 import ProjectOverview from "@/components/projects/details/ProjectOverview";
 import RolesAccordion from "@/components/projects/details/RolesAccordion";
@@ -84,12 +85,127 @@ const ProjectDetailsPage = () => {
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null | "loading">("loading");
 
+  type BackendRole = {
+    id?: string;
+    title: string;
+    responsibilities?: string[];
+    requiredSkills?: string[];
+    niceToHaveSkills?: string[];
+    level?: "Junior" | "Intermediate" | "Senior";
+    seats?: number;
+    status?: "Open" | "Filled";
+  };
+
+  type BackendProject = {
+    _id: string;
+    id?: string;
+    title: string;
+    summary: string;
+    problemStatement?: string;
+    deliverables?: string[];
+    projectType: string;
+    domain: string;
+    technologies?: string[];
+    difficulty: "Beginner" | "Intermediate" | "Advanced" | string;
+    duration?: string;
+    weeklyHours?: number;
+    compensation?: string;
+    posterImage?: string;
+    tags?: string[];
+    status: "Open" | "Ongoing" | "Filled" | "Finished";
+    roles?: BackendRole[];
+    members?: Array<{ userId: string; role?: string; status?: string; name?: string; avatar?: string }>;
+    owner?: { id?: string; name?: string; avatar?: string; title?: string; rating?: number; projectsPosted?: number };
+    postedAt?: string;
+    createdAt?: string;
+  };
+
+  const adaptRole = (role: BackendRole): ProjectRole => ({
+    title: role.title,
+    level: role.level || "Junior",
+    skills: role.requiredSkills || [],
+    niceToHave: role.niceToHaveSkills || [],
+    responsibilities: role.responsibilities || [],
+    filled: role.status === "Filled" ? (role.seats || 1) : 0,
+    total: role.seats || 1,
+    status: role.status || "Open",
+  });
+
+  const adaptMembers = (members?: BackendProject["members"]): TeamMember[] => {
+    if (!members || members.length === 0) return [];
+    return members.map((m, idx) => ({
+      id: m.userId || `member-${idx}`,
+      name: m.name || "Team member",
+      avatar: m.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.name || "Member")}`,
+      role: m.role || "Contributor",
+    }));
+  };
+
+  const adaptProject = (p: BackendProject): Project => ({
+    id: p.id || p._id,
+    title: p.title,
+    posterAvatar: p.owner?.avatar || "https://api.dicebear.com/7.x/initials/svg?seed=Owner",
+    posterName: p.owner?.name || "Project Owner",
+    posterRating: p.owner?.rating || 4.8,
+    owner: {
+      id: p.owner?.id || p.owner?.id || "owner",
+      name: p.owner?.name || "Project Owner",
+      avatar: p.owner?.avatar || "https://api.dicebear.com/7.x/initials/svg?seed=Owner",
+      rating: p.owner?.rating || 4.8,
+      title: p.owner?.title || "Project Owner",
+      projectsPosted: p.owner?.projectsPosted || 1,
+    },
+    domain: p.domain as Project["domain"],
+    difficulty: (p.difficulty as Project["difficulty"]) || "Intermediate",
+    status: p.status,
+    projectType: p.projectType as Project["projectType"],
+    summary: p.summary,
+    description: p.summary,
+    problemStatement: p.problemStatement || p.summary,
+    deliverables: p.deliverables || [],
+    duration: (p.duration as Project["duration"]) || "short-term",
+    timeCommitment: p.weeklyHours ? `${p.weeklyHours} hrs/week` : "5-8 hrs/week",
+    technologies: p.technologies || [],
+    location: "Remote",
+    compensation: (p.compensation as Project["compensation"]) || "None",
+    roles: (p.roles || []).map(adaptRole),
+    teamMembers: adaptMembers(p.members),
+    relatedProjectIds: [],
+    mentorLinked: false,
+    postedAt: p.postedAt || p.createdAt || new Date().toISOString(),
+    tags: p.tags || [],
+    posterImage: p.posterImage || "/src/assets/posters/poster-resume-ai.jpg",
+  });
+
   useEffect(() => {
-    setProject("loading");
-    const allProjects = getAllProjects(mockProjects);
-    const found = allProjects.find((p) => p.id === id) ?? null;
-    const timer = setTimeout(() => setProject(found), 350);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    const load = async () => {
+      setProject("loading");
+      try {
+        if (!id) {
+          setProject(null);
+          return;
+        }
+        const res = await apiGet<{ success: boolean; data: { project: BackendProject } }>(`/projects/public/${id}`);
+        if (!cancelled && res?.data?.project) {
+          setProject(adaptProject(res.data.project));
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to load project", err);
+      }
+
+      if (!cancelled) {
+        const allProjects = getAllProjects(mockProjects);
+        const fallback = allProjects.find((p) => p.id === id) ?? null;
+        setProject(fallback);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   useEffect(() => {

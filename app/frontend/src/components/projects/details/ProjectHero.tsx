@@ -1,9 +1,7 @@
-import { useState } from "react";
-import { Bookmark, BookmarkCheck, Share2, Check, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/data/mockProjects";
-import { toast } from "@/hooks/use-toast";
 
 const STATUS_CONFIG = {
   Open: { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/20 border-emerald-400/40", dot: "bg-emerald-500" },
@@ -23,18 +21,8 @@ interface ProjectHeroProps {
 }
 
 const ProjectHero = ({ project }: ProjectHeroProps) => {
-  const [bookmarked, setBookmarked] = useState(false);
-  const [copied, setCopied] = useState(false);
-
   const statusConfig = STATUS_CONFIG[project.status];
   const diffConfig = DIFFICULTY_CONFIG[project.difficulty];
-
-  const handleShare = async () => {
-    await navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    toast({ title: "Link copied!", description: "Project link copied to clipboard." });
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <div className="relative w-full overflow-hidden" style={{ minHeight: 300 }}>
@@ -92,29 +80,6 @@ const ProjectHero = ({ project }: ProjectHeroProps) => {
             </span>
           </div>
 
-          {/* Right: action buttons */}
-          <div className="flex items-center gap-2.5 flex-shrink-0">
-            <button
-              onClick={() => setBookmarked(!bookmarked)}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border backdrop-blur-sm transition-all duration-200",
-                bookmarked
-                  ? "bg-primary/40 border-primary/60 text-white"
-                  : "bg-white/10 border-white/25 text-white hover:bg-white/20"
-              )}
-              aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
-            >
-              {bookmarked ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-              <span className="hidden sm:inline">{bookmarked ? "Saved" : "Save"}</span>
-            </button>
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 border border-white/25 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-200"
-            >
-              {copied ? <Check size={16} /> : <Share2 size={16} />}
-              <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>

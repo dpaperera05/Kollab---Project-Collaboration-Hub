@@ -1,7 +1,7 @@
 import { ArrowLeft, Star, CalendarCheck, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import type { Mentor } from "@/data/mockMentors";
+import type { Mentor } from "@/types/mentor";
 
 const avatarColors = [
   "from-violet-500 to-pink-500",
@@ -39,9 +39,15 @@ const MentorHeader = ({ mentor, colorIndex, avgRating, reviewCount, onBook, onMe
         {/* Profile row */}
         <div className="pb-6 flex flex-col sm:flex-row sm:items-center gap-5">
           {/* Avatar */}
-          <div className={cn("flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white text-2xl font-bold shadow-brand", avatarColors[colorIndex % avatarColors.length])}>
-            {mentor.avatar}
-          </div>
+          {mentor.avatarUrl ? (
+            <div className="flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden shadow-brand">
+              <img src={mentor.avatarUrl} alt={mentor.name} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className={cn("flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white text-2xl font-bold shadow-brand", avatarColors[colorIndex % avatarColors.length])}>
+              {mentor.avatar}
+            </div>
+          )}
 
           {/* Info */}
           <div className="flex-1 min-w-0 space-y-1.5">

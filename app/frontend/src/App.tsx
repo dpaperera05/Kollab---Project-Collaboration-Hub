@@ -25,6 +25,7 @@ import CreateEventPage from "@/pages/events/CreateEventPage";
 import BlogsPage from "@/pages/BlogsPage";
 import BlogDetailPage from "@/pages/BlogDetailPage";
 import CreateBlogPage from "@/pages/blogs/CreateBlogPage";
+import BookmarkedProjectsPage from "./pages/BookmarkedProjectsPage";
 
 //Auth related webpages
 import LoginPage from "./pages/auth/LoginPage";
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
             <Route path="/projects/new" element={<PostProjectPage />} />
+            <Route path="/bookmarks" element={<BookmarkedProjectsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/portfolio/:id" element={<PortfolioShowcasePage />} />
             <Route path="/projects/:id/workspace" element={<ProjectWorkspacePage />} />

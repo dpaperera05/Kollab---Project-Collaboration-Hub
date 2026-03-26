@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, CalendarSearch } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -8,9 +8,24 @@ import EventsHeroIllustration from "@/components/events/EventsHeroIllustration";
 import EventsFilterBar, { type EventFilterState } from "@/components/events/EventsFilterBar";
 import EventListCard from "@/components/events/EventListCard";
 import PaginationBar from "@/components/projects/PaginationBar";
-import { mockEvents } from "@/data/eventsData";
+import { apiGet } from "@/lib/api";
+import type { EventItem } from "@/data/eventOptions";
 
-const PAGE_SIZE = 6;
+type BackendEvent = {
+  _id: string;
+  title: string;
+  type: string;
+  coverImage?: string;
+  dateTime: string;
+  locationType: string;
+  city?: string;
+  tags?: string[];
+  externalLink?: string;
+  description?: string;
+  featured?: boolean;
+};
+
+const PAGE_SIZE = 50;
 
 const DEFAULT_FILTERS: EventFilterState = {
   type: "All",
@@ -18,6 +33,25 @@ const DEFAULT_FILTERS: EventFilterState = {
   location: "All",
   sortBy: "Soonest",
   dateRange: "All",
+};
+
+const mapEvent = (ev: BackendEvent): EventItem => {
+  const start = ev.dateTime ? new Date(ev.dateTime) : new Date();
+  const daysLeft = Math.max(0, Math.ceil((start.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  return {
+    id: ev._id,
+    title: ev.title,
+    type: ev.type as EventItem["type"],
+    coverImage: ev.coverImage || "",
+    startDateTimeUTC: ev.dateTime,
+    locationType: (ev.locationType as EventItem["locationType"]) || "Virtual",
+    city: ev.city,
+    tags: ev.tags || [],
+    externalUrl: ev.externalLink || "#",
+    description: ev.description || "",
+    featured: Boolean(ev.featured),
+    daysLeft,
+  };
 };
 
 const EmptyState = ({ onClear }: { onClear: () => void }) => (
@@ -43,37 +77,45 @@ const EmptyState = ({ onClear }: { onClear: () => void }) => (
 const EventsListingPage = () => {
   const [filters, setFilters] = useState<EventFilterState>(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const filtered = useMemo(() => {
-    let result = [...mockEvents];
-
-    if (filters.type !== "All") result = result.filter((e) => e.type === filters.type);
-    if (filters.location !== "All") result = result.filter((e) => e.locationType === filters.location);
-    if (filters.tags.length > 0) result = result.filter((e) => filters.tags.some((t) => e.tags.includes(t)));
-
-    // Date range
-    if (filters.dateRange === "This week") {
-      result = result.filter((e) => e.daysLeft <= 7);
-    } else if (filters.dateRange === "This month") {
-      result = result.filter((e) => e.daysLeft <= 31);
-    }
-
-    // Sort
-    if (filters.sortBy === "Newest") {
-      result.sort((a, b) => b.daysLeft - a.daysLeft);
-    } else if (filters.sortBy === "Soonest") {
-      result.sort((a, b) => a.daysLeft - b.daysLeft);
-    } else if (filters.sortBy === "Furthest") {
-      result.sort((a, b) => b.daysLeft - a.daysLeft);
-    }
-
-    return result;
-  }, [filters]);
+  const [events, setEvents] = useState<ReturnType<typeof mapEvent>[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+    return events.slice(start, start + PAGE_SIZE);
+  }, [events, currentPage]);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (filters.type !== "All") params.set("type", filters.type);
+        if (filters.location !== "All") params.set("location", filters.location);
+        if (filters.tags.length > 0) params.set("tags", filters.tags.join(","));
+        if (filters.sortBy) params.set("sortBy", filters.sortBy);
+        if (filters.dateRange && filters.dateRange !== "All") params.set("dateRange", filters.dateRange);
+
+        params.set("page", String(currentPage));
+        params.set("pageSize", String(PAGE_SIZE));
+
+        const res = await apiGet<{ success: boolean; data: { events: BackendEvent[]; total: number; page: number; pageSize: number } }>(`/events/public?${params.toString()}`);
+        const mapped = (res?.data?.events ?? []).map(mapEvent);
+        setEvents(mapped);
+        setTotalCount(res?.data?.total ?? mapped.length);
+        setCurrentPage(res?.data?.page ?? currentPage);
+      } catch (err) {
+        console.error("Failed to load events", err);
+        setEvents([]);
+        setTotalCount(0);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
+  }, [filters, currentPage]);
 
   const handleFilterChange = (f: EventFilterState) => { setFilters(f); setCurrentPage(1); };
   const handleClear = () => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); };
@@ -118,11 +160,13 @@ const EventsListingPage = () => {
 
           {/* Count */}
           <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{filtered.length}</span> event{filtered.length !== 1 ? "s" : ""} found
+            <span className="font-semibold text-foreground">{totalCount}</span> event{totalCount !== 1 ? "s" : ""} found
           </p>
 
           {/* List */}
-          {paginated.length === 0 ? (
+          {isLoading ? (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">Loading events...</div>
+          ) : paginated.length === 0 ? (
             <EmptyState onClear={handleClear} />
           ) : (
             <div className="space-y-4">
@@ -133,9 +177,9 @@ const EventsListingPage = () => {
           )}
 
           {/* Pagination */}
-          {filtered.length > PAGE_SIZE && (
+          {totalCount > PAGE_SIZE && (
             <PaginationBar
-              totalItems={filtered.length}
+              totalItems={totalCount}
               pageSize={PAGE_SIZE}
               currentPage={currentPage}
               onPageChange={(page) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }); }}

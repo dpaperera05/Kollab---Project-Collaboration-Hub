@@ -1,77 +1,44 @@
-import { useState } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Calendar, MessageCircle, BookOpen } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { mockBlogs, type ContentBlock } from "@/data/blogsData";
-import { mockBlogComments, type BlogComment } from "@/data/blogComments";
+import { type BlogDetail } from "@/data/blogsData";
+import { apiGet } from "@/lib/api";
 
-/* ── Content Block Renderer ─────────────────────────────── */
+type BlogComment = {
+  id: string;
+  blogId: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+};
 
-const BlogContentRenderer = ({ blocks }: { blocks: ContentBlock[] }) => (
-  <div className="space-y-6">
-    {blocks.map((block, i) => {
-      switch (block.type) {
-        case "heading":
-          return (
-            <h2 key={i} className="text-2xl font-bold text-foreground mt-10 first:mt-0">
-              {block.text}
-            </h2>
-          );
-        case "paragraph":
-          return (
-            <p key={i} className="text-base text-foreground/85 leading-[1.85] ">
-              {block.text}
-            </p>
-          );
-        case "list":
-          return (
-            <ul key={i} className="space-y-2 pl-1">
-              {block.items.map((item, j) => (
-                <li key={j} className="flex gap-2.5 text-base text-foreground/85 leading-relaxed">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          );
-        case "image":
-          return (
-            <figure key={i} className="my-8">
-              <img
-                src={block.src}
-                alt={block.alt}
-                className="w-full rounded-xl object-cover max-h-[420px]"
-                loading="lazy"
-              />
-              {block.alt && (
-                <figcaption className="mt-2 text-xs text-muted-foreground text-center italic">
-                  {block.alt}
-                </figcaption>
-              )}
-            </figure>
-          );
-        case "quote":
-          return (
-            <blockquote
-              key={i}
-              className="border-l-4 border-primary/40 pl-5 py-3 my-8 bg-primary/[0.03] rounded-r-lg"
-            >
-              <p className="text-base italic text-foreground/80 leading-relaxed">"{block.text}"</p>
-              {block.cite && (
-                <cite className="block mt-2 text-sm text-muted-foreground not-italic">— {block.cite}</cite>
-              )}
-            </blockquote>
-          );
-        default:
-          return null;
-      }
-    })}
-  </div>
-);
+/* ── Content Renderer ───────────────────────────────────── */
+
+const BlogContentRenderer = ({ content }: { content?: string }) => {
+  if (!content) {
+    return <p className="text-sm text-muted-foreground">No content available for this blog.</p>;
+  }
+
+  const paragraphs = content
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-6">
+      {paragraphs.map((text, i) => (
+        <p key={i} className="text-base text-foreground/85 leading-[1.85] whitespace-pre-line">
+          {text}
+        </p>
+      ))}
+    </div>
+  );
+};
 
 /* ── Comment Item ───────────────────────────────────────── */
 
@@ -105,8 +72,7 @@ const CommentItem = ({ comment }: { comment: BlogComment }) => {
 /* ── Comments Section ───────────────────────────────────── */
 
 const BlogCommentsSection = ({ blogId }: { blogId: string }) => {
-  const initial = mockBlogComments.filter((c) => c.blogId === blogId);
-  const [comments, setComments] = useState<BlogComment[]>(initial);
+  const [comments, setComments] = useState<BlogComment[]>([]);
   const [text, setText] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -197,9 +163,46 @@ const BlogNotFound = () => (
 
 const BlogDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const blog = mockBlogs.find((b) => b.id === id);
+  const [blog, setBlog] = useState<BlogDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!blog) return <BlogNotFound />;
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchBlog = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await apiGet<{
+          success: boolean;
+          data: { blog: BlogDetail };
+        }>(`/blogs/public/${id}`);
+        setBlog(response.data.blog);
+      } catch (err: any) {
+        setError(err?.message || "Failed to load blog");
+        setBlog(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBlog();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <main className="flex-1 pt-20 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading blog...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!blog || error) return <BlogNotFound />;
 
   const dateStr = new Date(blog.publishedAt).toLocaleDateString("en-US", {
     month: "long",
@@ -213,11 +216,15 @@ const BlogDetailPage = () => {
       <main className="flex-1 pt-16">
         {/* Hero header with cover image */}
         <div className="relative w-full h-[320px] sm:h-[400px] lg:h-[440px] overflow-hidden">
-          <img
-            src={blog.coverImage}
-            alt={blog.title}
-            className="w-full h-full object-cover"
-          />
+          {blog.coverImage ? (
+            <img
+              src={blog.coverImage}
+              alt={blog.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/25 via-primary/10 to-accent/20" />
+          )}
           {/* Subtle overlay for readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
 
@@ -235,7 +242,7 @@ const BlogDetailPage = () => {
             <div className="space-y-3 max-w-3xl">
               {/* Tags */}
               <div className="flex flex-wrap gap-1.5">
-                {blog.tags.map((tag) => (
+                {(blog.tags || []).map((tag) => (
                   <Badge
                     key={tag}
                     className="bg-white/15 backdrop-blur-sm text-white border-white/20 text-[11px] font-medium px-2.5 py-0.5 rounded-md hover:bg-white/25"
@@ -282,7 +289,7 @@ const BlogDetailPage = () => {
           <div className="max-w-3xl mx-auto space-y-12">
             {/* Content */}
             <article>
-              <BlogContentRenderer blocks={blog.contentBlocks} />
+              <BlogContentRenderer content={blog.content} />
             </article>
 
             {/* Divider */}

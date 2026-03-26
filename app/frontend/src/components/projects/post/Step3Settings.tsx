@@ -11,9 +11,33 @@ export interface SettingsData {
 }
 
 const SUGGESTED_TAGS = [
-  "Hackathon", "Real-world", "Beginner-friendly", "Open Source",
-  "Research", "Paid", "Remote", "AI", "Career-Tech", "Data",
-  "Robotics", "IoT", "Advanced", "Short-term",
+  "Beginner Friendly",
+  "Intermediate",
+  "Advanced",
+  "Team Project",
+  "Solo Project",
+  "Looking for Team",
+  "Mentor Needed",
+  "Short-Term",
+  "Long-Term",
+  "Flexible",
+  "In Progress",
+  "Completed",
+  "Actively Hiring",
+  "Urgent Roles",
+  "Open for Contributions",
+  "Portfolio Project",
+  "Resume Booster",
+  "Industry Relevant",
+  "Startup Potential",
+  "Learning Project",
+  "Skill Building",
+  "Experimental",
+  "Remote",
+  "Hybrid",
+  "In-Person",
+  "Innovative",
+  "AI-Powered",
 ];
 
 interface Props {

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSession } from "@/lib/authStore";
+import { getSession, setSession, type KollabUser } from "@/lib/authStore";
+import { apiGet } from "@/lib/api";
 import Navbar from "@/components/layout/Navbar";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import MemberTabs from "@/components/profile/tabs/MemberTabs";
@@ -22,7 +23,27 @@ const ProfilePage = () => {
     setSessionState(s);
   }, [navigate]);
 
-  const refresh = () => setSessionState(getSession());
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const res = await apiGet<{ success: boolean; data: { user: KollabUser } }>("/profile/me");
+      const apiUser = res?.data?.user;
+      if (apiUser?.id) {
+        const session = getSession();
+        const merged = session ? { ...session, ...apiUser } : apiUser;
+        setSession(merged);
+        setSessionState(merged);
+      }
+    } catch {
+      // ignore; keep existing session
+    }
+  }, []);
+
+  useEffect(() => {
+    // Pull latest profile (including availability slots) from backend on load
+    void refreshFromServer();
+  }, [refreshFromServer]);
+
+  const refresh = () => { void refreshFromServer(); };
 
   if (!session) return null;
 

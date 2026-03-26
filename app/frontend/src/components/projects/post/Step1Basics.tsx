@@ -30,12 +30,62 @@ export interface BasicsData {
 }
 
 const ALL_TECHS = [
-  "React", "Vue", "Angular", "Next.js", "TypeScript", "JavaScript",
-  "Node.js", "Python", "FastAPI", "Django", "Flask", "Java", "Spring",
-  "Go", "Rust", "C++", "TensorFlow", "PyTorch", "OpenAI", "LangChain",
-  "PostgreSQL", "MongoDB", "MySQL", "Redis", "Docker", "Kubernetes",
-  "AWS", "GCP", "Azure", "TailwindCSS", "GraphQL", "REST", "MQTT",
-  "ROS2", "Arduino", "Raspberry Pi", "Solidity", "Web3", "React Native",
+  "React",
+  "Next.js",
+  "Vue.js",
+  "Nuxt.js",
+  "Angular",
+  "Svelte",
+  "HTML",
+  "CSS",
+  "JavaScript",
+  "TypeScript",
+  "Tailwind CSS",
+  "Bootstrap",
+  "Node.js",
+  "Express.js",
+  "NestJS",
+  "Django",
+  "Flask",
+  "FastAPI",
+  "Laravel",
+  "Spring Boot",
+  "ASP.NET Core",
+  "PHP",
+  "Java",
+  "Python",
+  "C#",
+  "Go",
+  "React Native",
+  "Flutter",
+  "Kotlin",
+  "Swift",
+  "MongoDB",
+  "PostgreSQL",
+  "SQLite",
+  "Firebase",
+  "Supabase",
+  "Redis",
+  "Oracle Database",
+  "TensorFlow",
+  "PyTorch",
+  "Scikit-learn",
+  "OpenCV",
+  "Pandas",
+  "NumPy",
+  "Hugging Face",
+  "LangChain",
+  "R",
+  "Jupyter",
+  "MATLAB",
+  "Docker",
+  "Kubernetes",
+  "AWS",
+  "Azure",
+  "Netlify",
+  "Render",
+  "Figma",
+  "Adobe XD",
 ];
 
 const DOMAINS = [
@@ -43,10 +93,22 @@ const DOMAINS = [
   "Data Science", "Cybersecurity", "Web Dev", "Mobile Dev",
 ];
 
-const PROJECT_TYPES = ["Real-world", "Coursework", "Hackathon", "Practice"];
+const PROJECT_TYPES = [
+  "Real-World Project",
+  "Startup / Product Idea",
+  "Hackathon Project",
+  "Open Source Contribution",
+  "Practice / Learning Project",
+  "Research Project",
+  "Prototype / MVP",
+  "Competition Project",
+  "Freelance Client Project",
+  "Experimental / Exploration",
+  "Community / Social Impact Project",
+];
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 const DURATIONS = ["short-term", "long-term"];
-const COMPENSATIONS = ["None", "Paid", "Symbolic"];
+const COMPENSATIONS = ["None", "Paid"];
 
 interface Props {
   initialData: BasicsData | null;
@@ -130,6 +192,18 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
   const set = (key: keyof BasicsData, val: unknown) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  const handleTitleChange = (value: string) => {
+    const cleaned = value.replace(/[0-9]/g, "");
+    set("title", cleaned);
+    if (!cleaned.trim()) {
+      setErrors((er) => ({ ...er, title: "Project title is required." }));
+    } else if (cleaned.length !== value.length) {
+      setErrors((er) => ({ ...er, title: "Numbers are not allowed in the title." }));
+    } else {
+      setErrors((er) => ({ ...er, title: undefined }));
+    }
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -138,11 +212,31 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
     setErrors((er) => ({ ...er, posterFile: undefined }));
   };
 
+  const handleSummaryChange = (value: string) => {
+    set("summary", value);
+    setErrors((er) => ({ ...er, summary: value.trim() ? undefined : "Summary is required." }));
+  };
+
+  const handleProblemChange = (value: string) => {
+    set("problemStatement", value);
+    setErrors((er) => ({ ...er, problemStatement: value.trim() ? undefined : "Problem statement is required." }));
+  };
+
+  const handleDeliverablesChange = (value: string) => {
+    set("deliverables", value);
+    setErrors((er) => ({ ...er, deliverables: value.trim() ? undefined : "Deliverables are required." }));
+  };
+
   const validate = (): boolean => {
     const errs: Partial<Record<keyof BasicsData, string>> = {};
-    if (!form.title.trim()) errs.title = "Project title is required.";
+    if (!form.title.trim()) {
+      errs.title = "Project title is required.";
+    } else if (/\d/.test(form.title)) {
+      errs.title = "Numbers are not allowed in the title.";
+    }
     if (!form.posterPreviewUrl) errs.posterFile = "Please upload a project poster.";
     if (!form.summary.trim()) errs.summary = "Summary is required.";
+    if (!form.problemStatement.trim()) errs.problemStatement = "Problem statement is required.";
     if (!form.deliverables.trim()) errs.deliverables = "Deliverables are required.";
     if (!form.projectType) errs.projectType = "Select a project type.";
     if (!form.domain) errs.domain = "Select a domain.";
@@ -174,7 +268,7 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             id="title"
             placeholder="e.g. AI-Powered Resume Analyzer"
             value={form.title}
-            onChange={(e) => set("title", e.target.value)}
+            onChange={(e) => handleTitleChange(e.target.value)}
             className={cn("text-base font-medium", errors.title ? "border-destructive" : "")}
           />
           <FieldError msg={errors.title} />
@@ -209,6 +303,7 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setForm((f) => ({ ...f, posterFile: null, posterPreviewUrl: "" }));
+                    setErrors((er) => ({ ...er, posterFile: "Please upload a project poster." }));
                   }}
                   className="absolute top-3 right-3 p-1.5 rounded-full bg-card/80 backdrop-blur-sm border border-border hover:bg-destructive hover:text-destructive-foreground transition-colors"
                 >
@@ -250,7 +345,7 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             placeholder="A one-paragraph overview of your project..."
             rows={3}
             value={form.summary}
-            onChange={(e) => set("summary", e.target.value)}
+            onChange={(e) => handleSummaryChange(e.target.value)}
             className={errors.summary ? "border-destructive" : ""}
           />
           <FieldError msg={errors.summary} />
@@ -258,16 +353,16 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
 
         <div className="space-y-1.5">
           <Label htmlFor="problem">
-            Problem Statement{" "}
-            <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+            Problem Statement <span className="text-destructive">*</span>
           </Label>
           <Textarea
             id="problem"
             placeholder="What problem does this project solve?"
             rows={3}
             value={form.problemStatement}
-            onChange={(e) => set("problemStatement", e.target.value)}
+            onChange={(e) => handleProblemChange(e.target.value)}
           />
+          <FieldError msg={errors.problemStatement} />
         </div>
 
         <div className="space-y-1.5">
@@ -279,7 +374,7 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             placeholder={"One deliverable per line:\nWorking REST API\nReact frontend dashboard\nDocumentation"}
             rows={4}
             value={form.deliverables}
-            onChange={(e) => set("deliverables", e.target.value)}
+            onChange={(e) => handleDeliverablesChange(e.target.value)}
             className={errors.deliverables ? "border-destructive" : ""}
           />
           <p className="text-xs text-muted-foreground">Enter one deliverable per line.</p>
@@ -296,7 +391,13 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             <Label>
               Project Type <span className="text-destructive">*</span>
             </Label>
-            <Select value={form.projectType} onValueChange={(v) => set("projectType", v)}>
+            <Select
+              value={form.projectType}
+              onValueChange={(v) => {
+                set("projectType", v);
+                setErrors((er) => ({ ...er, projectType: undefined }));
+              }}
+            >
               <SelectTrigger className={errors.projectType ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
@@ -311,7 +412,13 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             <Label>
               Domain <span className="text-destructive">*</span>
             </Label>
-            <Select value={form.domain} onValueChange={(v) => set("domain", v)}>
+            <Select
+              value={form.domain}
+              onValueChange={(v) => {
+                set("domain", v);
+                setErrors((er) => ({ ...er, domain: undefined }));
+              }}
+            >
               <SelectTrigger className={errors.domain ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select domain" />
               </SelectTrigger>
@@ -330,7 +437,10 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
           <ChipPicker
             options={ALL_TECHS}
             selected={form.technologies}
-            onChange={(v) => set("technologies", v)}
+            onChange={(v) => {
+              set("technologies", v);
+              setErrors((er) => ({ ...er, technologies: v.length ? undefined : "Select at least one technology." }));
+            }}
           />
           {form.technologies.length > 0 && (
             <p className="text-xs text-muted-foreground">
@@ -350,7 +460,13 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             <Label>
               Difficulty <span className="text-destructive">*</span>
             </Label>
-            <Select value={form.difficulty} onValueChange={(v) => set("difficulty", v)}>
+            <Select
+              value={form.difficulty}
+              onValueChange={(v) => {
+                set("difficulty", v);
+                setErrors((er) => ({ ...er, difficulty: undefined }));
+              }}
+            >
               <SelectTrigger className={errors.difficulty ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select difficulty" />
               </SelectTrigger>
@@ -365,7 +481,13 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             <Label>
               Duration <span className="text-destructive">*</span>
             </Label>
-            <Select value={form.duration} onValueChange={(v) => set("duration", v)}>
+            <Select
+              value={form.duration}
+              onValueChange={(v) => {
+                set("duration", v);
+                setErrors((er) => ({ ...er, duration: undefined }));
+              }}
+            >
               <SelectTrigger className={errors.duration ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select duration" />
               </SelectTrigger>
@@ -388,7 +510,11 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
                 max={80}
                 placeholder="8"
                 value={form.weeklyHours || ""}
-                onChange={(e) => set("weeklyHours", Number(e.target.value))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  set("weeklyHours", val);
+                  setErrors((er) => ({ ...er, weeklyHours: val >= 1 ? undefined : "Enter weekly commitment." }));
+                }}
                 className={cn("pr-20", errors.weeklyHours ? "border-destructive" : "")}
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">hrs/week</span>
@@ -400,7 +526,13 @@ const Step1Basics = ({ initialData, onNext, onCancel }: Props) => {
             <Label>
               Compensation <span className="text-destructive">*</span>
             </Label>
-            <Select value={form.compensation} onValueChange={(v) => set("compensation", v)}>
+            <Select
+              value={form.compensation}
+              onValueChange={(v) => {
+                set("compensation", v);
+                setErrors((er) => ({ ...er, compensation: undefined }));
+              }}
+            >
               <SelectTrigger className={errors.compensation ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select compensation" />
               </SelectTrigger>
