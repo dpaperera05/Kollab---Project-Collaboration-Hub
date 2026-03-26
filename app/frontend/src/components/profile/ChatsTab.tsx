@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 interface Props { user: KollabUser; }
 
 const ChatsTab = ({ user }: Props) => {
-  const [convos, setConvos] = useState(() => getConversationsForUser(user.id));
+  const [convos, setConvos] = useState<Conversation[]>(() => getConversationsForUser(user.id));
   const [activeId, setActiveId] = useState<string | null>(convos[0]?.id || null);
   const [input, setInput] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -64,8 +64,8 @@ const ChatsTab = ({ user }: Props) => {
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {convos.map(c => {
-                  const otherName = c.participantNames.find((_, i) => c.participants[i] !== user.id) || c.participantNames[1] || "Unknown";
+                {convos.map((c: Conversation) => {
+                  const otherName = c.participantNames.find((_, i: number) => c.participants[i] !== user.id) || c.participantNames[1] || "Unknown";
                   const lastMsg = c.messages[c.messages.length - 1];
                   return (
                     <button key={c.id} onClick={() => setActiveId(c.id)}
@@ -86,11 +86,11 @@ const ChatsTab = ({ user }: Props) => {
             <>
               <div className="px-4 py-3 border-b border-border">
                 <p className="font-semibold text-sm text-foreground">
-                  {active.participantNames.find((_, i) => active.participants[i] !== user.id) || "Chat"}
+                  {active.participantNames.find((_, i: number) => active.participants[i] !== user.id) || "Chat"}
                 </p>
               </div>
               <CardContent className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[300px]">
-                {active.messages.map(m => (
+                {active.messages.map((m) => (
                   <div key={m.id} className={cn("max-w-[75%] rounded-xl px-3 py-2 text-sm",
                     m.senderId === user.id ? "ml-auto bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
                     {m.text}

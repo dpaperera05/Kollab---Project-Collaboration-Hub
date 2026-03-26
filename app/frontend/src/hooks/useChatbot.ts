@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { getMockReply, getContextualGreeting } from "@/components/chatbot/mockReplies";
 

@@ -98,9 +98,9 @@ const ManageProjectsTab = () => {
   const updateApplicant = (applicantId: string, status: "approved" | "rejected", reason?: string) => {
     const projectId = applicantsProject?._id || owned.find(p => p.applicants.some(a => a.id === applicantId))?._id;
     if (!projectId) return;
-    apiPatch(`/projects/${projectId}/applicants/${applicantId}`, { status, rejectionReason: reason })
+    apiPatch<{ success: boolean; data: { project: OwnedProject } }>(`/projects/${projectId}/applicants/${applicantId}`, { status, rejectionReason: reason })
       .then(res => {
-        const updated = res?.data?.project as OwnedProject;
+        const updated = res?.data?.project;
         if (updated) {
           setOwned(prev => prev.map(p => p._id === updated._id ? updated : p));
           setApplicantsProject(prev => prev && prev._id === updated._id ? updated : prev);

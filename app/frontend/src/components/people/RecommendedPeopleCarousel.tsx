@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PersonProfile } from "@/data/mockPeople";
+import type { PersonProfile } from "@/data/mockPeople";
 
 interface Props {
   people: PersonProfile[];

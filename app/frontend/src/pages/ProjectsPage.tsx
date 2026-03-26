@@ -29,6 +29,7 @@ type BackendProject = {
   compensation?: string;
   weeklyHours?: number;
   duration?: string;
+  posterImage?: string;
   roles?: Array<{ title: string; status?: "Open" | "Filled"; seats?: number }>;
   ownerId?: string;
   owner?: { id?: string; name?: string; avatar?: string; rating?: number };

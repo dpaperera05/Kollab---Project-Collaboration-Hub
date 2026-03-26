@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Pin } from "lucide-react";
 import type { PinnedShowcase } from "@/data/mockPeople";
-import { cn } from "@/lib/utils";
 
 import posterAi from "@/assets/posters/poster-ai-sentiment.jpg";
 import posterCode from "@/assets/posters/poster-code-review.jpg";

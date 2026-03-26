@@ -49,11 +49,11 @@ const createShowcase = (
     id: crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
-    techStack: input.techStack || [],
-    links: input.links || [],
-    screenshots: input.screenshots || [],
-    collaborators: input.collaborators || [],
     ...input,
+    techStack: input.techStack ?? [],
+    links: input.links ?? [],
+    screenshots: input.screenshots ?? [],
+    collaborators: input.collaborators ?? [],
   };
   portfolioMemory.unshift(showcase);
   return showcase;

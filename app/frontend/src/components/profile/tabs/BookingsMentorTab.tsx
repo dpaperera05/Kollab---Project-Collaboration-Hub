@@ -31,14 +31,6 @@ type ApiBooking = {
   rejectionReason?: string;
 };
 
-const toDate = (dateStr: string) => {
-  const parsed = new Date(dateStr);
-  if (!Number.isNaN(parsed.getTime())) return parsed;
-  // fallback if date is not ISO; accept mm/dd/yyyy
-  const [m, d, y] = dateStr.split(/[\/\-]/).map(Number);
-  return new Date(y || 0, (m || 1) - 1, d || 1);
-};
-
 const BookingsMentorTab = () => {
   const [bookings, setBookings] = useState<ApiBooking[]>([]);
   const [rejectingId, setRejectingId] = useState<string | null>(null);

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
-import { Eye, Shield, LogOut, Trash2, Lock } from "lucide-react";
+import { Eye, LogOut, Trash2, Lock } from "lucide-react";
 import { type KollabUser, logout } from "@/lib/authStore";
 import { setProfilePublic, changePassword, deleteAccount } from "@/lib/profileStore";
 
@@ -110,7 +110,7 @@ const SettingsTab = ({ user, onUpdate }: Props) => {
       </Card>
 
       {/* Delete Account */}
-      <Card className="border-border border-destructive/20 card-shadow">
+      <Card className="border border-destructive/20 card-shadow">
         <CardHeader className="pb-4"><CardTitle className="text-base flex items-center gap-2 text-destructive"><Trash2 size={16} /> Danger Zone</CardTitle></CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">Permanently delete your account and all associated data.</p>

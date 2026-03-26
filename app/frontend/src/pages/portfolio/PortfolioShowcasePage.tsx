@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, ExternalLink, Lock, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, Lock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import { getShowcaseById } from "@/lib/portfolioStore";
