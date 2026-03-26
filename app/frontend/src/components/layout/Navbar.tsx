@@ -8,6 +8,7 @@ import Container from "@/components/ui/Container";
 import KollabLogo from "@/components/ui/KollabLogo";
 import { cn } from "@/lib/utils";
 import { getSession, logout, type KollabUser } from "@/lib/authStore";
+import { useNavigate } from "react-router-dom";
 
 const navLinks = [
   { label: "Projects", href: "/projects" },
@@ -20,6 +21,7 @@ const navLinks = [
 ];
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -71,6 +73,9 @@ const Navbar = () => {
     logout();
     setSession(null);
     setAccountOpen(false);
+    if (location.pathname.startsWith("/profile")) {
+      navigate("/", { replace: true });
+    }
   };
 
   return (

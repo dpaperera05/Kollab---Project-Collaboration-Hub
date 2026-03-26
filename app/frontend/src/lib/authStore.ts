@@ -210,6 +210,15 @@ export function getSession(): KollabUser | null {
 
 export function logout(): void {
   localStorage.removeItem(SESSION_KEY);
+  clearVerificationToken();
+  try {
+    const resetMap = JSON.parse(localStorage.getItem("kollab_reset_tokens") || "{}");
+    if (resetMap && typeof resetMap === "object") {
+      localStorage.removeItem("kollab_reset_tokens");
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 type VerifyResult =
