@@ -202,7 +202,7 @@ const ProjectsPage = () => {
   const handleAddProject = () => {
     const session = getSession();
     if (!session) {
-      navigate("/login");
+      navigate("/login", { state: { from: "/projects/new" } });
       return;
     }
     navigate("/projects/new");
