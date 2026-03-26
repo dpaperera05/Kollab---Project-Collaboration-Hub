@@ -5,14 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Check, X, ExternalLink } from "lucide-react";
-import { type MockApplicant } from "@/data/mockProfileContent";
 import { cn } from "@/lib/utils";
+
+type Applicant = {
+  id: string;
+  name: string;
+  role: string;
+  motivation?: string;
+  links?: { github?: string; linkedin?: string };
+  status: "pending" | "approved" | "rejected";
+  rejectionReason?: string;
+};
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectTitle: string;
-  applicants: MockApplicant[];
+  applicants: Applicant[];
   onUpdateApplicant: (id: string, status: "approved" | "rejected", reason?: string) => void;
 }
 
@@ -63,12 +72,12 @@ const ApplicantsModal = ({ open, onOpenChange, projectTitle, applicants, onUpdat
                 </div>
                 <p className="text-sm text-muted-foreground">{a.motivation}</p>
                 <div className="flex gap-2 text-xs">
-                  {a.links.github && (
+                  {a.links?.github && (
                     <a href={a.links.github} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                       <ExternalLink size={10} /> GitHub
                     </a>
                   )}
-                  {a.links.linkedin && (
+                  {a.links?.linkedin && (
                     <a href={a.links.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                       <ExternalLink size={10} /> LinkedIn
                     </a>

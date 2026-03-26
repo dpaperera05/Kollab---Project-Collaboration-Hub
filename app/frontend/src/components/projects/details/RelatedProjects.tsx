@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/data/mockProjects";
 

@@ -10,6 +10,12 @@ interface MentorBookingCardProps {
   mentor: Mentor;
 }
 
+type SlotOption = {
+  id: string;
+  label: string;
+  slot?: NonNullable<Mentor["availabilitySlots"]>[number];
+};
+
 const MentorBookingCard = ({ mentor }: MentorBookingCardProps) => {
   const [slot, setSlot] = useState("");
   const [agenda, setAgenda] = useState("");
@@ -20,7 +26,7 @@ const MentorBookingCard = ({ mentor }: MentorBookingCardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const slotOptions = useMemo(() => {
+  const slotOptions: SlotOption[] = useMemo(() => {
     if (mentor.availabilitySlots?.length) {
       return mentor.availabilitySlots.map((s, idx) => ({
         id: String(idx),

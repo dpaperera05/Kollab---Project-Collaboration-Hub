@@ -3,7 +3,7 @@ import type { BasicsData } from "./Step1Basics";
 import type { RoleData } from "./Step2Roles";
 import type { SettingsData } from "./Step3Settings";
 import { cn } from "@/lib/utils";
-import { Rocket, Users, CheckCircle2 } from "lucide-react";
+import { Rocket, CheckCircle2 } from "lucide-react";
 
 interface Props {
   basics: BasicsData;

@@ -82,7 +82,6 @@ const NotFoundState = () => {
 /* ── Main page ── */
 const ProjectDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [project, setProject] = useState<Project | null | "loading">("loading");
 
   type BackendRole = {

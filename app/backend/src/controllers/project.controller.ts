@@ -161,7 +161,7 @@ export const getPublicProjectById = async (req: Request, res: Response) => {
 
   const response = {
     ...project,
-    id: project._id?.toString?.() || project.id,
+    id: project._id?.toString?.() ?? String(project._id),
     owner: {
       id: project.ownerId,
       name: ownerName,

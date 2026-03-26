@@ -1,5 +1,4 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { cn } from "@/lib/utils";
 
 interface Props {
   scores: Record<string, number>;
@@ -49,7 +48,7 @@ const SkillEvidenceGraph = ({ scores }: Props) => {
                 fontSize: "12px",
                 boxShadow: "0 4px 12px hsl(0 0% 0% / 0.1)",
               }}
-              formatter={(value: number) => [`${value}%`, "Evidence"]}
+              formatter={(value?: number) => [`${value ?? 0}%`, "Evidence"]}
             />
             <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20}>
               {data.map((_, i) => (

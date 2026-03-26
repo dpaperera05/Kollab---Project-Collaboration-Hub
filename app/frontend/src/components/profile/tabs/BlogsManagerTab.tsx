@@ -123,7 +123,7 @@ const BlogsManagerTab = () => {
       {/* Editor Dialog */}
       <Dialog open={!!editing} onOpenChange={open => { if (!open) setEditing(null); }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editing?.id ? "Edit Blog" : "New Blog"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing?._id ? "Edit Blog" : "New Blog"}</DialogTitle></DialogHeader>
           {editing && (
             <div className="space-y-4 pt-2">
               <div><Label>Title *</Label><Input value={editing.title || ""} onChange={e => set("title", e.target.value)} placeholder="Blog title..." /></div>

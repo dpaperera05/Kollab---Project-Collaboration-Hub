@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { SortOrder } from "mongoose";
 import { Blog } from "../models/blog.model";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
@@ -90,10 +91,10 @@ const deleteR2Object = async (key?: string) => {
   }
 };
 
-const getSort = (sortBy?: string) => {
-  if (sortBy === "Oldest") return { createdAt: 1 } as const;
-  if (sortBy === "Popular") return { viewCount: -1, createdAt: -1 } as const;
-  return { createdAt: -1 } as const;
+const getSort = (sortBy?: string): Record<string, SortOrder> => {
+  if (sortBy === "Oldest") return { createdAt: 1 };
+  if (sortBy === "Popular") return { viewCount: -1, createdAt: -1 };
+  return { createdAt: -1 };
 };
 
 export const listBlogs = async (req: Request, res: Response) => {

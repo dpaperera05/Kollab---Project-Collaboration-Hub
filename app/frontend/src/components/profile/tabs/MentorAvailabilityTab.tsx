@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import TimePicker from "@/components/ui/time-picker";
-import { CalendarRange, Clock, MapPin, Plus, Save, Trash2 } from "lucide-react";
+import { CalendarRange, Clock, MapPin, Plus, Trash2 } from "lucide-react";
 import type { KollabUser, AvailabilitySlot } from "@/lib/authStore";
 import { saveAvailabilitySlots } from "@/lib/profileStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Upload, ImageIcon, Calendar, Clock, MapPin, Globe, Tag, Trophy,
-  Users, FileText, Sparkles, ExternalLink, X, ChevronDown, ChevronUp,
+  ArrowLeft, Upload, ImageIcon, Calendar, MapPin, Tag,
+  FileText, Sparkles, ExternalLink, X, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { format, differenceInDays, isBefore, startOfDay, startOfToday } from "date-fns";
 import Navbar from "@/components/layout/Navbar";
@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { EVENT_TYPES } from "@/data/eventOptions";
-import { DOMAIN_TAGS, TOOLS_TECH_TAGS, SKILLS_TAGS, ALL_EVENT_TAGS, TIMEZONE_OPTIONS } from "@/data/eventTagOptions";
+import { DOMAIN_TAGS, TOOLS_TECH_TAGS, SKILLS_TAGS, TIMEZONE_OPTIONS } from "@/data/eventTagOptions";
 import { apiPost } from "@/lib/api";
 import { getSession } from "@/lib/authStore";
 
@@ -326,9 +326,6 @@ const CreateEventPage = () => {
       .finally(() => setIsSubmitting(false));
   };
 
-  const filteredTags = tagSearch
-    ? ALL_EVENT_TAGS.filter((t) => t.toLowerCase().includes(tagSearch.toLowerCase()))
-    : ALL_EVENT_TAGS;
 
   const FieldError = ({ name }: { name: string }) =>
     errors[name] ? <p className="text-xs text-destructive mt-1">{errors[name]}</p> : null;

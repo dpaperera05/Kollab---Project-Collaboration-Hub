@@ -9,18 +9,18 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 const WEEKS = 52;
 const DAYS = 7;
 
-// Simple seeded random
+// Simple seeded random so the grid is stable per userId
 const seededRandom = (seed: number) => {
-  let s = seed;
+  let s = seed || 1;
   return () => {
-    s = (s * 16807 + 0) % 2147483647;
+    s = (s * 16807) % 2147483647;
     return (s - 1) / 2147483646;
   };
 };
 
 const LEVELS = [
   "bg-muted",
-  "bg-[hsl(270_60%_88%)] dark:bg-[hsl(270_40%_22%)]",
+  "bg-[hsl(270_70%_86%)] dark:bg-[hsl(270_50%_28%)]",
   "bg-[hsl(270_70%_76%)] dark:bg-[hsl(270_50%_32%)]",
   "bg-[hsl(270_80%_64%)] dark:bg-[hsl(270_60%_42%)]",
   "bg-primary",
@@ -48,16 +48,14 @@ const ContributionsHeatmap = ({ userId }: Props) => {
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-foreground">
-          🔥 {total} contributions in the last year
-        </h3>
+        <h3 className="text-sm font-bold text-foreground">🔥 {total} contributions in the last year</h3>
       </div>
 
       {/* Month labels */}
       <div className="overflow-x-auto">
         <div className="min-w-[680px]">
           <div className="flex gap-[3px] mb-1 ml-8">
-            {MONTHS.map((m, i) => (
+            {MONTHS.map((m) => (
               <span
                 key={m}
                 className="text-[10px] text-muted-foreground"
