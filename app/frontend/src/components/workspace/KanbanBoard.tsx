@@ -5,40 +5,91 @@ import KanbanColumn from "./KanbanColumn";
 import TaskModal from "./TaskModal";
 import type { WorkspaceTask, WorkspaceMember } from "@/data/workspaceData";
 import { toast } from "@/hooks/use-toast";
+import { apiDelete, apiPatch, apiPost } from "@/lib/api";
 
 interface Props {
+  projectId: string;
   initialTasks: WorkspaceTask[];
   members: WorkspaceMember[];
 }
 
-const KanbanBoard = ({ initialTasks, members }: Props) => {
+const KanbanBoard = ({ projectId, initialTasks, members }: Props) => {
   const [tasks, setTasks] = useState<WorkspaceTask[]>(initialTasks);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<WorkspaceTask | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const columns: { title: string; status: WorkspaceTask["status"]; accent: string }[] = [
     { title: "To-Do", status: "todo", accent: "bg-amber-500" },
     { title: "In Progress", status: "in-progress", accent: "bg-blue-500" },
-    { title: "Done", status: "done", accent: "bg-green-500" },
+    { title: "Done", status: "done", accent: "bg-emerald-500" },
   ];
 
-  const handleSave = (task: WorkspaceTask) => {
-    setTasks((prev) => {
-      const exists = prev.find((t) => t.id === task.id);
-      if (exists) return prev.map((t) => (t.id === task.id ? task : t));
-      return [...prev, task];
-    });
-    toast({ title: editingTask ? "Task updated" : "Task created" });
-    setEditingTask(null);
+  const handleSave = async (task: WorkspaceTask) => {
+    setSaving(true);
+    try {
+      if (editingTask) {
+        const res = await apiPatch<{ success: boolean; data: { task: WorkspaceTask; board: { tasks: WorkspaceTask[] } } }>(
+          `/workspace/${projectId}/tasks/${task.id}`,
+          {
+            title: task.title,
+            description: task.description,
+            assignedTo: task.assignedTo,
+            status: task.status,
+          }
+        );
+        setTasks(res.data.board.tasks);
+        toast({ title: "Task updated" });
+      } else {
+        const res = await apiPost<{ success: boolean; data: { task: WorkspaceTask; board: { tasks: WorkspaceTask[] } } }>(
+          `/workspace/${projectId}/tasks`,
+          {
+            title: task.title,
+            description: task.description,
+            assignedTo: task.assignedTo,
+            status: task.status,
+          }
+        );
+        setTasks(res.data.board.tasks);
+        toast({ title: "Task created" });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Could not save task", variant: "destructive" });
+    } finally {
+      setEditingTask(null);
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    toast({ title: "Task deleted" });
+  const handleDelete = async (taskId: string) => {
+    setSaving(true);
+    try {
+      const res = await apiDelete<{ success: boolean; data: { board: { tasks: WorkspaceTask[] } } }>(`/workspace/${projectId}/tasks/${taskId}`);
+      setTasks(res.data.board.tasks);
+      toast({ title: "Task deleted" });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Could not delete task", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleStatusChange = (taskId: string, status: WorkspaceTask["status"]) => {
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)));
+  const handleStatusChange = async (taskId: string, status: WorkspaceTask["status"]) => {
+    setSaving(true);
+    try {
+      const res = await apiPatch<{ success: boolean; data: { task: WorkspaceTask; board: { tasks: WorkspaceTask[] } } }>(
+        `/workspace/${projectId}/tasks/${taskId}`,
+        { status }
+      );
+      setTasks(res.data.board.tasks);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Could not update status", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openEdit = (task: WorkspaceTask) => {
@@ -71,6 +122,7 @@ const KanbanBoard = ({ initialTasks, members }: Props) => {
             onEdit={openEdit}
             onDelete={handleDelete}
             onStatusChange={handleStatusChange}
+            saving={saving}
           />
         ))}
       </div>

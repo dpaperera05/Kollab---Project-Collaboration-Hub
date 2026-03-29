@@ -10,6 +10,7 @@ import eventRoutes from "./event.routes";
 import chatRoutes from "./chat.routes";
 import bookmarkRoutes from "./bookmark.routes";
 import newsletterRoutes from "./newsletter.routes";
+import workspaceRoutes from "./workspace.routes";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use("/newsletter", newsletterRoutes);
 router.use("/blogs", blogRoutes);
 router.use("/events", eventRoutes);
 router.use("/chats", chatRoutes);
+router.use("/workspace", workspaceRoutes);
 
 export default router;

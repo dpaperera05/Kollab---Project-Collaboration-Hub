@@ -5,6 +5,8 @@ export interface IChatMessage {
   senderId: string;
   text: string;
   timestamp: string;
+  senderName?: string;
+  senderAvatar?: string;
 }
 
 export interface IChat extends Document {
@@ -22,6 +24,8 @@ const messageSchema = new Schema<IChatMessage>(
     senderId: { type: String, required: true },
     text: { type: String, required: true, trim: true },
     timestamp: { type: String, required: true },
+    senderName: { type: String, trim: true },
+    senderAvatar: { type: String, trim: true },
   },
   { _id: false }
 );

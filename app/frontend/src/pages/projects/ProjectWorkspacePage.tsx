@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import WorkspaceHeader from "@/components/workspace/WorkspaceHeader";
@@ -6,10 +6,21 @@ import WorkspaceSidebar from "@/components/workspace/WorkspaceSidebar";
 import ChatPanel from "@/components/workspace/ChatPanel";
 import KanbanBoard from "@/components/workspace/KanbanBoard";
 import MembersModal from "@/components/workspace/MembersModal";
-import { getWorkspaceProject } from "@/data/workspaceData";
+import type { WorkspaceChatMessage, WorkspaceMember, WorkspaceTask, WorkspaceProject } from "@/data/workspaceData";
 import { getSession } from "@/lib/authStore";
+import { apiGet } from "@/lib/api";
 
 type Tab = "chat" | "kanban";
+
+type WorkspaceResponse = {
+  success: boolean;
+  data: {
+    project: { id: string; title: string; status: WorkspaceProject["status"]; domain?: string[] };
+    tasks: WorkspaceTask[];
+    chatMessages: WorkspaceChatMessage[];
+    members: WorkspaceMember[];
+  };
+};
 
 const ProjectWorkspacePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,17 +32,64 @@ const ProjectWorkspacePage = () => {
   // Mobile sidebar drawer
   const [mobileDrawer, setMobileDrawer] = useState(false);
 
+  const [workspace, setWorkspace] = useState<WorkspaceResponse["data"] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    apiGet<WorkspaceResponse>(`/workspace/${id}`)
+      .then((res) => {
+        setWorkspace(res.data);
+      })
+      .catch((err: Error & { status?: number }) => {
+        console.error(err);
+        if (err.status === 401) setError("Please log in to access this workspace.");
+        else if (err.status === 403) setError("You do not have access to this workspace.");
+        else setError(err.message || "Workspace not found");
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const project: WorkspaceProject | null = useMemo(() => {
+    if (!workspace) return null;
+    const chatMessages = (workspace.chatMessages || []).map((m) => ({
+      ...m,
+      senderName: m.senderName || "Member",
+      senderAvatar: m.senderAvatar || "",
+    }));
+    return {
+      id: workspace.project.id,
+      title: workspace.project.title,
+      status: workspace.project.status,
+      domain: workspace.project.domain || [],
+      members: workspace.members,
+      chatMessages,
+      tasks: workspace.tasks,
+    };
+  }, [workspace]);
+
   if (!session) return <Navigate to="/login" replace />;
 
-  const project = getWorkspaceProject(id || "");
-  if (!project) {
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="pt-20 flex items-center justify-center min-h-screen text-muted-foreground">Loading workspace...</div>
+      </>
+    );
+  }
+
+  if (error || !project) {
     return (
       <>
         <Navbar />
         <div className="pt-20 flex items-center justify-center min-h-screen">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-foreground mb-2">Workspace not found</h2>
-            <p className="text-muted-foreground">This project workspace doesn't exist.</p>
+            <p className="text-muted-foreground">{error || "This project workspace doesn't exist."}</p>
           </div>
         </div>
       </>
@@ -95,7 +153,7 @@ const ProjectWorkspacePage = () => {
                 <ChatPanel initialMessages={project.chatMessages} />
               ) : (
                 <div className="p-4 lg:p-6 overflow-y-auto h-full">
-                  <KanbanBoard initialTasks={project.tasks} members={project.members} />
+                  <KanbanBoard projectId={project.id} initialTasks={project.tasks} members={project.members} />
                 </div>
               )}
             </div>

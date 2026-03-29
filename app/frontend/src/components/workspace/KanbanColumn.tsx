@@ -11,16 +11,17 @@ interface Props {
   onEdit: (task: WorkspaceTask) => void;
   onDelete: (taskId: string) => void;
   onStatusChange: (taskId: string, status: WorkspaceTask["status"]) => void;
+  saving: boolean;
 }
 
-const KanbanColumn = ({ title, tasks, members, accentClass, onEdit, onDelete, onStatusChange }: Props) => (
+const KanbanColumn = ({ title, tasks, members, accentClass, onEdit, onDelete, onStatusChange, saving }: Props) => (
   <div className="flex flex-col min-w-[280px] max-w-sm flex-1">
     <div className="flex items-center gap-2 mb-3 px-1">
       <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", accentClass)} />
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       <span className="text-xs text-muted-foreground ml-auto">{tasks.length}</span>
     </div>
-    <div className="flex-1 space-y-2.5 rounded-xl bg-muted/40 p-2.5 min-h-[200px]">
+    <div className="flex-1 space-y-2.5 rounded-xl p-2.5 min-h-[200px] bg-muted/40">
       {tasks.length === 0 ? (
         <div className="flex items-center justify-center h-24 text-xs text-muted-foreground italic">
           No tasks in this column
@@ -34,6 +35,7 @@ const KanbanColumn = ({ title, tasks, members, accentClass, onEdit, onDelete, on
             onEdit={() => onEdit(t)}
             onDelete={() => onDelete(t.id)}
             onStatusChange={(s) => onStatusChange(t.id, s)}
+            disabled={saving}
           />
         ))
       )}
