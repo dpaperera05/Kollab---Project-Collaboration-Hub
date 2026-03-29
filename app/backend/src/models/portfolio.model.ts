@@ -10,7 +10,7 @@ export interface IPortfolioItem extends Document {
   responsibilities?: string;
   outcomes?: string;
   techStack?: string[];
-  links?: { demo?: string; repo?: string; caseStudy?: string };
+  links?: { label?: string; url: string }[];
   collaborators?: string[];
   screenshots?: string[];
   coverImage?: string;
@@ -31,11 +31,12 @@ const portfolioSchema = new Schema<IPortfolioItem>(
     responsibilities: { type: String, trim: true },
     outcomes: { type: String, trim: true },
     techStack: [{ type: String, trim: true }],
-    links: {
-      demo: { type: String, trim: true },
-      repo: { type: String, trim: true },
-      caseStudy: { type: String, trim: true },
-    },
+    links: [
+      {
+        label: { type: String, trim: true },
+        url: { type: String, trim: true, required: true },
+      },
+    ],
     collaborators: [{ type: String, trim: true }],
     screenshots: [{ type: String, trim: true }],
     coverImage: { type: String, trim: true },
