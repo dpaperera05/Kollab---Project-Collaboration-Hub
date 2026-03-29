@@ -2,24 +2,33 @@ import { useState } from "react";
 import ChatMessageList from "./ChatMessageList";
 import ChatInput from "./ChatInput";
 import type { WorkspaceChatMessage } from "@/data/workspaceData";
+import { apiPost } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
+  projectId: string;
   initialMessages: WorkspaceChatMessage[];
 }
 
-const ChatPanel = ({ initialMessages }: Props) => {
+const ChatPanel = ({ projectId, initialMessages }: Props) => {
   const [messages, setMessages] = useState<WorkspaceChatMessage[]>(initialMessages);
+  const [sending, setSending] = useState(false);
 
-  const handleSend = (text: string) => {
-    const newMsg: WorkspaceChatMessage = {
-      id: `cm-${Date.now()}`,
-      senderId: "u-owner",
-      senderName: "You",
-      senderAvatar: "",
-      text,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, newMsg]);
+  const handleSend = async (text: string) => {
+    if (!text.trim()) return;
+    setSending(true);
+    try {
+      const res = await apiPost<{ success: boolean; data: { chat: { messages: WorkspaceChatMessage[] } } }>(
+        `/workspace/${projectId}/chat/messages`,
+        { text }
+      );
+      setMessages(res.data.chat.messages || []);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Could not send message", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -29,7 +38,7 @@ const ChatPanel = ({ initialMessages }: Props) => {
         <p className="text-xs text-muted-foreground">{messages.length} messages</p>
       </div>
       <ChatMessageList messages={messages} />
-      <ChatInput onSend={handleSend} />
+      <ChatInput onSend={handleSend} disabled={sending} />
     </div>
   );
 };

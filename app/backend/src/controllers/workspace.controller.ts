@@ -29,26 +29,39 @@ const ensureProjectAccess = async (projectId: string, userId: string | undefined
     return null;
   }
 
-  const isMember = project.ownerId === userId || project.members.some((m) => m.userId === userId);
+    const members = project.members || [];
+    const isMember = project.ownerId === userId || members.some((m) => m.userId === userId);
   if (!isMember) {
     res.status(403).json({ success: false, message: "Access denied" });
     return null;
   }
 
-  return project;
+    return { project, members } as const;
 };
 
 const ensureBoard = async (projectId: string) => {
-  return WorkspaceBoard.findOneAndUpdate({ projectId }, { $setOnInsert: { projectId, tasks: [] } }, { new: true, upsert: true });
+  return WorkspaceBoard.findOneAndUpdate(
+    { projectId },
+    { $setOnInsert: { projectId, tasks: [] } },
+    { upsert: true, returnDocument: "after" }
+  );
 };
 
-const ensureProjectChat = async (projectId: string, participantIds: string[]) => {
+const ensureProjectChat = async (projectId: string, participantIds: string[], participantNames?: Map<string, { name?: string; avatar?: string }>) => {
   const conversationKey = `${WORKSPACE_CHAT_PREFIX}${projectId}`;
   const uniqueParticipants = Array.from(new Set(participantIds));
   return Chat.findOneAndUpdate(
     { conversationKey },
-    { $setOnInsert: { participantIds: uniqueParticipants, conversationKey, messages: [] } },
-    { new: true, upsert: true }
+    {
+      $set: {
+        participantIds: uniqueParticipants,
+        participantNames: participantNames
+          ? Object.fromEntries(Array.from(participantNames.entries()).map(([id, info]) => [id, info.name || "Member"]))
+          : undefined,
+      },
+      $setOnInsert: { conversationKey, messages: [], projectId },
+    },
+    { upsert: true, returnDocument: "after" }
   );
 };
 
@@ -66,16 +79,16 @@ export const getWorkspace = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     const userId = req.userId;
-    const project = await ensureProjectAccess(projectId, userId, res);
-    if (!project) return;
+    const access = await ensureProjectAccess(projectId, userId, res);
+    if (!access) return;
+    const { project, members: projectMembers } = access;
 
-    const participantIds = [project.ownerId, ...project.members.map((m) => m.userId).filter(Boolean)] as string[];
-    const [board, chat] = await Promise.all([ensureBoard(projectId), ensureProjectChat(projectId, participantIds)]);
-
+    const participantIds = [project.ownerId, ...(projectMembers || []).map((m) => m.userId).filter(Boolean)] as string[];
     const memberMap = await loadMembers(participantIds);
+    const [board, chat] = await Promise.all([ensureBoard(projectId), ensureProjectChat(projectId, participantIds, memberMap)]);
     const members = participantIds.map((id) => {
       const info = memberMap.get(id) || {};
-      const memberRecord = project.members.find((m) => m.userId === id);
+      const memberRecord = (projectMembers || []).find((m) => m.userId === id);
       return {
         id,
         name: info.name || "Member",
@@ -112,14 +125,15 @@ export const createTask = async (req: Request, res: Response) => {
     const { title, description, assignedTo } = req.body || {};
     const status = normalizeStatus(req.body?.status);
 
-    const project = await ensureProjectAccess(projectId, userId, res);
-    if (!project) return;
+    const access = await ensureProjectAccess(projectId, userId, res);
+    if (!access) return;
+    const { project, members } = access;
 
     if (!title) {
       return res.status(400).json({ success: false, message: "title is required" });
     }
 
-    const participantIds = [project.ownerId, ...project.members.map((m) => m.userId).filter(Boolean)] as string[];
+    const participantIds = [project.ownerId, ...(members || []).map((m) => m.userId).filter(Boolean)] as string[];
     if (assignedTo && !participantIds.includes(assignedTo)) {
       return res.status(400).json({ success: false, message: "Assigned user must be a project member" });
     }
@@ -156,10 +170,11 @@ export const updateTask = async (req: Request, res: Response) => {
     const { title, description, assignedTo } = req.body || {};
     const status = normalizeStatus(req.body?.status);
 
-    const project = await ensureProjectAccess(projectId, userId, res);
-    if (!project) return;
+    const access = await ensureProjectAccess(projectId, userId, res);
+    if (!access) return;
+    const { project, members } = access;
 
-    const participantIds = [project.ownerId, ...project.members.map((m) => m.userId).filter(Boolean)] as string[];
+    const participantIds = [project.ownerId, ...(members || []).map((m) => m.userId).filter(Boolean)] as string[];
     if (assignedTo && !participantIds.includes(assignedTo)) {
       return res.status(400).json({ success: false, message: "Assigned user must be a project member" });
     }
@@ -192,8 +207,9 @@ export const deleteTask = async (req: Request, res: Response) => {
     const { projectId, taskId } = req.params;
     const userId = req.userId;
 
-    const project = await ensureProjectAccess(projectId, userId, res);
-    if (!project) return;
+    const access = await ensureProjectAccess(projectId, userId, res);
+    if (!access) return;
+    const { project, members } = access;
 
     const board = await ensureBoard(projectId);
     const initialLength = board.tasks.length;
@@ -211,30 +227,65 @@ export const deleteTask = async (req: Request, res: Response) => {
   }
 };
 
+export const getWorkspaceChat = async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.userId;
+      const access = await ensureProjectAccess(projectId, userId, res);
+      if (!access) return;
+      const { project, members } = access;
+
+    const participantIds = [project.ownerId, ...(members || []).map((m) => m.userId).filter(Boolean)] as string[];
+    const memberMap = await loadMembers(participantIds);
+    const chat = await ensureProjectChat(projectId, participantIds, memberMap);
+
+      const mappedMembers = participantIds.map((id) => {
+        const info = memberMap.get(id) || {};
+        const memberRecord = (members || []).find((m) => m.userId === id);
+        return {
+          id,
+          name: info.name || "Member",
+          avatar: info.avatar || "",
+          role: id === project.ownerId ? "Project Owner" : memberRecord?.role || "Member",
+          isOwner: id === project.ownerId,
+        };
+      });
+
+      return res.json({ success: true, data: { messages: chat?.messages || [], members: mappedMembers } });
+  } catch (error) {
+    console.error("getWorkspaceChat failed", error);
+    return res.status(500).json({ success: false, message: "Failed to load chat" });
+  }
+};
+
 export const sendWorkspaceMessage = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     const userId = req.userId;
     const { text } = req.body || {};
 
-    const project = await ensureProjectAccess(projectId, userId, res);
-    if (!project) return;
+    const access = await ensureProjectAccess(projectId, userId, res);
+    if (!access) return;
+    const { project, members } = access;
 
     if (!text || !String(text).trim()) {
       return res.status(400).json({ success: false, message: "Message text is required" });
     }
 
-    const participantIds = [project.ownerId, ...project.members.map((m) => m.userId).filter(Boolean)] as string[];
-    const chat = await ensureProjectChat(projectId, participantIds);
-    const sender = userId ? await User.findById(userId).select("name profile.avatarUrl") : null;
+    const sanitized = String(text).trim().slice(0, 2000);
+
+    const participantIds = [project.ownerId, ...(members || []).map((m) => m.userId).filter(Boolean)] as string[];
+    const memberMap = await loadMembers(participantIds);
+    const chat = await ensureProjectChat(projectId, participantIds, memberMap);
+    const sender = userId ? memberMap.get(userId) : null;
 
     const message = {
       id: `m-${Date.now()}`,
       senderId: userId as string,
-      text: String(text).trim(),
+      text: sanitized,
       timestamp: new Date().toISOString(),
-      senderName: sender?.name || sender?.profile?.name,
-      senderAvatar: sender?.profile?.avatarUrl,
+      senderName: sender?.name,
+      senderAvatar: sender?.avatar,
     } as const;
 
     chat.messages.push(message);

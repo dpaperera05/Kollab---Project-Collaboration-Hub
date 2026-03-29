@@ -43,7 +43,7 @@ export const createChat = async (req: Request, res: Response) => {
         messages: [],
       },
     },
-    { new: true, upsert: true }
+    { upsert: true, returnDocument: "after" }
   );
 
   return res.status(201).json({ success: true, data: { chat } });

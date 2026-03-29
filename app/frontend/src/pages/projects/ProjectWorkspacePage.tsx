@@ -150,7 +150,7 @@ const ProjectWorkspacePage = () => {
 
             <div className="flex-1 overflow-hidden">
               {activeTab === "chat" ? (
-                <ChatPanel initialMessages={project.chatMessages} />
+                <ChatPanel projectId={project.id} initialMessages={project.chatMessages} />
               ) : (
                 <div className="p-4 lg:p-6 overflow-y-auto h-full">
                   <KanbanBoard projectId={project.id} initialTasks={project.tasks} members={project.members} />
