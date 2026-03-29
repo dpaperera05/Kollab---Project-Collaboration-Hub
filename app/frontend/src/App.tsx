@@ -70,6 +70,7 @@ const App = () => (
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:id" element={<ProjectDetailsPage />} />
             <Route path="/projects/new" element={<PostProjectPage />} />
+            <Route path="/projects/:id/edit" element={<PostProjectPage />} />
             <Route path="/bookmarks" element={<BookmarkedProjectsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/portfolio/:id" element={<PortfolioShowcasePage />} />

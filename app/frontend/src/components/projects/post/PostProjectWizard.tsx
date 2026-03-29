@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import Step1Basics, {type BasicsData } from "./Step1Basics";
@@ -7,7 +7,7 @@ import Step3Settings, {type SettingsData } from "./Step3Settings";
 import Step4Review from "./Step4Review";
 import { cn } from "@/lib/utils";
 import { Check, Layers, Users, Settings, Eye } from "lucide-react";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { getSession } from "@/lib/authStore";
 
 const STEPS = [
@@ -76,18 +76,92 @@ const StepIndicator = ({ current }: { current: number }) => (
   </div>
 );
 
-const PostProjectWizard = () => {
+interface Props {
+  projectId?: string;
+}
+
+const PostProjectWizard = ({ projectId }: Props) => {
   const navigate = useNavigate();
+  const isEditing = useMemo(() => Boolean(projectId), [projectId]);
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>({ basics: null, roles: [], settings: null });
+  const [isLoading, setIsLoading] = useState(Boolean(projectId));
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const session = getSession();
     if (!session) {
       navigate("/login", { replace: true });
       toast({ title: "Please login to post a project", variant: "destructive" });
+      return;
     }
-  }, [navigate]);
+
+    const loadProject = async () => {
+      if (!projectId) return;
+      setIsLoading(true);
+      try {
+        const res = await apiGet<{ success: boolean; data: { project: any } }>(`/projects/public/${projectId}`);
+        const project = res?.data?.project;
+        if (!project) throw new Error("Project not found");
+
+        const ownerId = project.ownerId || project.owner?.id;
+        if (ownerId && ownerId !== session.id) {
+          toast({ title: "You can only edit your own project", variant: "destructive" });
+          navigate(`/projects/${projectId}`, { replace: true });
+          return;
+        }
+
+        const basics: BasicsData = {
+          title: project.title || "",
+          posterFile: null,
+          posterPreviewUrl: project.posterImage || "",
+          summary: project.summary || "",
+          problemStatement: project.problemStatement || "",
+          deliverables: Array.isArray(project.deliverables) ? project.deliverables.join("\n") : project.deliverables || "",
+          projectType: project.projectType || "",
+          domain: project.domain || "",
+          technologies: project.technologies || [],
+          difficulty: project.difficulty || "",
+          duration: project.duration || "",
+          weeklyHours: project.weeklyHours || 0,
+          compensation: project.compensation || "",
+        };
+
+        const roles: RoleData[] = Array.isArray(project.roles)
+          ? project.roles.map((r: any) => ({
+              id: r?.id || r?._id || `role-${Date.now()}-${Math.random()}`,
+              title: r?.title || "",
+              responsibilities: Array.isArray(r?.responsibilities)
+                ? r.responsibilities.join("\n")
+                : typeof r?.responsibilities === "string"
+                ? r.responsibilities
+                : "",
+              requiredSkills: Array.isArray(r?.requiredSkills) ? r.requiredSkills : [],
+              niceToHaveSkills: Array.isArray(r?.niceToHaveSkills) ? r.niceToHaveSkills : [],
+              level: r?.level || "Junior",
+              seats: r?.seats || 1,
+              status: r?.status || "Open",
+            }))
+          : [];
+
+        const settings: SettingsData = {
+          tags: Array.isArray(project.tags) ? project.tags : [],
+          agreedToTerms: true,
+        };
+
+        setData({ basics, roles: roles.length > 0 ? roles : [], settings });
+        setStep(1);
+      } catch (error: any) {
+        console.error(error);
+        toast({ title: error?.message || "Failed to load project", variant: "destructive" });
+        navigate("/projects", { replace: true });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadProject();
+  }, [navigate, projectId]);
 
   const handleBasicsDone = (basics: BasicsData) => {
     setData((d) => ({ ...d, basics }));
@@ -120,8 +194,10 @@ const PostProjectWizard = () => {
   const handlePublish = async () => {
     const { basics, roles, settings } = data;
     if (!basics || !settings) return;
+    if (isSubmitting) return;
 
     try {
+      setIsSubmitting(true);
       const posterImage = await fileToBase64(basics.posterFile);
       const payload = {
         title: basics.title,
@@ -149,17 +225,25 @@ const PostProjectWizard = () => {
         })),
       };
 
-      const res = await apiPost<{ success: boolean; data: { project: { _id: string } } }>("/projects", payload);
-      const id = res?.data?.project?._id;
-      toast({ title: "Project posted successfully 🎉" });
-      if (id) {
-        navigate(`/projects/${id}`);
+      if (isEditing && projectId) {
+        await apiPut(`/projects/${projectId}`, payload);
+        toast({ title: "Project updated" });
+        navigate(`/projects/${projectId}`);
       } else {
-        navigate("/projects");
+        const res = await apiPost<{ success: boolean; data: { project: { _id: string } } }>("/projects", payload);
+        const id = res?.data?.project?._id;
+        toast({ title: "Project posted successfully 🎉" });
+        if (id) {
+          navigate(`/projects/${id}`);
+        } else {
+          navigate("/projects");
+        }
       }
     } catch (error: any) {
       console.error(error);
       toast({ title: error?.message || "Failed to post project", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -169,6 +253,8 @@ const PostProjectWizard = () => {
     "Add tags and confirm you're ready to share this project with the Kollab community.",
     "Everything looks good? Give it one final look before you go live.",
   ];
+
+  const titleText = isEditing ? "Edit Project" : "Post a Project";
 
   return (
     <div className="min-h-screen bg-background">
@@ -213,7 +299,7 @@ const PostProjectWizard = () => {
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-extrabold text-foreground tracking-tight mb-3">
-            Post a <span className="gradient-text">Project</span>
+            {titleText.replace("Project", "")}<span className="gradient-text"> Project</span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-lg mx-auto mb-12 leading-relaxed">
             {stepDescriptions[step - 1]}
@@ -234,35 +320,45 @@ const PostProjectWizard = () => {
 
       {/* Step content — wider container */}
       <div className="max-w-4xl mx-auto w-full px-6 py-10">
-        {step === 1 && (
-          <Step1Basics
-            initialData={data.basics}
-            onNext={handleBasicsDone}
-            onCancel={() => navigate("/projects")}
-          />
-        )}
-        {step === 2 && (
-          <Step2Roles
-            initialRoles={data.roles}
-            onNext={handleRolesDone}
-            onBack={() => { setStep(1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-          />
-        )}
-        {step === 3 && (
-          <Step3Settings
-            initialData={data.settings}
-            onNext={handleSettingsDone}
-            onBack={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-          />
-        )}
-        {step === 4 && data.basics && data.settings && (
-          <Step4Review
-            basics={data.basics}
-            roles={data.roles}
-            settings={data.settings}
-            onBack={() => { setStep(3); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-            onPublish={handlePublish}
-          />
+        {isLoading ? (
+          <div className="rounded-2xl border border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+            Loading project details...
+          </div>
+        ) : (
+          <>
+            {step === 1 && (
+              <Step1Basics
+                initialData={data.basics}
+                onNext={handleBasicsDone}
+                onCancel={() => navigate("/projects")}
+              />
+            )}
+            {step === 2 && (
+              <Step2Roles
+                initialRoles={data.roles}
+                onNext={handleRolesDone}
+                onBack={() => { setStep(1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              />
+            )}
+            {step === 3 && (
+              <Step3Settings
+                initialData={data.settings}
+                onNext={handleSettingsDone}
+                onBack={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              />
+            )}
+            {step === 4 && data.basics && data.settings && (
+              <Step4Review
+                basics={data.basics}
+                roles={data.roles}
+                settings={data.settings}
+                isEditing={isEditing}
+                isSubmitting={isSubmitting}
+                onBack={() => { setStep(3); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                onPublish={handlePublish}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

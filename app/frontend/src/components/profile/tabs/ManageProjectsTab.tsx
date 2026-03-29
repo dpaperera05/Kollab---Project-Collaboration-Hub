@@ -139,7 +139,7 @@ const ManageProjectsTab = () => {
                   </div>
                   <div className="flex flex-wrap gap-2 pt-1">
                     <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => navigate(`/projects/${p._id}`)}><Eye size={12} /> View</Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => toast({ title: "Edit coming soon" })}><Pencil size={12} /> Edit</Button>
+                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => navigate(`/projects/${p._id}/edit`)}><Pencil size={12} /> Edit</Button>
                     <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setApplicantsProject(p)}>
                       <Users size={12} /> Applicants ({p.applicants.length})
                     </Button>

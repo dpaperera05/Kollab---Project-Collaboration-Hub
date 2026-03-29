@@ -355,6 +355,88 @@ export const createProject = async (req: Request, res: Response) => {
   return res.status(201).json({ success: true, data: { project } });
 };
 
+export const updateProject = async (req: Request, res: Response) => {
+  const userId = req.userId;
+  const { id } = req.params;
+  if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+  const project = await Project.findOne({ _id: id, ownerId: userId });
+  if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+  const {
+    title,
+    summary,
+    problemStatement,
+    deliverables,
+    projectType,
+    domain,
+    technologies,
+    difficulty,
+    duration,
+    weeklyHours,
+    compensation,
+    posterImage,
+    tags,
+    roles,
+  } = req.body || {};
+
+  if (!title || !summary || !projectType || !domain || !difficulty || !duration || !weeklyHours || !compensation) {
+    return res.status(400).json({ success: false, message: "Missing required fields" });
+  }
+
+  const cleanedRoles = Array.isArray(roles)
+    ? roles.map((r: any) => ({
+        id: typeof r?.id === "string" ? r.id : `role-${Date.now()}`,
+        title: typeof r?.title === "string" ? r.title.trim() : "",
+        responsibilities: ensureDeliverables(r?.responsibilities),
+        requiredSkills: ensureStringArray(r?.requiredSkills),
+        niceToHaveSkills: ensureStringArray(r?.niceToHaveSkills),
+        level: typeof r?.level === "string" && ["Junior", "Intermediate", "Senior"].includes(r.level) ? r.level : "Junior",
+        seats: typeof r?.seats === "number" && r.seats > 0 ? r.seats : 1,
+        status: typeof r?.status === "string" && ["Open", "Filled"].includes(r.status) ? r.status : "Open",
+      }))
+    : [];
+
+  if (cleanedRoles.length === 0) {
+    return res.status(400).json({ success: false, message: "At least one role is required" });
+  }
+
+  if (cleanedRoles.some((r) => !r.title || r.requiredSkills.length === 0 || r.responsibilities.length === 0)) {
+    return res.status(400).json({ success: false, message: "Roles must include title, responsibilities, and required skills" });
+  }
+
+  let poster: { imageUrl: string; key?: string } | null = null;
+  try {
+    if (posterImage && typeof posterImage === "string" && posterImage.startsWith("data:")) {
+      poster = await uploadPosterToR2(posterImage);
+      if (project.posterKey) {
+        void deleteR2Object(project.posterKey);
+      }
+    }
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err?.message || "Poster upload failed" });
+  }
+
+  project.title = String(title).trim();
+  project.summary = String(summary).trim();
+  project.problemStatement = typeof problemStatement === "string" ? problemStatement.trim() : undefined;
+  project.deliverables = ensureDeliverables(deliverables);
+  project.projectType = String(projectType).trim();
+  project.domain = String(domain).trim();
+  project.technologies = ensureStringArray(technologies);
+  project.difficulty = String(difficulty).trim();
+  project.duration = String(duration).trim();
+  project.weeklyHours = Number(weeklyHours);
+  project.compensation = String(compensation).trim();
+  project.posterImage = poster?.imageUrl || (typeof posterImage === "string" ? posterImage.trim() : project.posterImage);
+  project.posterKey = poster?.key ?? project.posterKey;
+  project.tags = ensureStringArray(tags);
+  project.roles = cleanedRoles;
+
+  await project.save();
+  return res.json({ success: true, data: { project } });
+};
+
 export const updateProjectStatus = async (req: Request, res: Response) => {
   const userId = req.userId;
   const { id } = req.params;
