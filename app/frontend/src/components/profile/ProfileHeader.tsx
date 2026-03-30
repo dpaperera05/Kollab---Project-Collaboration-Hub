@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Eye, Shield, MapPin, Clock, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { setProfilePublic, uploadAvatar } from "@/lib/profileStore";
 interface Props { user: KollabUser; onUpdate: () => void; }
 
 const ProfileHeader = ({ user, onUpdate }: Props) => {
+  const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [isPublic, setIsPublic] = useState(user.isProfilePublic ?? true);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
@@ -55,6 +57,11 @@ const ProfileHeader = ({ user, onUpdate }: Props) => {
   };
 
   const initials = (p.name || user.email).slice(0, 2).toUpperCase();
+
+  const viewPublicProfile = () => {
+    const targetPath = user.userType === "mentor" ? `/mentors/${user.id}` : `/people/${user.id}`;
+    navigate(targetPath);
+  };
 
   return (
     <div className="relative mb-8 rounded-2xl border border-border bg-card overflow-hidden card-shadow">
@@ -101,7 +108,7 @@ const ProfileHeader = ({ user, onUpdate }: Props) => {
               <span className="text-muted-foreground text-xs">{isPublic ? "Public" : "Private"}</span>
               <Switch checked={isPublic} onCheckedChange={toggleVisibility} disabled={updatingVisibility} />
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => toast({ title: "Public profile page coming soon" })}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={viewPublicProfile}>
               <ExternalLink size={12} /> View Public Profile
             </Button>
           </div>
