@@ -9,6 +9,12 @@ const VALID_STATUSES = ["todo", "in-progress", "done"] as const;
 
 type ValidStatus = (typeof VALID_STATUSES)[number];
 
+const getProjectIdParam = (req: Request): string | null => {
+  const raw = (req.params as Record<string, string | string[] | undefined>)?.projectId;
+  if (!raw) return null;
+  return Array.isArray(raw) ? raw[0] : raw;
+};
+
 const normalizeStatus = (status?: string): ValidStatus | null => {
   if (!status) return null;
   const lower = status.toLowerCase();
@@ -77,8 +83,9 @@ const loadMembers = async (userIds: string[]) => {
 
 export const getWorkspace = async (req: Request, res: Response) => {
   try {
-    const { projectId } = req.params;
+    const projectId = getProjectIdParam(req);
     const userId = req.userId;
+    if (!projectId) return res.status(400).json({ success: false, message: "projectId is required" });
     const access = await ensureProjectAccess(projectId, userId, res);
     if (!access) return;
     const { project, members: projectMembers } = access;
@@ -120,8 +127,9 @@ export const getWorkspace = async (req: Request, res: Response) => {
 
 export const createTask = async (req: Request, res: Response) => {
   try {
-    const { projectId } = req.params;
+    const projectId = getProjectIdParam(req);
     const userId = req.userId;
+    if (!projectId) return res.status(400).json({ success: false, message: "projectId is required" });
     const { title, description, assignedTo } = req.body || {};
     const status = normalizeStatus(req.body?.status);
 
@@ -165,8 +173,10 @@ export const createTask = async (req: Request, res: Response) => {
 
 export const updateTask = async (req: Request, res: Response) => {
   try {
-    const { projectId, taskId } = req.params;
+    const projectId = getProjectIdParam(req);
+    const { taskId } = req.params;
     const userId = req.userId;
+    if (!projectId) return res.status(400).json({ success: false, message: "projectId is required" });
     const { title, description, assignedTo } = req.body || {};
     const status = normalizeStatus(req.body?.status);
 
@@ -204,8 +214,10 @@ export const updateTask = async (req: Request, res: Response) => {
 
 export const deleteTask = async (req: Request, res: Response) => {
   try {
-    const { projectId, taskId } = req.params;
+    const projectId = getProjectIdParam(req);
+    const { taskId } = req.params;
     const userId = req.userId;
+    if (!projectId) return res.status(400).json({ success: false, message: "projectId is required" });
 
     const access = await ensureProjectAccess(projectId, userId, res);
     if (!access) return;
@@ -229,8 +241,9 @@ export const deleteTask = async (req: Request, res: Response) => {
 
 export const getWorkspaceChat = async (req: Request, res: Response) => {
   try {
-    const { projectId } = req.params;
+    const projectId = getProjectIdParam(req);
     const userId = req.userId;
+      if (!projectId) return res.status(400).json({ success: false, message: "projectId is required" });
       const access = await ensureProjectAccess(projectId, userId, res);
       if (!access) return;
       const { project, members } = access;
@@ -260,8 +273,9 @@ export const getWorkspaceChat = async (req: Request, res: Response) => {
 
 export const sendWorkspaceMessage = async (req: Request, res: Response) => {
   try {
-    const { projectId } = req.params;
+    const projectId = getProjectIdParam(req);
     const userId = req.userId;
+    if (!projectId) return res.status(400).json({ success: false, message: "projectId is required" });
     const { text } = req.body || {};
 
     const access = await ensureProjectAccess(projectId, userId, res);
