@@ -15,7 +15,7 @@ const ChatPanel = ({ projectId, initialMessages }: Props) => {
   const [messages, setMessages] = useState<WorkspaceChatMessage[]>(initialMessages);
   const [sending, setSending] = useState(false);
   const session = getSession();
-  const currentUserId = session?.id || session?._id || "u-owner";
+  const currentUserId = session?.id || "u-owner";
 
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
