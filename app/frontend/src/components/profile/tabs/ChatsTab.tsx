@@ -37,6 +37,7 @@ const ChatsTab = () => {
   const [sending, setSending] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
+  // Only keep 1:1 or small DMs; skip workspace group rooms
   const directChats = useMemo(() => chats.filter((c) => (c.participantIds?.length || 0) <= 2), [chats]);
   const active = directChats.find((c) => c._id === activeId) || null;
 
@@ -73,9 +74,8 @@ const ChatsTab = () => {
   };
 
   const subtitle = (chat: ApiChat) => {
-    const parts: string[] = [];
-    if (chat.projectId) parts.push(chat.projectTitle || "Project chat");
-    return parts.join(" • ");
+    if (chat.projectId) return chat.projectTitle || "Project chat";
+    return "";
   };
 
   const lastMessagePreview = (chat: ApiChat) => {
@@ -126,7 +126,7 @@ const ChatsTab = () => {
                   >
                     <p className="font-medium text-sm text-foreground truncate">{otherName(c)}</p>
                     <p className="text-xs text-muted-foreground truncate">{lastMessagePreview(c)}</p>
-                    {subtitle(c) && <p className="text-[11px] text-muted-foreground/80 truncate">{subtitle(c)}</p>}
+                    {subtitle(c) && <p className="text-[11px] text-primary truncate">Project: {subtitle(c)}</p>}
                   </button>
                 ))}
               </div>
@@ -142,9 +142,9 @@ const ChatsTab = () => {
                   <div className="space-y-0.5">
                     <p className="font-semibold text-sm text-foreground">{otherName(active)}</p>
                     {subtitle(active) && (
-                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1 text-[11px] text-primary font-semibold">
                         <Tag size={12} />
-                        <span>{subtitle(active)}</span>
+                        <span>Project: {subtitle(active)}</span>
                       </div>
                     )}
                   </div>
