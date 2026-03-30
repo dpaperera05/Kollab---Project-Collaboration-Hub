@@ -9,8 +9,54 @@ import { type KollabUser, updateUserProfile } from "@/lib/authStore";
 
 interface Props { user: KollabUser; onUpdate: () => void; }
 
-const SUGGESTED_SKILLS = ["React", "TypeScript", "Node.js", "Python", "Java", "C++", "Go", "Rust", "SQL", "MongoDB", "Docker", "Kubernetes", "AWS", "GCP", "Azure", "TensorFlow", "PyTorch", "Figma", "GraphQL", "Redis", "Swift", "Kotlin", "Ruby", "PHP", "Scala", "R", "MATLAB", "Haskell", "Dart", "Flutter"];
-const SUGGESTED_TECH = ["React", "Next.js", "Vue", "Angular", "Express", "FastAPI", "Django", "Spring Boot", "PostgreSQL", "MySQL", "Firebase", "Supabase", "TailwindCSS", "Docker", "GitHub Actions", "Terraform", "Vite", "Webpack", "Redux", "Prisma", "Drizzle", "NestJS", "Svelte", "Remix", "Astro", "Nuxt"];
+const SUGGESTED_SKILLS = [
+  "System Design",
+  "API Design",
+  "Database Design",
+  "Data Modeling",
+  "Testing & QA",
+  "Debugging",
+  "Performance Tuning",
+  "Security / Threat Modeling",
+  "DevOps & CI/CD",
+  "Cloud Architecture",
+  "Observability",
+  "Product Thinking",
+  "Project Management",
+  "Mentoring & Leadership",
+  "Technical Writing",
+  "UX Collaboration",
+];
+
+const SUGGESTED_TECH = [
+  "React",
+  "Next.js",
+  "Node.js",
+  "Express",
+  "NestJS",
+  "Django",
+  "FastAPI",
+  "Spring Boot",
+  "Kotlin",
+  "Swift",
+  "React Native",
+  "Flutter",
+  "PostgreSQL",
+  "MySQL",
+  "MongoDB",
+  "Redis",
+  "Kafka",
+  "GraphQL",
+  "gRPC",
+  "Docker",
+  "Kubernetes",
+  "AWS",
+  "GCP",
+  "Azure",
+  "Terraform",
+  "Tailwind CSS",
+  "Vite",
+];
 
 const ChipPicker = ({ label, options, selected, setSelected }: { label: string; options: string[]; selected: string[]; setSelected: (s: string[]) => void }) => {
   const [search, setSearch] = useState("");

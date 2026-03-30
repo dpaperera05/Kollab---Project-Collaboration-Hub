@@ -22,9 +22,74 @@ interface PeopleFiltersProps {
   onClear: () => void;
 }
 
-const ROLES = ["Frontend Developer", "Backend Developer", "Full Stack Developer", "UI/UX Designer", "Data Scientist", "ML Engineer", "DevOps Engineer", "Mobile Developer", "Product Manager", "Security Analyst", "Embedded Developer", "Robotics Engineer", "Blockchain Developer", "Game Developer", "Data Analyst", "Technical Writer", "3D Developer"];
-const SKILLS = ["React", "TypeScript", "Python", "Node.js", "Go", "C++", "Figma", "Docker", "Kubernetes", "TensorFlow", "PyTorch", "SQL", "GraphQL", "AWS", "Rust", "Swift", "Solidity"];
-const TECH = ["React", "Next.js", "Tailwind CSS", "PostgreSQL", "MongoDB", "Docker", "AWS", "Firebase", "Supabase", "Terraform", "ROS2", "Unity", "Vite"];
+const ROLES = [
+  "Frontend Developer",
+  "Backend Developer",
+  "Full Stack Developer",
+  "UI/UX Designer",
+  "Data Scientist",
+  "ML Engineer",
+  "DevOps Engineer",
+  "Mobile Developer",
+  "Product Manager",
+  "Security Analyst",
+  "Embedded Developer",
+  "Robotics Engineer",
+  "Blockchain Developer",
+  "Game Developer",
+  "Data Analyst",
+  "Technical Writer",
+  "3D Developer",
+];
+
+const SKILLS = [
+  "System Design",
+  "API Design",
+  "Database Design",
+  "Data Modeling",
+  "Testing & QA",
+  "Debugging",
+  "Performance Tuning",
+  "Security / Threat Modeling",
+  "DevOps & CI/CD",
+  "Cloud Architecture",
+  "Observability",
+  "Product Thinking",
+  "Project Management",
+  "Mentoring & Leadership",
+  "Technical Writing",
+  "UX Collaboration",
+];
+
+const TECH = [
+  "React",
+  "Next.js",
+  "Node.js",
+  "Express",
+  "NestJS",
+  "Django",
+  "FastAPI",
+  "Spring Boot",
+  "Kotlin",
+  "Swift",
+  "React Native",
+  "Flutter",
+  "PostgreSQL",
+  "MySQL",
+  "MongoDB",
+  "Redis",
+  "Kafka",
+  "GraphQL",
+  "gRPC",
+  "Docker",
+  "Kubernetes",
+  "AWS",
+  "GCP",
+  "Azure",
+  "Terraform",
+  "Tailwind CSS",
+  "Vite",
+];
 const DOMAINS = ["AI & ML", "Web Dev", "Mobile Dev", "Data Science", "Cybersecurity", "Robotics", "IoT", "Software Engineering"];
 
 const ChipMultiFilter = ({
