@@ -12,6 +12,7 @@ import ActivityTimeline from "@/components/people/profile/ActivityTimeline";
 import type { PersonProfile, PinnedShowcase } from "@/data/mockPeople";
 import { apiGet } from "@/lib/api";
 import NotFound from "@/pages/NotFound";
+import defaultAvatar from "@/assets/default-avatar.svg";
 
 type MemberProfileResponse = {
   success: boolean;
@@ -47,7 +48,7 @@ const PersonProfilePage = () => {
         const res = await apiGet<MemberProfileResponse>(`/profile/members/${id}`);
         const profile = res.data.user?.profile || {};
         const name = profile.name || res.data.user?.name || "Member";
-        const avatar = profile.avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(name)}`;
+        const avatar = profile.avatarUrl || defaultAvatar;
         const stats = {
           projectsCount: res.data.stats?.projectsCount ?? 0,
           showcasesCount: res.data.stats?.showcasesCount ?? 0,

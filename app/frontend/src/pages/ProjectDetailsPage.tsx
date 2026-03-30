@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import defaultAvatar from "@/assets/default-avatar.svg";
 
 import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -135,7 +136,7 @@ const ProjectDetailsPage = () => {
     return members.map((m, idx) => ({
       id: m.userId || `member-${idx}`,
       name: m.name || "Team member",
-      avatar: m.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.name || "Member")}`,
+      avatar: m.avatar || defaultAvatar,
       role: m.role || "Contributor",
     }));
   };
@@ -143,13 +144,13 @@ const ProjectDetailsPage = () => {
   const adaptProject = (p: BackendProject): Project => ({
     id: p.id || p._id,
     title: p.title,
-    posterAvatar: p.owner?.avatar || "https://api.dicebear.com/7.x/initials/svg?seed=Owner",
+    posterAvatar: p.owner?.avatar || defaultAvatar,
     posterName: p.owner?.name || "Project Owner",
     posterRating: p.owner?.rating || 4.8,
     owner: {
       id: p.owner?.id || p.owner?.id || "owner",
       name: p.owner?.name || "Project Owner",
-      avatar: p.owner?.avatar || "https://api.dicebear.com/7.x/initials/svg?seed=Owner",
+      avatar: p.owner?.avatar || defaultAvatar,
       rating: p.owner?.rating || 4.8,
       title: p.owner?.title || "Project Owner",
       projectsPosted: p.owner?.projectsPosted || 1,

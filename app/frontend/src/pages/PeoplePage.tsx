@@ -11,6 +11,7 @@ import PeopleHeroIllustration from "@/components/people/PeopleHeroIllustration";
 import PaginationBar from "@/components/projects/PaginationBar";
 import type { PeoplePerson } from "@/components/people/PeopleCard";
 import { apiGet } from "@/lib/api";
+import defaultAvatar from "@/assets/default-avatar.svg";
 
 const PAGE_SIZE = 9;
 
@@ -57,7 +58,7 @@ const PeoplePage = () => {
         const mapped = (res.data.users || []).map((u) => {
           const profile = u.profile || {};
           const name = profile.name || u.name || "Member";
-          const avatar = profile.avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(name)}`;
+          const avatar = profile.avatarUrl || defaultAvatar;
           return {
             id: u.id,
             name,
