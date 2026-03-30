@@ -4,6 +4,7 @@ import ChatInput from "./ChatInput";
 import type { WorkspaceChatMessage } from "@/data/workspaceData";
 import { apiPost } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { getSession } from "@/lib/authStore";
 
 interface Props {
   projectId: string;
@@ -13,6 +14,8 @@ interface Props {
 const ChatPanel = ({ projectId, initialMessages }: Props) => {
   const [messages, setMessages] = useState<WorkspaceChatMessage[]>(initialMessages);
   const [sending, setSending] = useState(false);
+  const session = getSession();
+  const currentUserId = session?.id || session?._id || "u-owner";
 
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
@@ -37,7 +40,7 @@ const ChatPanel = ({ projectId, initialMessages }: Props) => {
         <h2 className="text-lg font-semibold text-foreground">Group Chat</h2>
         <p className="text-xs text-muted-foreground">{messages.length} messages</p>
       </div>
-      <ChatMessageList messages={messages} />
+      <ChatMessageList messages={messages} currentUserId={currentUserId} />
       <ChatInput onSend={handleSend} disabled={sending} />
     </div>
   );
