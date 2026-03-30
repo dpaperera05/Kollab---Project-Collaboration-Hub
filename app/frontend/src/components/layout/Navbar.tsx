@@ -148,10 +148,10 @@ const Navbar = () => {
 
                 {accountOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-68 max-w-xs rounded-2xl border-[1.5px] border-primary/30 bg-white shadow-xl overflow-hidden transition-all"
+                    className="absolute right-0 mt-2 w-68 max-w-xs rounded-2xl border-[1.5px] border-primary/30 bg-card shadow-xl overflow-hidden transition-all"
                     role="menu"
                   >
-                    <div className="px-3 py-2.5 border-b border-border/70 bg-white">
+                    <div className="px-3 py-2.5 border-b border-border/70 bg-card">
                       <p className="text-sm font-semibold text-foreground line-clamp-1">{session.name || "Account"}</p>
                       <p className="text-xs text-muted-foreground line-clamp-1">{session.email}</p>
                     </div>
