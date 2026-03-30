@@ -20,9 +20,10 @@ interface ApplyRoleModalProps {
   roleTitle: string;
   projectTitle: string;
   projectId: string;
+  projectStatus?: "Open" | "Ongoing" | "Filled" | "Finished" | string;
 }
 
-const ApplyRoleModal = ({ open, onClose, roleTitle, projectTitle, projectId }: ApplyRoleModalProps) => {
+const ApplyRoleModal = ({ open, onClose, roleTitle, projectTitle, projectId, projectStatus }: ApplyRoleModalProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [motivation, setMotivation] = useState("");
@@ -48,6 +49,8 @@ const ApplyRoleModal = ({ open, onClose, roleTitle, projectTitle, projectId }: A
     cleanedLinks.length > 0 &&
     confirmed &&
     !!resumeBase64;
+
+  const projectClosed = projectStatus === "Filled" || projectStatus === "Finished";
 
   const toBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -80,6 +83,12 @@ const ApplyRoleModal = ({ open, onClose, roleTitle, projectTitle, projectId }: A
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
+
+    if (projectClosed) {
+      toast({ title: "Applications closed", description: "This project is no longer accepting applicants." });
+      handleClose();
+      return;
+    }
 
     const session = getSession();
     if (!session?.token) {
@@ -254,10 +263,10 @@ const ApplyRoleModal = ({ open, onClose, roleTitle, projectTitle, projectId }: A
             </Button>
             <Button
               type="submit"
-              disabled={!isValid || submitting}
+              disabled={!isValid || submitting || projectClosed}
               className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {submitting ? "Submitting…" : "Submit Application"}
+              {projectClosed ? "Applications Closed" : submitting ? "Submitting…" : "Submit Application"}
             </Button>
           </div>
         </form>

@@ -20,16 +20,22 @@ interface RoleCardProps {
   role: ProjectRole;
   projectTitle: string;
   projectId: string;
+  projectStatus?: "Open" | "Ongoing" | "Filled" | "Finished" | string;
   defaultOpen?: boolean;
 }
 
-const RoleCard = ({ role, projectTitle, projectId, defaultOpen = false }: RoleCardProps) => {
+const RoleCard = ({ role, projectTitle, projectId, projectStatus, defaultOpen = false }: RoleCardProps) => {
   const [open, setOpen] = useState(defaultOpen);
   const [applyOpen, setApplyOpen] = useState(false);
 
   const levelConfig = LEVEL_CONFIG[role.level];
   const statusConfig = STATUS_CONFIG[role.status];
   const filledPct = Math.round((role.filled / role.total) * 100);
+  const projectClosed = projectStatus === "Filled" || projectStatus === "Finished";
+  const applyDisabled = role.status === "Filled" || projectClosed;
+  const applyLabel = projectClosed
+    ? projectStatus === "Finished" ? "Project Completed" : "Project Filled"
+    : role.status === "Filled" ? "Role Filled" : "Apply for this Role";
 
   return (
     <>
@@ -133,11 +139,11 @@ const RoleCard = ({ role, projectTitle, projectId, defaultOpen = false }: RoleCa
             {/* Apply */}
             <div className="pt-1">
               <Button
-                onClick={() => setApplyOpen(true)}
+                onClick={() => !applyDisabled && setApplyOpen(true)}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-brand-sm"
-                disabled={role.status === "Filled"}
+                disabled={applyDisabled}
               >
-                {role.status === "Filled" ? "Role Filled" : "Apply for this Role"}
+                {applyLabel}
               </Button>
             </div>
           </div>
@@ -150,6 +156,7 @@ const RoleCard = ({ role, projectTitle, projectId, defaultOpen = false }: RoleCa
         roleTitle={role.title}
         projectTitle={projectTitle}
         projectId={projectId}
+        projectStatus={projectStatus}
       />
     </>
   );
@@ -159,9 +166,10 @@ interface RolesAccordionProps {
   roles: ProjectRole[];
   projectTitle: string;
   projectId: string;
+  projectStatus?: "Open" | "Ongoing" | "Filled" | "Finished" | string;
 }
 
-const RolesAccordion = ({ roles, projectTitle, projectId }: RolesAccordionProps) => {
+const RolesAccordion = ({ roles, projectTitle, projectId, projectStatus }: RolesAccordionProps) => {
   const openRoles = roles.filter((r) => r.status === "Open").length;
 
   return (
@@ -182,6 +190,7 @@ const RolesAccordion = ({ roles, projectTitle, projectId }: RolesAccordionProps)
             role={role}
             projectTitle={projectTitle}
             projectId={projectId}
+            projectStatus={projectStatus}
             defaultOpen={i === 0 && role.status === "Open"}
           />
         ))}

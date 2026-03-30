@@ -507,7 +507,7 @@ export const addApplicant = async (req: Request, res: Response) => {
   const project = await Project.findById(id);
   if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
-  if (project.status === "Filled") {
+  if (project.status === "Filled" || project.status === "Finished") {
     return res.status(400).json({ success: false, message: "Project is not accepting applicants" });
   }
 
