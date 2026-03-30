@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Project } from "../models/project.model";
 import { User } from "../models/user.model";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { recordActivity } from "../services/activity.service";
 
 const ensureStringArray = (val: unknown): string[] => {
   if (!Array.isArray(val)) return [];
@@ -352,6 +353,13 @@ export const createProject = async (req: Request, res: Response) => {
     applicants: [],
     members: [],
   });
+  void recordActivity({
+    userId,
+    type: "project_created",
+    projectId: project._id.toString(),
+    projectTitle: project.title,
+    description: `Posted a new project: ${project.title}`,
+  });
   return res.status(201).json({ success: true, data: { project } });
 };
 
@@ -434,6 +442,13 @@ export const updateProject = async (req: Request, res: Response) => {
   project.roles = cleanedRoles;
 
   await project.save();
+  void recordActivity({
+    userId,
+    type: "project_updated",
+    projectId: project._id.toString(),
+    projectTitle: project.title,
+    description: `Updated project: ${project.title}`,
+  });
   return res.json({ success: true, data: { project } });
 };
 

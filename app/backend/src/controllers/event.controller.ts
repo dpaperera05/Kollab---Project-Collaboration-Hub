@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Event } from "../models/event.model";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { recordActivity } from "../services/activity.service";
 
 const ensureStringArray = (val: unknown): string[] => {
   if (!Array.isArray(val)) return [];
@@ -178,6 +179,13 @@ export const createEvent = async (req: Request, res: Response) => {
     prize: prize ? String(prize).trim() : undefined,
     participantCount: participantCount != null ? Number(participantCount) : undefined,
     notes: notes ? String(notes).trim() : undefined,
+  });
+  void recordActivity({
+    userId,
+    type: "event_created",
+    eventId: event._id.toString(),
+    eventTitle: event.title,
+    description: `Created an event: ${event.title}`,
   });
   return res.status(201).json({ success: true, data: { event } });
 };
