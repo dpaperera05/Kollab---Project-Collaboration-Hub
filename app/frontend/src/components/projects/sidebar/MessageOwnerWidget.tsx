@@ -22,9 +22,10 @@ interface MessageOwnerWidgetProps {
   ownerId: string;
   ownerName: string;
   ownerAvatar: string;
+  projectId: string;
 }
 
-const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar }: MessageOwnerWidgetProps) => {
+const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar, projectId }: MessageOwnerWidgetProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatId, setChatId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -50,7 +51,7 @@ const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar }: MessageOwnerWid
       setLoading(true);
       setError("");
       try {
-        const res = await apiPost<ChatResponse>("/chats", { participantId: ownerId, participantName: ownerName });
+        const res = await apiPost<ChatResponse>("/chats", { participantId: ownerId, participantName: ownerName, projectId });
         if (cancelled) return;
         const id = res?.data?.chat?._id || res?.data?.chat?.id || null;
         setChatId(id);
@@ -66,7 +67,7 @@ const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar }: MessageOwnerWid
     return () => {
       cancelled = true;
     };
-  }, [ownerId, ownerName, session?.id]);
+  }, [ownerId, ownerName, projectId, session?.id]);
 
   const formatTime = (ts: string) => {
     const date = new Date(ts);
@@ -92,7 +93,7 @@ const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar }: MessageOwnerWid
       setError("");
       let activeChatId = chatId;
       if (!activeChatId) {
-        const created = await apiPost<ChatResponse>("/chats", { participantId: ownerId, participantName: ownerName });
+        const created = await apiPost<ChatResponse>("/chats", { participantId: ownerId, participantName: ownerName, projectId });
         activeChatId = created?.data?.chat?._id || created?.data?.chat?.id || null;
         setChatId(activeChatId);
         setMessages(created?.data?.chat?.messages || []);

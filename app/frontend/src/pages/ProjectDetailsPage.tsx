@@ -267,6 +267,7 @@ const ProjectDetailsPage = () => {
                   ownerId={project.owner.id}
                   ownerName={project.owner.name}
                   ownerAvatar={project.owner.avatar}
+                  projectId={project.id}
                 />
               </div>
 
@@ -279,6 +280,7 @@ const ProjectDetailsPage = () => {
                 ownerId={project.owner.id}
                 ownerName={project.owner.name}
                 ownerAvatar={project.owner.avatar}
+                projectId={project.id}
               />
             </aside>
           </div>

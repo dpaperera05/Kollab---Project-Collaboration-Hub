@@ -17,6 +17,7 @@ interface ApiChat {
   _id: string;
   participantIds: string[];
   messages: ApiMessage[];
+  projectId?: string;
 }
 
 interface MentorChatWidgetProps {
@@ -46,7 +47,7 @@ const MentorChatWidget = ({ mentorId, mentorName }: MentorChatWidgetProps) => {
       if (!session) { setLoading(false); return; }
       try {
         const res = await apiGet<{ success: boolean; data: { chats: ApiChat[] } }>("/chats");
-        const existing = res.data.chats.find((c) => c.participantIds.includes(mentorId));
+        const existing = res.data.chats.find((c) => c.participantIds.includes(mentorId) && !c.projectId);
         if (existing) {
           setChatId(existing._id);
           setMessages(existing.messages || []);

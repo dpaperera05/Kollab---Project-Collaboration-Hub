@@ -45,12 +45,14 @@ export const sendMessage = async (req: Request, res: Response) => {
 
 export const createChat = async (req: Request, res: Response) => {
   const userId = req.userId;
-  const { participantId, participantName } = req.body || {};
+  const { participantId, participantName, projectId } = req.body || {};
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
   if (!participantId) return res.status(400).json({ success: false, message: "participantId is required" });
   if (participantId === userId) return res.status(400).json({ success: false, message: "Cannot create chat with yourself" });
+
   const participants = [userId, participantId].sort();
-  const conversationKey = participants.join(":");
+  const normalizedProjectId = projectId ? String(projectId) : undefined;
+  const conversationKey = normalizedProjectId ? `${participants.join(":")}:project:${normalizedProjectId}` : participants.join(":");
 
   // Atomic upsert to avoid duplicate docs when multiple requests fire
   const chat = await Chat.findOneAndUpdate(
@@ -60,6 +62,7 @@ export const createChat = async (req: Request, res: Response) => {
         participantIds: participants,
         participantNames: participantName ? { [participantId]: participantName } : undefined,
         conversationKey,
+        projectId: normalizedProjectId,
         messages: [],
       },
     },
