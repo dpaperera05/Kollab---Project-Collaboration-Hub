@@ -5,8 +5,20 @@ import { User } from "../models/user.model";
 export const listMemberBookings = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-  const bookings = await Booking.find({ memberId: userId }).sort({ createdAt: -1 });
-  return res.json({ success: true, data: { bookings } });
+  const bookings = await Booking.find({ memberId: userId }).sort({ createdAt: -1 }).lean();
+
+  const mentorIds = bookings.map((b) => b.mentorId);
+  const uniqueIds = Array.from(new Set([...mentorIds, userId]));
+  const users = await User.find({ _id: { $in: uniqueIds } }, "name").lean();
+  const nameMap = new Map<string, string>(users.map((u) => [u._id.toString(), u.name || ""]));
+
+  const enriched = bookings.map((b) => ({
+    ...b,
+    mentorName: nameMap.get(b.mentorId) || "Mentor",
+    memberName: nameMap.get(userId) || "You",
+  }));
+
+  return res.json({ success: true, data: { bookings: enriched } });
 };
 
 export const listMentorBookings = async (req: Request, res: Response) => {

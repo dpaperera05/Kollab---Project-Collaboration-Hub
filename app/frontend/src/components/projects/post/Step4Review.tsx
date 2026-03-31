@@ -9,6 +9,8 @@ interface Props {
   basics: BasicsData;
   roles: RoleData[];
   settings: SettingsData;
+  isEditing?: boolean;
+  isSubmitting?: boolean;
   onBack: () => void;
   onPublish: () => void;
 }
@@ -41,7 +43,8 @@ const MetaBadge = ({ label, value }: { label: string; value: string | number }) 
   </div>
 );
 
-const Step4Review = ({ basics, roles, settings, onBack, onPublish }: Props) => {
+const Step4Review = ({ basics, roles, settings, isEditing, isSubmitting, onBack, onPublish }: Props) => {
+  const ctaLabel = isEditing ? "Save Changes" : "Publish Project";
   return (
     <div className="space-y-6 animate-fade-up">
       {/* Ready banner */}
@@ -180,10 +183,11 @@ const Step4Review = ({ basics, roles, settings, onBack, onPublish }: Props) => {
         <Button variant="outline" onClick={onBack} className="px-6">← Back</Button>
         <Button
           onClick={onPublish}
+          disabled={isSubmitting}
           className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-brand px-10 font-bold gap-2"
         >
           <Rocket size={16} />
-          Publish Project
+          {isSubmitting ? "Working..." : ctaLabel}
         </Button>
       </div>
     </div>

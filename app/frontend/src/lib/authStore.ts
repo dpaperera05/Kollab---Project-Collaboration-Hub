@@ -210,6 +210,15 @@ export function getSession(): KollabUser | null {
 
 export function logout(): void {
   localStorage.removeItem(SESSION_KEY);
+  clearVerificationToken();
+  try {
+    const resetMap = JSON.parse(localStorage.getItem("kollab_reset_tokens") || "{}");
+    if (resetMap && typeof resetMap === "object") {
+      localStorage.removeItem("kollab_reset_tokens");
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 type VerifyResult =
@@ -260,36 +269,99 @@ export async function verifyEmail(code: string): Promise<VerifyResult> {
   }
 }
 
-const VALID_RESET_CODE = "654321";
+const RESET_TOKEN_KEY = "kollab_reset_tokens"; // map of email -> resetToken
 
-export function requestPasswordReset(_email: string): { success: true } {
-  // Always returns success — never reveals whether the email exists
-  return { success: true };
+const saveResetToken = (email: string, token: string) => {
+  try {
+    const map = JSON.parse(localStorage.getItem(RESET_TOKEN_KEY) || "{}") as Record<string, string>;
+    map[email.toLowerCase()] = token;
+    localStorage.setItem(RESET_TOKEN_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+};
+
+const getResetToken = (email: string): string | null => {
+  try {
+    const map = JSON.parse(localStorage.getItem(RESET_TOKEN_KEY) || "{}") as Record<string, string>;
+    return map[email.toLowerCase()] || null;
+  } catch {
+    return null;
+  }
+};
+
+const clearResetToken = (email: string) => {
+  try {
+    const map = JSON.parse(localStorage.getItem(RESET_TOKEN_KEY) || "{}") as Record<string, string>;
+    delete map[email.toLowerCase()];
+    localStorage.setItem(RESET_TOKEN_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+};
+
+type RequestResetResult =
+  | { success: true; resetToken?: string; code?: string }
+  | { success: false; error: string };
+
+export async function requestPasswordReset(email: string): Promise<RequestResetResult> {
+  try {
+    const payload = await fetch(buildApiUrl("/auth/forgot-password"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })).catch(() => ({ ok: false, data: null })));
+
+    if (!payload.ok) {
+      return { success: false, error: payload.data?.message || "Failed to request password reset" };
+    }
+
+    const resetToken = payload.data?.data?.resetToken as string | undefined;
+    const code = payload.data?.data?.code as string | undefined;
+    if (resetToken) {
+      saveResetToken(email, resetToken);
+    }
+
+    return { success: true, resetToken, code };
+  } catch (err) {
+    console.error("requestPasswordReset failed", err);
+    return { success: false, error: "Unable to request password reset. Please try again." };
+  }
 }
 
 type ResetPasswordResult =
   | { success: true }
   | { success: false; error: string };
 
-export function resetPassword(
+export async function resetPassword(
   email: string,
   newPassword: string,
   code: string
-): ResetPasswordResult {
-  if (code !== VALID_RESET_CODE) {
-    return { success: false, error: "Invalid reset code." };
+): Promise<ResetPasswordResult> {
+  const resetToken = getResetToken(email);
+  if (!resetToken) {
+    return { success: false, error: "Reset token missing. Please request a new code." };
   }
 
-  const users = getUsers();
-  const updated = users.map((u) =>
-    u.email.toLowerCase() === email.toLowerCase()
-      ? { ...u, password: newPassword }
-      : u
-  );
-  saveUsers(updated);
+  try {
+    const payload = await fetch(buildApiUrl("/auth/reset-password"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, resetToken, newPassword }),
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })).catch(() => ({ ok: false, data: null })));
 
-  // Always success — don't reveal if user exists
-  return { success: true };
+    if (!payload.ok) {
+      return { success: false, error: payload.data?.message || "Failed to reset password" };
+    }
+
+    clearResetToken(email);
+    return { success: true };
+  } catch (err) {
+    console.error("resetPassword failed", err);
+    return { success: false, error: "Unable to reset password. Please try again." };
+  }
 }
 
 // ─── Onboarding helpers ─────────────────────────────────────

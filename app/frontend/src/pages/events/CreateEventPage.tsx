@@ -4,7 +4,7 @@ import {
   ArrowLeft, Upload, ImageIcon, Calendar, MapPin, Tag,
   FileText, Sparkles, ExternalLink, X, ChevronDown, ChevronUp,
 } from "lucide-react";
-import { format, differenceInDays, isBefore, startOfDay, startOfToday } from "date-fns";
+import { format, differenceInDays, startOfToday } from "date-fns";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
@@ -14,8 +14,6 @@ import TimePicker from "@/components/ui/time-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Calendar as CalendarUI } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -229,6 +227,9 @@ const CreateEventPage = () => {
   const [tagSearch, setTagSearch] = useState("");
 
   const today = useMemo(() => startOfToday(), []);
+
+  const formatInputDate = (d?: Date) => (d ? format(d, "yyyy-MM-dd") : "");
+  const parseInputDate = (val: string) => (val ? new Date(`${val}T00:00:00`) : undefined);
 
   const set = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -459,28 +460,13 @@ const CreateEventPage = () => {
                   {/* Start Date */}
                   <div>
                     <Label className="text-sm font-semibold">Start Date <span className="text-destructive">*</span></Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className={cn("mt-1.5 w-full h-11 justify-start font-normal", !form.startDate && "text-muted-foreground")}
-                        >
-                          <Calendar size={14} className="mr-2" />
-                          {form.startDate ? format(form.startDate, "PPP") : "Pick date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarUI
-                          mode="single"
-                          selected={form.startDate}
-                          onSelect={(d) => set("startDate", d)}
-                          disabled={(d) => isBefore(startOfDay(d), today)}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Input
+                      type="date"
+                      value={formatInputDate(form.startDate)}
+                      onChange={(e) => set("startDate", parseInputDate(e.target.value))}
+                      min={formatInputDate(today)}
+                      className="mt-1.5 h-11"
+                    />
                     <FieldError name="startDate" />
                   </div>
 
@@ -494,28 +480,13 @@ const CreateEventPage = () => {
                   {/* End Date */}
                   <div>
                     <Label className="text-sm font-semibold">End Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className={cn("mt-1.5 w-full h-11 justify-start font-normal", !form.endDate && "text-muted-foreground")}
-                        >
-                          <Calendar size={14} className="mr-2" />
-                          {form.endDate ? format(form.endDate, "PPP") : "Pick date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarUI
-                          mode="single"
-                          selected={form.endDate}
-                          onSelect={(d) => set("endDate", d)}
-                          disabled={(d) => isBefore(startOfDay(d), form.startDate ? startOfDay(form.startDate) : today)}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Input
+                      type="date"
+                      value={formatInputDate(form.endDate)}
+                      onChange={(e) => set("endDate", parseInputDate(e.target.value))}
+                      min={formatInputDate(form.startDate || today)}
+                      className="mt-1.5 h-11"
+                    />
                   </div>
 
                   {/* End Time */}

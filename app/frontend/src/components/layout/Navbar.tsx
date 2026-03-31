@@ -8,6 +8,7 @@ import Container from "@/components/ui/Container";
 import KollabLogo from "@/components/ui/KollabLogo";
 import { cn } from "@/lib/utils";
 import { getSession, logout, type KollabUser } from "@/lib/authStore";
+import { useNavigate } from "react-router-dom";
 
 const navLinks = [
   { label: "Projects", href: "/projects" },
@@ -20,6 +21,7 @@ const navLinks = [
 ];
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -71,6 +73,9 @@ const Navbar = () => {
     logout();
     setSession(null);
     setAccountOpen(false);
+    if (location.pathname.startsWith("/profile")) {
+      navigate("/", { replace: true });
+    }
   };
 
   return (
@@ -143,10 +148,10 @@ const Navbar = () => {
 
                 {accountOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-68 max-w-xs rounded-2xl border-[1.5px] border-primary/30 bg-gradient-to-b from-primary/8 via-card to-card shadow-xl backdrop-blur-sm overflow-hidden transition-all"
+                    className="absolute right-0 mt-2 w-68 max-w-xs rounded-2xl border-[1.5px] border-primary/30 bg-card shadow-xl overflow-hidden transition-all"
                     role="menu"
                   >
-                    <div className="px-3 py-2.5 border-b border-border/70 bg-card/80">
+                    <div className="px-3 py-2.5 border-b border-border/70 bg-card">
                       <p className="text-sm font-semibold text-foreground line-clamp-1">{session.name || "Account"}</p>
                       <p className="text-xs text-muted-foreground line-clamp-1">{session.email}</p>
                     </div>

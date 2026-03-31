@@ -1,18 +1,53 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, ExternalLink, Lock, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ExternalLink, Lock, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
-import { getShowcaseById } from "@/lib/portfolioStore";
+import { fetchShowcaseById, type PortfolioShowcase } from "@/lib/portfolioStore";
 
 const PortfolioShowcasePage = () => {
   const { id } = useParams<{ id: string }>();
-  const showcase = id ? getShowcaseById(id) : undefined;
+  const [showcase, setShowcase] = useState<PortfolioShowcase | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const item = await fetchShowcaseById(id);
+        setShowcase(item);
+      } catch (err: any) {
+        setError(err?.message || "Unable to load showcase");
+        setShowcase(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-24 pb-12 text-center text-muted-foreground flex flex-col items-center gap-3">
+          <Loader2 size={20} className="animate-spin" />
+          <p>Loading showcase...</p>
+        </main>
+      </div>
+    );
+  }
 
   if (!showcase) {
     return (
@@ -20,6 +55,7 @@ const PortfolioShowcasePage = () => {
         <Navbar />
         <main className="pt-24 pb-12 text-center">
           <h1 className="text-2xl font-bold text-foreground">Showcase not found</h1>
+          {error && <p className="text-sm text-muted-foreground mt-2">{error}</p>}
           <Link to="/profile" className="text-primary mt-4 inline-block hover:underline">Back to Profile</Link>
         </main>
       </div>

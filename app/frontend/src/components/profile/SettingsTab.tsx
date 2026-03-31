@@ -58,7 +58,7 @@ const SettingsTab = ({ user, onUpdate }: Props) => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   };
 
   const handleDeleteAccount = async () => {

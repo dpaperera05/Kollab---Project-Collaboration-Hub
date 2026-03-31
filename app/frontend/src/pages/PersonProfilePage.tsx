@@ -8,9 +8,11 @@ import ProfileSidebar from "@/components/people/profile/ProfileSidebar";
 import ReadmeAboutCard from "@/components/people/profile/ReadmeAboutCard";
 import TechBadges from "@/components/people/profile/TechBadges";
 import PinnedShowcases from "@/components/people/profile/PinnedShowcases";
+import ActivityTimeline from "@/components/people/profile/ActivityTimeline";
 import type { PersonProfile, PinnedShowcase } from "@/data/mockPeople";
 import { apiGet } from "@/lib/api";
 import NotFound from "@/pages/NotFound";
+import defaultAvatar from "@/assets/default-avatar.svg";
 
 type MemberProfileResponse = {
   success: boolean;
@@ -21,11 +23,22 @@ type MemberProfileResponse = {
   };
 };
 
+type ActivityApiItem = {
+  _id: string;
+  type: string;
+  description?: string;
+  projectTitle?: string;
+  blogTitle?: string;
+  eventTitle?: string;
+  createdAt: string;
+};
+
 const PersonProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const [person, setPerson] = useState<PersonProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activities, setActivities] = useState<ActivityApiItem[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -35,7 +48,7 @@ const PersonProfilePage = () => {
         const res = await apiGet<MemberProfileResponse>(`/profile/members/${id}`);
         const profile = res.data.user?.profile || {};
         const name = profile.name || res.data.user?.name || "Member";
-        const avatar = profile.avatarUrl || `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(name)}`;
+        const avatar = profile.avatarUrl || defaultAvatar;
         const stats = {
           projectsCount: res.data.stats?.projectsCount ?? 0,
           showcasesCount: res.data.stats?.showcasesCount ?? 0,
@@ -61,6 +74,13 @@ const PersonProfilePage = () => {
         };
 
         setPerson(mapped);
+        // Fetch recent activity
+        try {
+          const activityRes = await apiGet<{ success: boolean; data: { activities: ActivityApiItem[] } }>(`/activities/${id}?limit=12`);
+          setActivities(activityRes.data.activities || []);
+        } catch {
+          setActivities([]);
+        }
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to load profile");
@@ -118,6 +138,28 @@ const PersonProfilePage = () => {
                   <ReadmeAboutCard person={person} />
                   <TechBadges techStack={person.techStack} />
                   {hasPinned && <PinnedShowcases showcases={person.pinnedShowcases!} />}
+                  {activities.length > 0 && (
+                    <ActivityTimeline
+                      activities={activities.map((a) => ({
+                        id: a._id,
+                        type:
+                          a.type === "project_created" || a.type === "project_updated"
+                            ? "project"
+                            : a.type === "blog_published"
+                              ? "showcase"
+                              : a.type === "event_created"
+                                ? "simulation"
+                                : "badge",
+                        text:
+                          a.description ||
+                          a.projectTitle ||
+                          a.blogTitle ||
+                          a.eventTitle ||
+                          "Activity",
+                        date: new Date(a.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+                      }))}
+                    />
+                  )}
                 </>
               )}
             </div>

@@ -13,6 +13,9 @@ type Applicant = {
   role: string;
   motivation?: string;
   links?: { github?: string; linkedin?: string };
+  evidenceLinks?: string[];
+  resumeUrl?: string;
+  resumeName?: string;
   status: "pending" | "approved" | "rejected";
   rejectionReason?: string;
 };
@@ -71,7 +74,12 @@ const ApplicantsModal = ({ open, onOpenChange, projectTitle, applicants, onUpdat
                   <Badge variant="outline" className={cn("text-xs capitalize", STATUS_STYLES[a.status])}>{a.status}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">{a.motivation}</p>
-                <div className="flex gap-2 text-xs">
+                <div className="flex gap-2 text-xs flex-wrap">
+                  {a.evidenceLinks?.map((link, idx) => (
+                    <a key={idx} href={link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      <ExternalLink size={10} /> Evidence {idx + 1}
+                    </a>
+                  ))}
                   {a.links?.github && (
                     <a href={a.links.github} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                       <ExternalLink size={10} /> GitHub
@@ -80,6 +88,11 @@ const ApplicantsModal = ({ open, onOpenChange, projectTitle, applicants, onUpdat
                   {a.links?.linkedin && (
                     <a href={a.links.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
                       <ExternalLink size={10} /> LinkedIn
+                    </a>
+                  )}
+                  {a.resumeUrl && (
+                    <a href={a.resumeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                      <ExternalLink size={10} /> {a.resumeName || "Resume"}
                     </a>
                   )}
                 </div>

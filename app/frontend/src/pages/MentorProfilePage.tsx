@@ -6,6 +6,7 @@ import type { Mentor } from "@/types/mentor";
 import { getLocalReviewsForMentor, getAverageRating, type MentorReview } from "@/lib/reviewStore";
 import MentorHeader from "@/components/mentors/profile/MentorHeader";
 import MentorAbout from "@/components/mentors/profile/MentorAbout";
+import MentorAvailability from "@/components/mentors/profile/MentorAvailability";
 import MentorExpertise from "@/components/mentors/profile/MentorExpertise";
 import MentorBookingCard from "@/components/mentors/profile/MentorBookingCard";
 import MentorBookingModal from "@/components/mentors/profile/MentorBookingModal";
@@ -103,6 +104,7 @@ const MentorProfilePage = () => {
             <div className="flex-1 min-w-0 space-y-6">
               <MentorAbout mentor={mentor} />
               <MentorExpertise mentor={mentor} />
+              <MentorAvailability mentor={mentor} />
               <MentorReviews
                 key={reviewKey}
                 mentor={mentor}

@@ -10,6 +10,7 @@ if (!OTP_TOKEN_SECRET) {
 interface VerificationPayload {
   email: string;
   code: string;
+  purpose?: "verify" | "reset";
 }
 
 export const issueVerificationToken = (payload: VerificationPayload): string => {

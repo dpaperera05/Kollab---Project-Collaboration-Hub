@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { SortOrder } from "mongoose";
 import { Blog } from "../models/blog.model";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { recordActivity } from "../services/activity.service";
 
 const ensureString = (val: unknown): string | undefined => (typeof val === "string" && val.trim() ? val.trim() : undefined);
 
@@ -164,6 +165,13 @@ export const createBlog = async (req: Request, res: Response) => {
     viewCount: 0,
   });
   const populated = await blog.populate({ path: "userId", select: "name userType profile" });
+  void recordActivity({
+    userId,
+    type: "blog_published",
+    blogId: blog._id.toString(),
+    blogTitle: blog.title,
+    description: `Published a blog: ${blog.title}`,
+  });
   return res.status(201).json({ success: true, data: { blog: mapBlogResponse(populated) } });
 };
 

@@ -6,6 +6,7 @@ import {
   listOwnedProjects,
   listJoinedProjects,
   createProject,
+  updateProject,
   updateProjectStatus,
   deleteProject,
   updateApplicant,
@@ -22,6 +23,7 @@ router.use(authenticate);
 router.get("/owned", listOwnedProjects);
 router.get("/joined", listJoinedProjects);
 router.post("/", createProject);
+router.put("/:id", updateProject);
 router.patch("/:id/status", updateProjectStatus);
 router.delete("/:id", deleteProject);
 router.post("/:id/applicants", addApplicant);

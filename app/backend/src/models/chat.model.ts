@@ -5,11 +5,15 @@ export interface IChatMessage {
   senderId: string;
   text: string;
   timestamp: string;
+  senderName?: string;
+  senderAvatar?: string;
 }
 
 export interface IChat extends Document {
   participantIds: string[]; // always includes current user
   participantNames?: Record<string, string>;
+  conversationKey: string;
+  projectId?: string;
   messages: IChatMessage[];
   createdAt: Date;
   updatedAt: Date;
@@ -21,6 +25,8 @@ const messageSchema = new Schema<IChatMessage>(
     senderId: { type: String, required: true },
     text: { type: String, required: true, trim: true },
     timestamp: { type: String, required: true },
+    senderName: { type: String, trim: true },
+    senderAvatar: { type: String, trim: true },
   },
   { _id: false }
 );
@@ -29,6 +35,8 @@ const chatSchema = new Schema<IChat>(
   {
     participantIds: [{ type: String, ref: "User", index: true }],
     participantNames: { type: Map, of: String },
+    conversationKey: { type: String, required: true, unique: true, index: true },
+    projectId: { type: String, ref: "Project", index: true },
     messages: [messageSchema],
   },
   { timestamps: true }

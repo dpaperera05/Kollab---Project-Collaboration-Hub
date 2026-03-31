@@ -21,6 +21,10 @@ export interface IProjectApplicant {
   role: string;
   motivation?: string;
   links?: { github?: string; linkedin?: string };
+  evidenceLinks?: string[];
+  resumeUrl?: string;
+  resumeKey?: string;
+  resumeName?: string;
   status: ApplicantStatus;
   rejectionReason?: string;
 }
@@ -75,6 +79,10 @@ const applicantSchema = new Schema<IProjectApplicant>(
       github: { type: String, trim: true },
       linkedin: { type: String, trim: true },
     },
+    evidenceLinks: [{ type: String, trim: true }],
+    resumeUrl: { type: String, trim: true },
+    resumeKey: { type: String, trim: true },
+    resumeName: { type: String, trim: true },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     rejectionReason: { type: String, trim: true },
   },

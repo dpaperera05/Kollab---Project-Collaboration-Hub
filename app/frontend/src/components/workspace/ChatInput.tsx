@@ -4,14 +4,15 @@ import { SendHorizontal } from "lucide-react";
 
 interface Props {
   onSend: (text: string) => void;
+  disabled?: boolean;
 }
 
-const ChatInput = ({ onSend }: Props) => {
+const ChatInput = ({ onSend, disabled }: Props) => {
   const [text, setText] = useState("");
 
   const submit = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || disabled) return;
     onSend(trimmed);
     setText("");
   };
@@ -33,8 +34,9 @@ const ChatInput = ({ onSend }: Props) => {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKey}
           rows={1}
+          disabled={disabled}
         />
-        <Button size="icon" className="h-10 w-10 shrink-0" onClick={submit} disabled={!text.trim()}>
+        <Button size="icon" className="h-10 w-10 shrink-0" onClick={submit} disabled={!text.trim() || disabled}>
           <SendHorizontal size={16} />
         </Button>
       </div>

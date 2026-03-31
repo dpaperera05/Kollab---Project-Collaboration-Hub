@@ -46,9 +46,7 @@ const ResetPasswordPage = () => {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-
-    const result = resetPassword(email.trim(), password, code);
+    const result = await resetPassword(email.trim(), password, code);
     setLoading(false);
 
     if (!result.success) {

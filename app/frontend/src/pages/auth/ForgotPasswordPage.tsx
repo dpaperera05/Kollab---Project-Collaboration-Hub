@@ -28,9 +28,13 @@ const ForgotPasswordPage = () => {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    requestPasswordReset(email.trim());
+    const result = await requestPasswordReset(email.trim());
     setLoading(false);
+
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
 
     toast({
       title: "Check your email",

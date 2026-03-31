@@ -10,6 +10,7 @@ import { Chat } from "../models/chat.model";
 import { VerificationToken } from "../models/verificationToken.model";
 import { toUserResponse } from "../utils/userResponse";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { recordActivity } from "../services/activity.service";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -263,6 +264,11 @@ export const updateProfile = async (req: Request, res: Response) => {
   if (typeof isProfilePublic === "boolean") user.isProfilePublic = isProfilePublic;
 
   await user.save();
+  void recordActivity({
+    userId,
+    type: "profile_updated",
+    description: "Updated profile",
+  });
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
 
