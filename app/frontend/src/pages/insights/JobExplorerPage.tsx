@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import JobCard from "@/components/insights/JobCard";
 import JobFilters, { type FilterState } from "@/components/insights/JobFilters";
-import { fetchJobs, fetchFilters, type FetchJobsResult } from "@/services/jobMarketApi";
+import { getJobMarketJobs, getJobMarketFilters, type GetJobMarketJobsResult } from "@/services/jobMarketApi";
 import type { JobFilters as FilterOptions } from "@/data/mockJobMarket";
 
 const INITIAL_FILTERS: FilterState = {
@@ -26,31 +26,43 @@ const INITIAL_FILTERS: FilterState = {
 const JobExplorerPage = () => {
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [filterOpts, setFilterOpts] = useState<FilterOptions | null>(null);
-  const [result, setResult] = useState<FetchJobsResult | null>(null);
+  const [result, setResult] = useState<GetJobMarketJobsResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    fetchFilters().then(setFilterOpts);
+    getJobMarketFilters()
+      .then(setFilterOpts)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to load job filters.");
+      });
   }, []);
 
   const loadJobs = useCallback(async () => {
-    setLoading(true);
-    const r = await fetchJobs({
-      page,
-      limit: 9,
-      search: filters.search || undefined,
-      roleCategory: filters.roleCategory || undefined,
-      seniority: filters.seniority || undefined,
-      workMode: filters.workMode || undefined,
-      isTechJob: filters.isTechOnly ? true : undefined,
-      company: filters.company || undefined,
-      country: filters.country || undefined,
-      sortBy: filters.sortBy,
-      sortOrder: filters.sortOrder,
-    });
-    setResult(r);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      const r = await getJobMarketJobs({
+        page,
+        limit: 9,
+        search: filters.search || undefined,
+        roleCategory: filters.roleCategory || undefined,
+        seniority: filters.seniority || undefined,
+        workMode: filters.workMode || undefined,
+        isTechJob: filters.isTechOnly ? true : undefined,
+        company: filters.company || undefined,
+        country: filters.country || undefined,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+      });
+      setResult(r);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load jobs.");
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
   }, [filters, page]);
 
   useEffect(() => {
@@ -111,6 +123,12 @@ const JobExplorerPage = () => {
                   {Array.from({ length: 6 }).map((_, i) => (
                     <Skeleton key={i} className="h-56 rounded-xl" />
                   ))}
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Could not load jobs</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{error}</p>
+                  <Button variant="outline" size="sm" onClick={() => void loadJobs()}>Try Again</Button>
                 </div>
               ) : result && result.jobs.length > 0 ? (
                 <>

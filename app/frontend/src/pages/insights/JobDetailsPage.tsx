@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import JobCard from "@/components/insights/JobCard";
-import { fetchJobById, fetchJobs } from "@/services/jobMarketApi";
+import { getJobMarketJobById, getJobMarketJobs } from "@/services/jobMarketApi";
 import type { Job } from "@/data/mockJobMarket";
 
 const JobDetailsPage = () => {
@@ -17,18 +17,34 @@ const JobDetailsPage = () => {
   const [job, setJob] = useState<Job | null>(null);
   const [related, setRelated] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadJobDetails = async (jobId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const jobData = await getJobMarketJobById(jobId);
+      setJob(jobData);
+
+      if (jobData) {
+        const relatedResult = await getJobMarketJobs({ roleCategory: jobData.roleCategory, limit: 4 });
+        setRelated(relatedResult.jobs.filter((relatedJob) => relatedJob.id !== jobData.id).slice(0, 3));
+      } else {
+        setRelated([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load job details.");
+      setJob(null);
+      setRelated([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    fetchJobById(id).then(async (j) => {
-      setJob(j);
-      if (j) {
-        const r = await fetchJobs({ roleCategory: j.roleCategory, limit: 4 });
-        setRelated(r.jobs.filter((rj) => rj.id !== j.id).slice(0, 3));
-      }
-      setLoading(false);
-    });
+    void loadJobDetails(id);
   }, [id]);
 
   if (loading) {
@@ -48,6 +64,22 @@ const JobDetailsPage = () => {
   }
 
   if (!job) {
+    if (error) {
+      return (
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <div className="pt-24 pb-20">
+            <Container className="max-w-4xl text-center py-20">
+              <h2 className="text-xl font-bold mb-2">Could not load job details</h2>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={() => id && void loadJobDetails(id)}>Try again</Button>
+            </Container>
+          </div>
+          <Footer />
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
