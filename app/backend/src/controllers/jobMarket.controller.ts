@@ -2,6 +2,30 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import JobMarketJob from "../models/JobMarketJob";
 
+type CacheEntry<T> = {
+  expiresAt: number;
+  value: T;
+};
+
+const CACHE_TTL_MS = Math.max(
+  parseInt(process.env.JOB_MARKET_CACHE_TTL_MS || "60000", 10) || 60000,
+  1000
+);
+
+let summaryCache: CacheEntry<Record<string, unknown>> | null = null;
+let filtersCache: CacheEntry<Record<string, unknown>> | null = null;
+
+const getCached = <T>(entry: CacheEntry<T> | null): T | null => {
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) return null;
+  return entry.value;
+};
+
+const setCached = <T>(value: T): CacheEntry<T> => ({
+  value,
+  expiresAt: Date.now() + CACHE_TTL_MS,
+});
+
 const parseBoolean = (value: unknown): boolean | undefined => {
   if (typeof value !== "string") return undefined;
 
@@ -68,13 +92,14 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
       ];
     }
 
-    const total = await JobMarketJob.countDocuments(query);
-
-    const jobs = await JobMarketJob.find(query)
-      .sort({ [sortBy]: sortOrder })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    const [total, jobs] = await Promise.all([
+      JobMarketJob.countDocuments(query),
+      JobMarketJob.find(query)
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -109,7 +134,16 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
 
 export const getJobMarketJobById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const idParam = req.params.id;
+
+    if (typeof idParam !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid job id.",
+      });
+    }
+
+    const id = idParam;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -143,60 +177,111 @@ export const getJobMarketJobById = async (req: Request, res: Response) => {
 
 export const getJobMarketSummary = async (_req: Request, res: Response) => {
   try {
-    const jobs = await JobMarketJob.find().lean();
-
-    const totalJobs = jobs.length;
-    const techJobs = jobs.filter((job) => job.isTechJob);
-    const nonTechJobs = jobs.filter((job) => !job.isTechJob);
-
-    const roleCategoryCounts: Record<string, number> = {};
-    const seniorityCounts: Record<string, number> = {};
-    const skillCounts: Record<string, number> = {};
-    const technologyCounts: Record<string, number> = {};
-
-    for (const job of techJobs) {
-      if (job.roleCategory) {
-        roleCategoryCounts[job.roleCategory] =
-          (roleCategoryCounts[job.roleCategory] || 0) + 1;
-      }
-
-      if (job.seniority) {
-        seniorityCounts[job.seniority] =
-          (seniorityCounts[job.seniority] || 0) + 1;
-      }
-
-      for (const skill of job.skills || []) {
-        skillCounts[skill] = (skillCounts[skill] || 0) + 1;
-      }
-
-      for (const technology of job.technologies || []) {
-        technologyCounts[technology] = (technologyCounts[technology] || 0) + 1;
-      }
+    const cached = getCached(summaryCache);
+    if (cached) {
+      return res.status(200).json({ success: true, data: cached, cached: true });
     }
 
-    const topSkills = Object.entries(skillCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([name, count]) => ({ name, count }));
+    const [summaryAgg] = await JobMarketJob.aggregate<{
+      totals: { totalJobs: number; techJobs: number; nonTechJobs: number }[];
+      roleCategoryCounts: { _id: string; count: number }[];
+      seniorityCounts: { _id: string; count: number }[];
+      topSkills: { _id: string; count: number }[];
+      topTechnologies: { _id: string; count: number }[];
+    }>([
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalJobs: { $sum: 1 },
+                techJobs: {
+                  $sum: { $cond: [{ $eq: ["$isTechJob", true] }, 1, 0] },
+                },
+                nonTechJobs: {
+                  $sum: { $cond: [{ $eq: ["$isTechJob", true] }, 0, 1] },
+                },
+              },
+            },
+          ],
+          roleCategoryCounts: [
+            {
+              $match: {
+                isTechJob: true,
+                roleCategory: { $type: "string", $ne: "" },
+              },
+            },
+            { $group: { _id: "$roleCategory", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ],
+          seniorityCounts: [
+            {
+              $match: {
+                isTechJob: true,
+                seniority: { $type: "string", $ne: "" },
+              },
+            },
+            { $group: { _id: "$seniority", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ],
+          topSkills: [
+            { $match: { isTechJob: true } },
+            { $unwind: "$skills" },
+            { $match: { skills: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$skills", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+          ],
+          topTechnologies: [
+            { $match: { isTechJob: true } },
+            { $unwind: "$technologies" },
+            { $match: { technologies: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$technologies", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+          ],
+        },
+      },
+    ]);
 
-    const topTechnologies = Object.entries(technologyCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([name, count]) => ({ name, count }));
+    const totals = summaryAgg?.totals?.[0] || {
+      totalJobs: 0,
+      techJobs: 0,
+      nonTechJobs: 0,
+    };
+
+    const roleCategoryCounts = Object.fromEntries(
+      (summaryAgg?.roleCategoryCounts || []).map((item) => [item._id, item.count])
+    );
+
+    const seniorityCounts = Object.fromEntries(
+      (summaryAgg?.seniorityCounts || []).map((item) => [item._id, item.count])
+    );
+
+    const topSkills = (summaryAgg?.topSkills || []).map((item) => ({
+      name: item._id,
+      count: item.count,
+    }));
+
+    const topTechnologies = (summaryAgg?.topTechnologies || []).map((item) => ({
+      name: item._id,
+      count: item.count,
+    }));
+
+    const payload = {
+      totals,
+      roleCategoryCounts,
+      seniorityCounts,
+      topSkills,
+      topTechnologies,
+    };
+
+    summaryCache = setCached(payload);
 
     return res.status(200).json({
       success: true,
-      data: {
-        totals: {
-          totalJobs,
-          techJobs: techJobs.length,
-          nonTechJobs: nonTechJobs.length,
-        },
-        roleCategoryCounts,
-        seniorityCounts,
-        topSkills,
-        topTechnologies,
-      },
+      data: payload,
     });
   } catch (error) {
     console.error("Error fetching job market summary:", error);
@@ -210,56 +295,71 @@ export const getJobMarketSummary = async (_req: Request, res: Response) => {
 
 export const getJobMarketFilters = async (_req: Request, res: Response) => {
   try {
-    const jobs = await JobMarketJob.find({ isTechJob: true }).lean();
-
-    const roleCategorySet = new Set<string>();
-    const senioritySet = new Set<string>();
-    const workModeSet = new Set<string>();
-
-    const companyCounts: Record<string, number> = {};
-    const countryCounts: Record<string, number> = {};
-
-    for (const job of jobs) {
-      if (job.roleCategory) {
-        roleCategorySet.add(job.roleCategory);
-      }
-
-      if (job.seniority) {
-        senioritySet.add(job.seniority);
-      }
-
-      if (job.workMode) {
-        workModeSet.add(job.workMode);
-      }
-
-      if (job.company) {
-        companyCounts[job.company] = (companyCounts[job.company] || 0) + 1;
-      }
-
-      if (job.country) {
-        countryCounts[job.country] = (countryCounts[job.country] || 0) + 1;
-      }
+    const cached = getCached(filtersCache);
+    if (cached) {
+      return res.status(200).json({ success: true, data: cached, cached: true });
     }
 
-    const topCompanies = Object.entries(companyCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([name, count]) => ({ name, count }));
+    const [filtersAgg] = await JobMarketJob.aggregate<{
+      roleCategories: { _id: string }[];
+      seniorityLevels: { _id: string }[];
+      workModes: { _id: string }[];
+      topCompanies: { _id: string; count: number }[];
+      topCountries: { _id: string; count: number }[];
+    }>([
+      { $match: { isTechJob: true } },
+      {
+        $facet: {
+          roleCategories: [
+            { $match: { roleCategory: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$roleCategory" } },
+            { $sort: { _id: 1 } },
+          ],
+          seniorityLevels: [
+            { $match: { seniority: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$seniority" } },
+            { $sort: { _id: 1 } },
+          ],
+          workModes: [
+            { $match: { workMode: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$workMode" } },
+            { $sort: { _id: 1 } },
+          ],
+          topCompanies: [
+            { $match: { company: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$company", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+            { $limit: 20 },
+          ],
+          topCountries: [
+            { $match: { country: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$country", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+            { $limit: 20 },
+          ],
+        },
+      },
+    ]);
 
-    const topCountries = Object.entries(countryCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([name, count]) => ({ name, count }));
+    const payload = {
+      roleCategories: (filtersAgg?.roleCategories || []).map((item) => item._id),
+      seniorityLevels: (filtersAgg?.seniorityLevels || []).map((item) => item._id),
+      workModes: (filtersAgg?.workModes || []).map((item) => item._id),
+      topCompanies: (filtersAgg?.topCompanies || []).map((item) => ({
+        name: item._id,
+        count: item.count,
+      })),
+      topCountries: (filtersAgg?.topCountries || []).map((item) => ({
+        name: item._id,
+        count: item.count,
+      })),
+    };
+
+    filtersCache = setCached(payload);
 
     return res.status(200).json({
       success: true,
-      data: {
-        roleCategories: Array.from(roleCategorySet).sort(),
-        seniorityLevels: Array.from(senioritySet).sort(),
-        workModes: Array.from(workModeSet).sort(),
-        topCompanies,
-        topCountries,
-      },
+      data: payload,
     });
   } catch (error) {
     console.error("Error fetching job market filters:", error);
