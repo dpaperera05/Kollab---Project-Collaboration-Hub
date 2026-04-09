@@ -23,9 +23,15 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
     const workMode = (req.query.workMode as string)?.trim();
     const company = (req.query.company as string)?.trim();
     const country = (req.query.country as string)?.trim();
-    const sortBy = (req.query.sortBy as string)?.trim() || "postedDate";
-    const sortOrder = (req.query.sortOrder as string)?.trim() === "asc" ? 1 : -1;
     const isTechJob = parseBoolean(req.query.isTechJob);
+
+    const allowedSortFields = ["postedDate", "company", "title", "createdAt"];
+    const requestedSortBy = (req.query.sortBy as string)?.trim() || "postedDate";
+    const sortBy = allowedSortFields.includes(requestedSortBy)
+      ? requestedSortBy
+      : "postedDate";
+
+    const sortOrder = (req.query.sortOrder as string)?.trim() === "asc" ? 1 : -1;
 
     const query: Record<string, any> = {};
 
@@ -46,7 +52,7 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
     }
 
     if (company) {
-      query.normalizedCompany = company.toLowerCase();
+      query.company = { $regex: `^${company}$`, $options: "i" };
     }
 
     if (country) {
@@ -78,6 +84,17 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      filters: {
+        search: search || null,
+        roleCategory: roleCategory || null,
+        seniority: seniority || null,
+        workMode: workMode || null,
+        company: company || null,
+        country: country || null,
+        isTechJob: typeof isTechJob === "boolean" ? isTechJob : null,
+        sortBy,
+        sortOrder: sortOrder === 1 ? "asc" : "desc",
       },
     });
   } catch (error) {
@@ -187,6 +204,69 @@ export const getJobMarketSummary = async (_req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch job market summary.",
+    });
+  }
+};
+
+export const getJobMarketFilters = async (_req: Request, res: Response) => {
+  try {
+    const jobs = await JobMarketJob.find({ isTechJob: true }).lean();
+
+    const roleCategorySet = new Set<string>();
+    const senioritySet = new Set<string>();
+    const workModeSet = new Set<string>();
+
+    const companyCounts: Record<string, number> = {};
+    const countryCounts: Record<string, number> = {};
+
+    for (const job of jobs) {
+      if (job.roleCategory) {
+        roleCategorySet.add(job.roleCategory);
+      }
+
+      if (job.seniority) {
+        senioritySet.add(job.seniority);
+      }
+
+      if (job.workMode) {
+        workModeSet.add(job.workMode);
+      }
+
+      if (job.company) {
+        companyCounts[job.company] = (companyCounts[job.company] || 0) + 1;
+      }
+
+      if (job.country) {
+        countryCounts[job.country] = (countryCounts[job.country] || 0) + 1;
+      }
+    }
+
+    const topCompanies = Object.entries(companyCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([name, count]) => ({ name, count }));
+
+    const topCountries = Object.entries(countryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([name, count]) => ({ name, count }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        roleCategories: Array.from(roleCategorySet).sort(),
+        seniorityLevels: Array.from(senioritySet).sort(),
+        workModes: Array.from(workModeSet).sort(),
+        topCompanies,
+        topCountries,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching job market filters:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch job market filters.",
     });
   }
 };
