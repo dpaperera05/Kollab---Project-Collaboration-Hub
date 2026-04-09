@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BarChart3, Briefcase, Code2, Globe, TrendingUp, ArrowRight, Building2, Cpu, Users } from "lucide-react";
+import { BarChart3, Briefcase, Code2, Globe, TrendingUp, ArrowRight, Building2, Users } from "lucide-react";
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SummaryStatCard from "@/components/insights/SummaryStatCard";
 import ChartCard from "@/components/insights/ChartCard";
 import JobCard from "@/components/insights/JobCard";
-import { fetchSummary, fetchJobs } from "@/services/jobMarketApi";
+import { getJobMarketSummary, getJobMarketJobs } from "@/services/jobMarketApi";
 import type { JobSummary } from "@/data/mockJobMarket";
 import type { Job } from "@/data/mockJobMarket";
 
@@ -31,40 +31,58 @@ const CHART_COLORS = [
 const InsightsDashboardPage = () => {
   const [summary, setSummary] = useState<JobSummary | null>(null);
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
+  const [showSecondarySections, setShowSecondarySections] = useState(false);
+
+  const loadSummary = async () => {
+    try {
+      setSummaryLoading(true);
+      setSummaryError(null);
+      const summaryData = await getJobMarketSummary();
+      setSummary(summaryData);
+    } catch (err) {
+      setSummaryError(err instanceof Error ? err.message : "Failed to load job market insights.");
+      setSummary(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const loadFeaturedJobs = async () => {
+    try {
+      setFeaturedLoading(true);
+      setFeaturedError(null);
+      const jobsData = await getJobMarketJobs({ limit: 3 });
+      setFeaturedJobs(jobsData.jobs);
+    } catch (err) {
+      setFeaturedError(err instanceof Error ? err.message : "Failed to load featured jobs.");
+      setFeaturedJobs([]);
+    } finally {
+      setFeaturedLoading(false);
+    }
+  };
 
   useEffect(() => {
-    Promise.all([fetchSummary(), fetchJobs({ limit: 3 })]).then(([s, j]) => {
-      setSummary(s);
-      setFeaturedJobs(j.jobs);
-      setLoading(false);
-    });
+    void loadSummary();
+    void loadFeaturedJobs();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="pt-24 pb-20">
-          <Container>
-            <div className="space-y-6">
-              <Skeleton className="h-10 w-72" />
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <Skeleton className="h-72 rounded-xl" />
-                <Skeleton className="h-72 rounded-xl" />
-              </div>
-            </div>
-          </Container>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!summary) {
+      setShowSecondarySections(false);
+      return;
+    }
 
-  if (!summary) return null;
+    // Defer heavier sections by one tick so stat cards render first.
+    const timer = window.setTimeout(() => {
+      setShowSecondarySections(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [summary]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,127 +113,154 @@ const InsightsDashboardPage = () => {
 
       <div className="py-10">
         <Container className="space-y-10">
+          {summaryError && !summary && (
+            <div className="text-center py-8 border border-border rounded-xl">
+              <h2 className="text-xl font-bold mb-2">Could not load insights</h2>
+              <p className="text-muted-foreground mb-4">{summaryError}</p>
+              <Button onClick={() => void loadSummary()}>Try again</Button>
+            </div>
+          )}
+
           {/* Summary stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <SummaryStatCard label="Total Jobs" value={summary.totalJobs} icon={Briefcase} accent />
-            <SummaryStatCard label="Tech Jobs" value={summary.techJobs} icon={Code2} />
-            <SummaryStatCard label="Non-Tech Jobs" value={summary.nonTechJobs} icon={Users} />
-            <SummaryStatCard label="Top Role" value={summary.topRoleCategory} icon={TrendingUp} />
-            <SummaryStatCard label="Top Seniority" value={summary.topSeniority} icon={BarChart3} />
+            {summaryLoading && Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={`summary-skeleton-${i}`} className="h-24 rounded-xl" />
+            ))}
+
+            {!summaryLoading && summary && (
+              <>
+                <SummaryStatCard label="Total Jobs" value={summary.totalJobs} icon={Briefcase} accent />
+                <SummaryStatCard label="Tech Jobs" value={summary.techJobs} icon={Code2} />
+                <SummaryStatCard label="Non-Tech Jobs" value={summary.nonTechJobs} icon={Users} />
+                <SummaryStatCard label="Top Role" value={summary.topRoleCategory} icon={TrendingUp} />
+                <SummaryStatCard label="Top Seniority" value={summary.topSeniority} icon={BarChart3} />
+              </>
+            )}
           </div>
 
           {/* Charts */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <ChartCard title="Role Category Distribution">
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={summary.roleCategoryCounts} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-                    <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={90} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 8, fontSize: 13, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
-                    />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={18}>
-                      {summary.roleCategoryCounts.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </ChartCard>
+          {!summaryLoading && summary && !showSecondarySections && (
+            <div className="grid md:grid-cols-2 gap-6">
+              <Skeleton className="h-72 rounded-xl" />
+              <Skeleton className="h-72 rounded-xl" />
+            </div>
+          )}
 
-            <ChartCard title="Seniority Distribution">
-              <div className="h-64 flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={summary.seniorityCounts}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      innerRadius={50}
-                      dataKey="count"
-                      nameKey="name"
-                      paddingAngle={3}
-                      stroke="none"
-                    >
-                      {summary.seniorityCounts.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ borderRadius: 8, fontSize: 13, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center mt-2">
-                {summary.seniorityCounts.map((s, i) => (
-                  <div key={s.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                    {s.name} ({s.count})
+          {!summaryLoading && summary && showSecondarySections && (
+            <>
+              <div className="grid md:grid-cols-2 gap-6">
+                <ChartCard title="Role Category Distribution">
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={summary.roleCategoryCounts} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                        <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={90} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: 8, fontSize: 13, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
+                        />
+                        <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={18}>
+                          {summary.roleCategoryCounts.map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
-            </ChartCard>
-          </div>
+                </ChartCard>
 
-          {/* Top Skills & Technologies */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <ChartCard title="Top Skills in Demand">
-              <div className="flex flex-wrap gap-2">
-                {summary.topSkills.map((s) => (
-                  <Badge key={s.name} variant="secondary" className="text-sm px-3 py-1.5 gap-1.5">
-                    {s.name}
-                    <span className="text-xs text-muted-foreground font-normal">({s.count})</span>
-                  </Badge>
-                ))}
-              </div>
-            </ChartCard>
-
-            <ChartCard title="Top Technologies">
-              <div className="flex flex-wrap gap-2">
-                {summary.topTechnologies.map((t) => (
-                  <span key={t.name} className="px-3 py-1.5 text-sm font-medium rounded-lg bg-primary/8 text-primary border border-primary/15">
-                    {t.name}
-                    <span className="text-xs opacity-70 ml-1.5">({t.count})</span>
-                  </span>
-                ))}
-              </div>
-            </ChartCard>
-          </div>
-
-          {/* Top Companies & Countries */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <ChartCard title="Top Hiring Companies">
-              <div className="space-y-2.5">
-                {summary.topCompanies.slice(0, 6).map((c) => (
-                  <div key={c.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Building2 size={14} className="text-muted-foreground" />
-                      <span className="text-sm font-medium text-foreground">{c.name}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">{c.count} jobs</Badge>
+                <ChartCard title="Seniority Distribution">
+                  <div className="h-64 flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={summary.seniorityCounts}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={50}
+                          dataKey="count"
+                          nameKey="name"
+                          paddingAngle={3}
+                          stroke="none"
+                        >
+                          {summary.seniorityCounts.map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ borderRadius: 8, fontSize: 13, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
-            </ChartCard>
-
-            <ChartCard title="Top Countries">
-              <div className="space-y-2.5">
-                {summary.topCountries.slice(0, 6).map((c) => (
-                  <div key={c.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Globe size={14} className="text-muted-foreground" />
-                      <span className="text-sm font-medium text-foreground">{c.name}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">{c.count} jobs</Badge>
+                  <div className="flex flex-wrap gap-2 justify-center mt-2">
+                    {summary.seniorityCounts.map((s, i) => (
+                      <div key={s.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                        {s.name} ({s.count})
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </ChartCard>
               </div>
-            </ChartCard>
-          </div>
+
+              {/* Top Skills & Technologies */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <ChartCard title="Top Skills in Demand">
+                  <div className="flex flex-wrap gap-2">
+                    {summary.topSkills.map((s) => (
+                      <Badge key={s.name} variant="secondary" className="text-sm px-3 py-1.5 gap-1.5">
+                        {s.name}
+                        <span className="text-xs text-muted-foreground font-normal">({s.count})</span>
+                      </Badge>
+                    ))}
+                  </div>
+                </ChartCard>
+
+                <ChartCard title="Top Technologies">
+                  <div className="flex flex-wrap gap-2">
+                    {summary.topTechnologies.map((t) => (
+                      <span key={t.name} className="px-3 py-1.5 text-sm font-medium rounded-lg bg-primary/8 text-primary border border-primary/15">
+                        {t.name}
+                        <span className="text-xs opacity-70 ml-1.5">({t.count})</span>
+                      </span>
+                    ))}
+                  </div>
+                </ChartCard>
+              </div>
+
+              {/* Top Companies & Countries */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <ChartCard title="Top Hiring Companies">
+                  <div className="space-y-2.5">
+                    {summary.topCompanies.slice(0, 6).map((c) => (
+                      <div key={c.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Building2 size={14} className="text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">{c.name}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">{c.count} jobs</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+
+                <ChartCard title="Top Countries">
+                  <div className="space-y-2.5">
+                    {summary.topCountries.slice(0, 6).map((c) => (
+                      <div key={c.name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Globe size={14} className="text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">{c.name}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">{c.count} jobs</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+              </div>
+            </>
+          )}
 
           {/* Featured Jobs */}
           <section>
@@ -225,11 +270,28 @@ const InsightsDashboardPage = () => {
                 <Link to="/insights/jobs">View All <ArrowRight size={14} /></Link>
               </Button>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {featuredJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-            </div>
+            {featuredLoading ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={`featured-skeleton-${i}`} className="h-64 rounded-xl" />
+                ))}
+              </div>
+            ) : featuredError ? (
+              <div className="text-center py-6 border border-border rounded-xl">
+                <p className="text-sm text-muted-foreground mb-3">{featuredError}</p>
+                <Button variant="outline" size="sm" onClick={() => void loadFeaturedJobs()}>Retry featured jobs</Button>
+              </div>
+            ) : featuredJobs.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {featuredJobs.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 border border-border rounded-xl text-muted-foreground">
+                No featured jobs available right now.
+              </div>
+            )}
           </section>
         </Container>
       </div>

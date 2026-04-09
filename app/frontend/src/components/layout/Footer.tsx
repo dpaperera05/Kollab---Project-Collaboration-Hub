@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Github, Twitter, Linkedin, Youtube, ArrowRight, Send } from "lucide-react";
+import { Github, Twitter, Linkedin, Youtube, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import Container from "@/components/ui/Container";
 import KollabLogo from "@/components/ui/KollabLogo";
