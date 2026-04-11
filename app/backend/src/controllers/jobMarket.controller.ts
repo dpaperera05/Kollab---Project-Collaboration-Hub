@@ -35,6 +35,33 @@ const parseBoolean = (value: unknown): boolean | undefined => {
   return undefined;
 };
 
+const ALLOWED_TIME_RANGES = ["24h", "7d", "30d"] as const;
+type TimeRange = (typeof ALLOWED_TIME_RANGES)[number];
+
+const getTimeRangeWindowStart = (timeRange: TimeRange): Date => {
+  const now = Date.now();
+
+  if (timeRange === "24h") {
+    return new Date(now - 24 * 60 * 60 * 1000);
+  }
+
+  if (timeRange === "7d") {
+    return new Date(now - 7 * 24 * 60 * 60 * 1000);
+  }
+
+  return new Date(now - 30 * 24 * 60 * 60 * 1000);
+};
+
+const hasTextValue = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const asArrayCountDistribution = (
+  input: Array<{ _id: string; count: number }> | undefined
+): Array<{ key: string; count: number }> =>
+  (input || [])
+    .filter((item) => hasTextValue(item._id) && Number.isFinite(item.count) && item.count > 0)
+    .map((item) => ({ key: item._id, count: item.count }));
+
 export const getJobMarketJobs = async (req: Request, res: Response) => {
   try {
     const page = Math.max(parseInt(req.query.page as string) || 1, 1);
@@ -367,6 +394,316 @@ export const getJobMarketFilters = async (_req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch job market filters.",
+    });
+  }
+};
+
+export const getJobMarketInsights = async (req: Request, res: Response) => {
+  try {
+    const requestedTimeRange = typeof req.query.timeRange === "string" ? req.query.timeRange.trim() : "";
+    const timeRange: TimeRange = (requestedTimeRange || "30d") as TimeRange;
+
+    if (!ALLOWED_TIME_RANGES.includes(timeRange)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid timeRange. Allowed values: 24h, 7d, 30d.",
+      });
+    }
+
+    const country = typeof req.query.country === "string" ? req.query.country.trim() : "";
+    const roleCategory = typeof req.query.roleCategory === "string" ? req.query.roleCategory.trim() : "";
+    const seniority = typeof req.query.seniority === "string" ? req.query.seniority.trim() : "";
+    const workMode = typeof req.query.workMode === "string" ? req.query.workMode.trim() : "";
+    const techOnly = parseBoolean(req.query.techOnly);
+
+    const windowStart = getTimeRangeWindowStart(timeRange);
+
+    const baseMatch: Record<string, unknown> = {};
+
+    if (country) baseMatch.country = country;
+    if (roleCategory) baseMatch.roleCategory = roleCategory;
+    if (seniority) baseMatch.seniority = seniority;
+    if (workMode) baseMatch.workMode = workMode;
+    if (techOnly === true) baseMatch.isTechJob = true;
+
+    const [insightsAgg] = await JobMarketJob.aggregate<{
+      totals: { jobsAnalyzed: number }[];
+      topRole: { _id: string; count: number }[];
+      topSeniority: { _id: string; count: number }[];
+      topMentionedSkillOrTech: { _id: string; count: number }[];
+      remoteStats: { remoteCount: number; knownCount: number }[];
+      roleCategories: { _id: string; count: number }[];
+      seniorityDistribution: { _id: string; count: number }[];
+      skillsDistribution: { _id: string; count: number }[];
+      technologiesDistribution: { _id: string; count: number }[];
+      workModesDistribution: { _id: string; count: number }[];
+      featuredJobs: Array<{
+        _id: mongoose.Types.ObjectId;
+        title: string;
+        company: string;
+        country: string;
+        workMode: string;
+        seniority: string;
+        roleCategory: string;
+        postedDate: string | null;
+        description: string;
+        jobUrl: string;
+      }>;
+      lastUpdated: { _id: null; value: Date | null }[];
+    }>([
+      {
+        $addFields: {
+          postedDateParsed: {
+            $dateFromString: {
+              dateString: "$postedDate",
+              onError: null,
+              onNull: null,
+            },
+          },
+          processedAtParsed: {
+            $dateFromString: {
+              dateString: "$processedAt",
+              onError: null,
+              onNull: null,
+            },
+          },
+          syncedAtParsed: {
+            $dateFromString: {
+              dateString: "$syncedAt",
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          ...baseMatch,
+          postedDateParsed: {
+            $ne: null,
+            $gte: windowStart,
+          },
+        },
+      },
+      {
+        $facet: {
+          totals: [{ $count: "jobsAnalyzed" }],
+          topRole: [
+            { $match: { roleCategory: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$roleCategory", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+            { $limit: 1 },
+          ],
+          topSeniority: [
+            { $match: { seniority: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$seniority", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+            { $limit: 1 },
+          ],
+          topMentionedSkillOrTech: [
+            {
+              $project: {
+                mergedMentions: {
+                  $concatArrays: [{ $ifNull: ["$skills", []] }, { $ifNull: ["$technologies", []] }],
+                },
+              },
+            },
+            { $unwind: "$mergedMentions" },
+            {
+              $set: {
+                mergedMentions: {
+                  $trim: {
+                    input: { $toString: "$mergedMentions" },
+                  },
+                },
+              },
+            },
+            { $match: { mergedMentions: { $ne: "" } } },
+            { $group: { _id: "$mergedMentions", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+            { $limit: 1 },
+          ],
+          remoteStats: [
+            { $match: { workMode: { $type: "string", $ne: "" } } },
+            {
+              $group: {
+                _id: null,
+                knownCount: { $sum: 1 },
+                remoteCount: {
+                  $sum: {
+                    $cond: [
+                      {
+                        $eq: [
+                          {
+                            $toLower: {
+                              $trim: {
+                                input: "$workMode",
+                              },
+                            },
+                          },
+                          "remote",
+                        ],
+                      },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+          roleCategories: [
+            { $match: { roleCategory: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$roleCategory", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+          ],
+          seniorityDistribution: [
+            { $match: { seniority: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$seniority", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+          ],
+          skillsDistribution: [
+            { $unwind: "$skills" },
+            {
+              $set: {
+                skills: {
+                  $trim: {
+                    input: { $toString: "$skills" },
+                  },
+                },
+              },
+            },
+            { $match: { skills: { $ne: "" } } },
+            { $group: { _id: "$skills", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+          ],
+          technologiesDistribution: [
+            { $unwind: "$technologies" },
+            {
+              $set: {
+                technologies: {
+                  $trim: {
+                    input: { $toString: "$technologies" },
+                  },
+                },
+              },
+            },
+            { $match: { technologies: { $ne: "" } } },
+            { $group: { _id: "$technologies", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+          ],
+          workModesDistribution: [
+            { $match: { workMode: { $type: "string", $ne: "" } } },
+            { $group: { _id: "$workMode", count: { $sum: 1 } } },
+            { $sort: { count: -1, _id: 1 } },
+          ],
+          featuredJobs: [
+            { $sort: { postedDateParsed: -1 } },
+            { $limit: 6 },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                company: 1,
+                country: 1,
+                workMode: 1,
+                seniority: 1,
+                roleCategory: 1,
+                postedDate: {
+                  $ifNull: ["$postedDate", null],
+                },
+                description: {
+                  $ifNull: ["$description", ""],
+                },
+                jobUrl: 1,
+              },
+            },
+          ],
+          lastUpdated: [
+            {
+              $set: {
+                bestUpdatedAt: {
+                  $max: ["$processedAtParsed", "$syncedAtParsed"],
+                },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                value: { $max: "$bestUpdatedAt" },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const jobsAnalyzed = insightsAgg?.totals?.[0]?.jobsAnalyzed || 0;
+    const mostDemandedRole = insightsAgg?.topRole?.[0]?._id || null;
+    const mostCommonSeniority = insightsAgg?.topSeniority?.[0]?._id || null;
+    const mostMentionedSkillOrTech = insightsAgg?.topMentionedSkillOrTech?.[0]?._id || null;
+
+    const knownWorkModes = insightsAgg?.remoteStats?.[0]?.knownCount || 0;
+    const remoteCount = insightsAgg?.remoteStats?.[0]?.remoteCount || 0;
+    const remoteShare =
+      knownWorkModes > 0 ? Number(((remoteCount / knownWorkModes) * 100).toFixed(2)) : null;
+
+    const lastUpdatedDate = insightsAgg?.lastUpdated?.[0]?.value || null;
+
+    const appliedFilters: {
+      timeRange: TimeRange;
+      country?: string;
+      roleCategory?: string;
+      seniority?: string;
+      workMode?: string;
+      techOnly?: boolean;
+    } = { timeRange };
+
+    if (country) appliedFilters.country = country;
+    if (roleCategory) appliedFilters.roleCategory = roleCategory;
+    if (seniority) appliedFilters.seniority = seniority;
+    if (workMode) appliedFilters.workMode = workMode;
+    if (techOnly === true) appliedFilters.techOnly = true;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        lastUpdated: lastUpdatedDate ? new Date(lastUpdatedDate).toISOString() : null,
+        appliedFilters,
+        jobsAnalyzed,
+        kpis: {
+          mostDemandedRole,
+          mostCommonSeniority,
+          remoteShare,
+          mostMentionedSkillOrTech,
+        },
+        distributions: {
+          roleCategories: asArrayCountDistribution(insightsAgg?.roleCategories),
+          seniority: asArrayCountDistribution(insightsAgg?.seniorityDistribution),
+          skills: asArrayCountDistribution(insightsAgg?.skillsDistribution),
+          technologies: asArrayCountDistribution(insightsAgg?.technologiesDistribution),
+          workModes: asArrayCountDistribution(insightsAgg?.workModesDistribution),
+        },
+        featuredJobs: (insightsAgg?.featuredJobs || []).map((job) => ({
+          _id: String(job._id),
+          title: job.title || "",
+          company: job.company || "",
+          country: job.country || "",
+          workMode: job.workMode || "",
+          seniority: job.seniority || "",
+          roleCategory: job.roleCategory || "",
+          postedDate: job.postedDate || null,
+          description: job.description || "",
+          jobUrl: job.jobUrl || "",
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching job market insights:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch job market insights.",
     });
   }
 };

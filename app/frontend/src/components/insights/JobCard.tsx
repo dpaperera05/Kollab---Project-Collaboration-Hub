@@ -25,12 +25,23 @@ interface JobCardProps {
 }
 
 const JobCard = ({ job }: JobCardProps) => {
-  const daysAgo = Math.max(0, Math.floor((Date.now() - new Date(job.postedDate).getTime()) / 86400000));
-  const posted = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo}d ago`;
+  const postedMs = Date.now() - new Date(job.postedDate).getTime();
+  const postedHours = Number.isFinite(postedMs) ? Math.max(0, Math.floor(postedMs / 3600000)) : 0;
+  const postedDays = Math.floor(postedHours / 24);
+  const posted =
+    postedHours < 1
+      ? "Posted just now"
+      : postedHours < 24
+        ? `Posted ${postedHours}h ago`
+        : postedDays === 1
+          ? "Posted 1 day ago"
+          : `Posted ${postedDays} days ago`;
+
+  const preview = job.shortDescription?.trim() || "No description available for this role yet.";
 
   return (
-    <Card className="p-5 border hover:shadow-md transition-all group">
-      <div className="flex flex-col gap-3">
+    <Card className="h-full p-5 border hover:shadow-md transition-all group">
+      <div className="h-full flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -66,7 +77,7 @@ const JobCard = ({ job }: JobCardProps) => {
         </div>
 
         {/* Description */}
-        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{job.shortDescription}</p>
+        <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed min-h-[64px]">{preview}</p>
 
         {/* Skills & Tech chips */}
         <div className="flex flex-wrap gap-1">
@@ -81,11 +92,11 @@ const JobCard = ({ job }: JobCardProps) => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 pt-1">
-          <Button size="sm" variant="outline" className="text-xs" asChild>
+        <div className="mt-auto flex items-center gap-2 pt-1">
+          <Button size="sm" variant="outline" className="text-xs flex-1" asChild>
             <Link to={`/insights/jobs/${job.id}`}>View Details</Link>
           </Button>
-          <Button size="sm" className="text-xs gap-1" asChild>
+          <Button size="sm" className="text-xs gap-1 flex-1" asChild>
             <a href={job.applyUrl} target="_blank" rel="noopener noreferrer">
               Apply <ExternalLink size={12} />
             </a>

@@ -1,4 +1,5 @@
 import { mockJobs, mockSummary, mockFilters, type Job, type JobSummary, type JobFilters } from "@/data/mockJobMarket";
+import { excerptText, stripHtml } from "@/lib/utils";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, "") || "http://localhost:5000";
 const JOB_MARKET_BASE_PATH = "/api/job-market";
@@ -44,6 +45,9 @@ const asStringArray = (input: unknown): string[] => {
 };
 
 const normalizeJob = (raw: JobsApiItem): Job => {
+  const rawDescription = typeof raw.description === "string" ? raw.description : "";
+  const cleanedDescription = stripHtml(rawDescription) || "No description available.";
+
   const id = typeof raw.id === "string"
     ? raw.id
     : typeof raw._id === "string"
@@ -73,11 +77,9 @@ const normalizeJob = (raw: JobsApiItem): Job => {
     skills: asStringArray(raw.skills),
     technologies: asStringArray(raw.technologies),
     shortDescription: typeof raw.shortDescription === "string"
-      ? raw.shortDescription
-      : typeof raw.description === "string"
-        ? raw.description.slice(0, 180)
-        : "No description available.",
-    description: typeof raw.description === "string" ? raw.description : "No description available.",
+      ? excerptText(stripHtml(raw.shortDescription), 180)
+      : excerptText(cleanedDescription, 180),
+    description: cleanedDescription,
     postedDate: typeof raw.postedDate === "string"
       ? raw.postedDate
       : typeof raw.createdAt === "string"

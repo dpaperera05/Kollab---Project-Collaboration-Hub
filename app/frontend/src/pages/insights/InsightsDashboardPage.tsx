@@ -1,41 +1,131 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { BarChart3, Briefcase, Code2, Globe, TrendingUp, ArrowRight, Building2, Users } from "lucide-react";
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { ArrowRight, Briefcase, Code2, Globe2, SlidersHorizontal, Sparkles, Users } from "lucide-react";
+import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import SummaryStatCard from "@/components/insights/SummaryStatCard";
 import ChartCard from "@/components/insights/ChartCard";
 import JobCard from "@/components/insights/JobCard";
-import { getJobMarketSummary, getJobMarketJobs } from "@/services/jobMarketApi";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getJobMarketSummary, getJobMarketJobs, getJobMarketFilters } from "@/services/jobMarketApi";
 import type { JobSummary } from "@/data/mockJobMarket";
 import type { Job } from "@/data/mockJobMarket";
+import type { JobFilters } from "@/data/mockJobMarket";
 
 const CHART_COLORS = [
-  "hsl(270 80% 60%)",
-  "hsl(315 85% 65%)",
-  "hsl(200 80% 55%)",
-  "hsl(150 60% 50%)",
-  "hsl(30 90% 60%)",
-  "hsl(0 75% 60%)",
-  "hsl(240 60% 60%)",
-  "hsl(180 60% 45%)",
-  "hsl(60 70% 50%)",
-  "hsl(330 70% 55%)",
+  "hsl(214 85% 56%)",
+  "hsl(187 72% 42%)",
+  "hsl(154 60% 42%)",
+  "hsl(31 90% 56%)",
+  "hsl(345 72% 52%)",
+  "hsl(258 72% 62%)",
+  "hsl(202 80% 48%)",
+  "hsl(171 67% 38%)",
+  "hsl(43 93% 52%)",
+  "hsl(12 82% 56%)",
 ];
+
+type DashboardTimeRange = "24h" | "7d" | "30d";
+
+type DashboardFilters = {
+  timeRange: DashboardTimeRange;
+  country: string;
+  roleCategory: string;
+  seniority: string;
+  workMode: string;
+  techJobsOnly: boolean;
+};
+
+const TIME_RANGE_OPTIONS: { label: string; value: DashboardTimeRange }[] = [
+  { label: "Last 24 Hours", value: "24h" },
+  { label: "Last 7 Days", value: "7d" },
+  { label: "Last 30 Days", value: "30d" },
+];
+
+const DEFAULT_FILTERS: DashboardFilters = {
+  timeRange: "7d",
+  country: "",
+  roleCategory: "",
+  seniority: "",
+  workMode: "",
+  techJobsOnly: true,
+};
+
+const LOW_DATA_THRESHOLD = 50;
+
+const toReadableLabel = (value: string) => {
+  if (!value) return "Unknown";
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const formatDateLabel = (value?: string) => {
+  if (!value) return "Recently updated";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recently updated";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+};
+
+const getTimeRangeCutoff = (range: DashboardTimeRange) => {
+  const now = Date.now();
+  if (range === "24h") return now - 24 * 60 * 60 * 1000;
+  if (range === "7d") return now - 7 * 24 * 60 * 60 * 1000;
+  return now - 30 * 24 * 60 * 60 * 1000;
+};
+
+const countBy = (values: string[]) => {
+  return values.reduce<Record<string, number>>((acc, value) => {
+    if (!value || !value.trim()) return acc;
+    acc[value] = (acc[value] || 0) + 1;
+    return acc;
+  }, {});
+};
+
+const rankedEntries = (counts: Record<string, number>) => {
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+};
 
 const InsightsDashboardPage = () => {
   const [summary, setSummary] = useState<JobSummary | null>(null);
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
+  const [marketViewJobs, setMarketViewJobs] = useState<Job[]>([]);
+  const [filterOptions, setFilterOptions] = useState<JobFilters | null>(null);
+  const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS);
+
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
-  const [showSecondarySections, setShowSecondarySections] = useState(false);
+
+  const [marketLoading, setMarketLoading] = useState(true);
+  const [marketError, setMarketError] = useState<string | null>(null);
+
+  const [filtersLoading, setFiltersLoading] = useState(true);
+  const [filtersError, setFiltersError] = useState<string | null>(null);
+  const [autoExpandedMessage, setAutoExpandedMessage] = useState<string | null>(null);
 
   const loadSummary = async () => {
     try {
@@ -65,54 +155,372 @@ const InsightsDashboardPage = () => {
     }
   };
 
+  const loadFilterOptions = async () => {
+    try {
+      setFiltersLoading(true);
+      setFiltersError(null);
+      const nextOptions = await getJobMarketFilters();
+      setFilterOptions(nextOptions);
+    } catch (err) {
+      setFiltersError(err instanceof Error ? err.message : "Failed to load dashboard filters.");
+      setFilterOptions(null);
+    } finally {
+      setFiltersLoading(false);
+    }
+  };
+
+  const loadMarketView = useCallback(async () => {
+    try {
+      setMarketLoading(true);
+      setMarketError(null);
+
+      const baseQuery = {
+        limit: 100,
+        sortBy: "postedDate" as const,
+        sortOrder: "desc" as const,
+        country: filters.country || undefined,
+        roleCategory: filters.roleCategory || undefined,
+        seniority: filters.seniority || undefined,
+        workMode: filters.workMode || undefined,
+        isTechJob: filters.techJobsOnly ? true : undefined,
+      };
+
+      const firstPage = await getJobMarketJobs({ ...baseQuery, page: 1 });
+      const maxPages = Math.min(Math.max(firstPage.totalPages, 1), 5);
+      const pageRequests =
+        maxPages > 1
+          ? Array.from({ length: maxPages - 1 }, (_, idx) => getJobMarketJobs({ ...baseQuery, page: idx + 2 }))
+          : [];
+
+      const nextPages = pageRequests.length ? await Promise.all(pageRequests) : [];
+      const allJobs = [
+        ...firstPage.jobs,
+        ...nextPages.flatMap((pageResult) => pageResult.jobs),
+      ];
+
+      const cutoff = getTimeRangeCutoff(filters.timeRange);
+      const scopedJobs = allJobs.filter((job) => {
+        const ts = new Date(job.postedDate).getTime();
+        return !Number.isNaN(ts) && ts >= cutoff;
+      });
+
+      setMarketViewJobs(scopedJobs);
+    } catch (err) {
+      setMarketError(err instanceof Error ? err.message : "Failed to load current market view.");
+      setMarketViewJobs([]);
+    } finally {
+      setMarketLoading(false);
+    }
+  }, [filters]);
+
   useEffect(() => {
     void loadSummary();
     void loadFeaturedJobs();
+    void loadFilterOptions();
   }, []);
 
   useEffect(() => {
-    if (!summary) {
-      setShowSecondarySections(false);
+    void loadMarketView();
+  }, [loadMarketView]);
+
+  const roleDistribution = useMemo(() => {
+    if (marketViewJobs.length === 0) {
+      return summary?.roleCategoryCounts || [];
+    }
+
+    const counts = countBy(marketViewJobs.map((job) => job.roleCategory || "Other"));
+    return rankedEntries(counts).slice(0, 10);
+  }, [marketViewJobs, summary]);
+
+  const seniorityDistribution = useMemo(() => {
+    if (marketViewJobs.length === 0) {
+      return summary?.seniorityCounts || [];
+    }
+
+    const counts = countBy(marketViewJobs.map((job) => job.seniority || "Unknown"));
+    return rankedEntries(counts);
+  }, [marketViewJobs, summary]);
+
+  const topSkillsRanked = useMemo(() => {
+    if (marketViewJobs.length === 0) return summary?.topSkills || [];
+    const counts = countBy(marketViewJobs.flatMap((job) => job.skills));
+    return rankedEntries(counts).slice(0, 10);
+  }, [marketViewJobs, summary]);
+
+  const topTechnologiesRanked = useMemo(() => {
+    if (marketViewJobs.length === 0) return summary?.topTechnologies || [];
+    const counts = countBy(marketViewJobs.flatMap((job) => job.technologies));
+    return rankedEntries(counts).slice(0, 10);
+  }, [marketViewJobs, summary]);
+
+  const dominantRole = roleDistribution[0]?.name || summary?.topRoleCategory || "Insufficient data";
+  const dominantSeniority = seniorityDistribution[0]?.name || summary?.topSeniority || "Insufficient data";
+  const topSkill = topSkillsRanked[0]?.name || "Insufficient data";
+  const topTechnology = topTechnologiesRanked[0]?.name || "Insufficient data";
+
+  const workModeStats = useMemo(() => {
+    const knownModes = marketViewJobs
+      .map((job) => (job.workMode || "").trim())
+      .filter((mode) => mode.length > 0);
+    const knownCount = knownModes.length;
+    const remoteCount = knownModes.filter((mode) => mode.toLowerCase() === "remote").length;
+
+    if (knownCount < 10) {
+      return {
+        shareLabel: "Insufficient data",
+        insight: "Work mode split needs more records to be reliable.",
+      };
+    }
+
+    const remotePercent = Math.round((remoteCount / knownCount) * 100);
+    return {
+      shareLabel: `${remotePercent}%`,
+      insight:
+        remotePercent >= 50
+          ? `Remote roles lead the current view at ${remotePercent}% of known work modes.`
+          : `On-site and hybrid roles dominate, with remote at ${remotePercent}% of known work modes.`,
+    };
+  }, [marketViewJobs]);
+
+  const jobsAnalyzed = marketViewJobs.length;
+  const lowDataMode = jobsAnalyzed > 0 && jobsAnalyzed < LOW_DATA_THRESHOLD;
+
+  useEffect(() => {
+    if (marketLoading || marketError) return;
+    if (jobsAnalyzed <= 0) return;
+
+    if (jobsAnalyzed < LOW_DATA_THRESHOLD && filters.timeRange !== "30d") {
+      setFilters((prev) => ({ ...prev, timeRange: "30d" }));
+      setAutoExpandedMessage(
+        `Showing limited dataset (${jobsAnalyzed} jobs). Automatically expanded to Last 30 Days for better accuracy.`
+      );
       return;
     }
 
-    // Defer heavier sections by one tick so stat cards render first.
-    const timer = window.setTimeout(() => {
-      setShowSecondarySections(true);
-    }, 0);
+    if (filters.timeRange === "30d") {
+      setAutoExpandedMessage(null);
+    }
+  }, [jobsAnalyzed, marketLoading, marketError, filters.timeRange]);
 
-    return () => window.clearTimeout(timer);
-  }, [summary]);
+  const latestPostedDate = useMemo(() => {
+    const source = marketViewJobs.length ? marketViewJobs : featuredJobs;
+    const latest = source
+      .map((job) => new Date(job.postedDate).getTime())
+      .filter((ts) => !Number.isNaN(ts))
+      .sort((a, b) => b - a)[0];
+    return latest ? new Date(latest).toISOString() : undefined;
+  }, [marketViewJobs, featuredJobs]);
+
+  const timeRangeLabel = TIME_RANGE_OPTIONS.find((item) => item.value === filters.timeRange)?.label || "Last 7 Days";
+
+  const marketScopeText = filters.techJobsOnly ? "Tech jobs only" : "All jobs";
+
+  const marketInsights = useMemo(() => {
+    const insights: string[] = [];
+
+    if (dominantRole !== "Insufficient data") {
+      insights.push(
+        `${toReadableLabel(dominantRole)} dominates the current market, representing the largest share of active roles.`
+      );
+    }
+
+    if (dominantSeniority !== "Insufficient data") {
+      insights.push(`${toReadableLabel(dominantSeniority)} positions appear most frequently in the current dataset.`);
+    }
+
+    if (topTechnology !== "Insufficient data") {
+      insights.push(`${toReadableLabel(topTechnology)} is the most frequently mentioned technology across listings.`);
+    } else if (topSkill !== "Insufficient data") {
+      insights.push(`${toReadableLabel(topSkill)} appears as the most common capability in current listings.`);
+    }
+
+    if (workModeStats.shareLabel !== "Insufficient data") {
+      insights.push(`Remote roles account for ${workModeStats.shareLabel} of identified work modes.`);
+    } else {
+      insights.push(workModeStats.insight);
+    }
+
+    if (lowDataMode) {
+      insights.push("Data coverage is currently limited, so trend confidence is moderate rather than high.");
+    }
+
+    return insights.slice(0, 5);
+  }, [dominantRole, dominantSeniority, topTechnology, topSkill, workModeStats.insight, lowDataMode]);
+
+  const handleFilterUpdate = (patch: Partial<DashboardFilters>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+  };
+
+  const resetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
-      <section className="pt-24 pb-10 border-b border-border bg-gradient-to-b from-primary/[0.03] to-transparent">
+      <section className="pt-24 pb-10 bg-gradient-to-b from-primary/[0.05] via-background to-background">
         <Container>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="text-primary" size={24} />
-                <Badge variant="outline" className="text-xs border-primary/30 text-primary">Live Data</Badge>
+          <div className="py-1">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+              <div className="space-y-3">
+                <Badge variant="outline" className="text-[11px] border-primary/35 text-primary bg-primary/[0.04] w-fit">
+                  AI Market Intelligence
+                </Badge>
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Job Market Intelligence</h1>
+                  <p className="text-sm md:text-base text-muted-foreground mt-2 max-w-3xl leading-relaxed">
+                    Understand current market demand, role trends, and skill momentum through a real-time analytical view.
+                  </p>
+                </div>
+
+                <p className="text-xs md:text-sm text-muted-foreground/90 leading-relaxed">
+                  Last updated: {formatDateLabel(latestPostedDate)}
+                  <span className="mx-2">•</span>
+                  Range: {timeRangeLabel}
+                  <span className="mx-2">•</span>
+                  {marketLoading ? "Loading jobs analyzed" : `${jobsAnalyzed.toLocaleString()} jobs analyzed`}
+                  <span className="mx-2">•</span>
+                  {marketScopeText}
+                </p>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">Job Market Insights</h1>
-              <p className="text-muted-foreground mt-2 max-w-lg text-base">
-                Explore current tech job market demand, hiring patterns, and trending skills to guide your career.
-              </p>
+
+              <Button className="self-start lg:self-end gap-2 h-11 px-5 rounded-xl shadow-sm" asChild>
+                <Link to="/insights/jobs">
+                  Explore Live Jobs <ArrowRight size={16} />
+                </Link>
+              </Button>
             </div>
-            <Button className="self-start md:self-auto gap-2" asChild>
-              <Link to="/insights/jobs">
-                Explore All Jobs <ArrowRight size={16} />
-              </Link>
-            </Button>
           </div>
         </Container>
       </section>
 
       <div className="py-10">
-        <Container className="space-y-10">
+        <Container className="space-y-8">
+          <Card className="border-border/80 bg-gradient-to-r from-card to-muted/20 p-4 md:p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal size={16} className="text-primary" />
+                <p className="text-sm font-semibold text-foreground">Market View Controls</p>
+              </div>
+              <Button variant="ghost" size="sm" className="text-xs" onClick={resetFilters}>Reset Filters</Button>
+            </div>
+
+            {filtersLoading ? (
+              <div className="grid md:grid-cols-3 xl:grid-cols-6 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={`filter-skeleton-${i}`} className="h-10 rounded-md" />
+                ))}
+              </div>
+            ) : (
+              <>
+                {filtersError && (
+                  <p className="text-xs text-muted-foreground mb-3">{filtersError}</p>
+                )}
+
+                <div className="grid md:grid-cols-3 xl:grid-cols-6 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Time Range</Label>
+                    <Select value={filters.timeRange} onValueChange={(value) => handleFilterUpdate({ timeRange: value as DashboardTimeRange })}>
+                      <SelectTrigger className="h-10 bg-background/70">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_RANGE_OPTIONS.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Country</Label>
+                    <Select value={filters.country || "__all__"} onValueChange={(value) => handleFilterUpdate({ country: value === "__all__" ? "" : value })}>
+                      <SelectTrigger className="h-10 bg-background/70">
+                        <SelectValue placeholder="All countries" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All countries</SelectItem>
+                        {(filterOptions?.countries || []).map((item) => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Role Category</Label>
+                    <Select value={filters.roleCategory || "__all__"} onValueChange={(value) => handleFilterUpdate({ roleCategory: value === "__all__" ? "" : value })}>
+                      <SelectTrigger className="h-10 bg-background/70">
+                        <SelectValue placeholder="All roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All roles</SelectItem>
+                        {(filterOptions?.roleCategories || []).map((item) => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Seniority</Label>
+                    <Select value={filters.seniority || "__all__"} onValueChange={(value) => handleFilterUpdate({ seniority: value === "__all__" ? "" : value })}>
+                      <SelectTrigger className="h-10 bg-background/70">
+                        <SelectValue placeholder="All levels" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All levels</SelectItem>
+                        {(filterOptions?.seniorityLevels || []).map((item) => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Work Mode</Label>
+                    <Select value={filters.workMode || "__all__"} onValueChange={(value) => handleFilterUpdate({ workMode: value === "__all__" ? "" : value })}>
+                      <SelectTrigger className="h-10 bg-background/70">
+                        <SelectValue placeholder="All modes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All modes</SelectItem>
+                        {(filterOptions?.workModes || []).map((item) => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Tech Jobs Only</Label>
+                    <Card className="h-10 px-3 flex items-center justify-between border-border/80 bg-background/70">
+                      <span className="text-xs text-foreground">{filters.techJobsOnly ? "Enabled" : "Disabled"}</span>
+                      <Switch checked={filters.techJobsOnly} onCheckedChange={(checked) => handleFilterUpdate({ techJobsOnly: checked })} />
+                    </Card>
+                  </div>
+                </div>
+              </>
+            )}
+          </Card>
+
+          {autoExpandedMessage && (
+            <Card className="border border-amber-300/60 bg-amber-50/60 dark:bg-amber-900/10 p-3.5">
+              <p className="text-sm text-amber-900 dark:text-amber-200">
+                {autoExpandedMessage}
+              </p>
+            </Card>
+          )}
+
+          {!autoExpandedMessage && lowDataMode && (
+            <Card className="border border-amber-300/60 bg-amber-50/60 dark:bg-amber-900/10 p-3.5">
+              <p className="text-sm text-amber-900 dark:text-amber-200">
+                Limited data for selected time range. Showing limited dataset ({jobsAnalyzed} jobs).
+              </p>
+            </Card>
+          )}
+
           {summaryError && !summary && (
             <div className="text-center py-8 border border-border rounded-xl">
               <h2 className="text-xl font-bold mb-2">Could not load insights</h2>
@@ -121,7 +529,6 @@ const InsightsDashboardPage = () => {
             </div>
           )}
 
-          {/* Summary stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {summaryLoading && Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={`summary-skeleton-${i}`} className="h-24 rounded-xl" />
@@ -129,140 +536,190 @@ const InsightsDashboardPage = () => {
 
             {!summaryLoading && summary && (
               <>
-                <SummaryStatCard label="Total Jobs" value={summary.totalJobs} icon={Briefcase} accent />
-                <SummaryStatCard label="Tech Jobs" value={summary.techJobs} icon={Code2} />
-                <SummaryStatCard label="Non-Tech Jobs" value={summary.nonTechJobs} icon={Users} />
-                <SummaryStatCard label="Top Role" value={summary.topRoleCategory} icon={TrendingUp} />
-                <SummaryStatCard label="Top Seniority" value={summary.topSeniority} icon={BarChart3} />
+                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Jobs Analyzed</p>
+                    <Briefcase size={15} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-3xl font-bold mt-3 text-foreground leading-none">{jobsAnalyzed.toLocaleString()}</p>
+                </Card>
+                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Demanded Role</p>
+                    <Code2 size={15} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-xl font-semibold mt-3 text-foreground line-clamp-1">{toReadableLabel(dominantRole)}</p>
+                </Card>
+                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Common Seniority</p>
+                    <Users size={15} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-xl font-semibold mt-3 text-foreground line-clamp-1">{toReadableLabel(dominantSeniority)}</p>
+                </Card>
+                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Remote Share</p>
+                    <Globe2 size={15} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-3xl font-bold mt-3 text-foreground leading-none">{workModeStats.shareLabel}</p>
+                </Card>
+                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Mentioned Skill / Tech</p>
+                    <Sparkles size={15} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-xl font-semibold mt-3 text-foreground line-clamp-1">
+                    {toReadableLabel(topTechnology !== "Insufficient data" ? topTechnology : topSkill)}
+                  </p>
+                </Card>
               </>
             )}
           </div>
 
-          {/* Charts */}
-          {!summaryLoading && summary && !showSecondarySections && (
-            <div className="grid md:grid-cols-2 gap-6">
-              <Skeleton className="h-72 rounded-xl" />
-              <Skeleton className="h-72 rounded-xl" />
+          <Card className="border-border/80 bg-card/95 p-4 md:p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h2 className="text-2xl md:text-[1.7rem] font-bold tracking-tight text-foreground">Role Distribution Across Current Market View</h2>
+                <p className="text-sm text-muted-foreground mt-1">Role distribution based on current filters and selected time range</p>
+              </div>
+              <Badge variant="outline" className="text-xs border-border/80">{timeRangeLabel}</Badge>
             </div>
-          )}
 
-          {!summaryLoading && summary && showSecondarySections && (
-            <>
-              <div className="grid md:grid-cols-2 gap-6">
-                <ChartCard title="Role Category Distribution">
-                  <div className="h-64">
+            {marketLoading ? (
+              <div className="grid lg:grid-cols-[1fr_260px] gap-4">
+                <Skeleton className="h-[500px] rounded-xl" />
+                <Skeleton className="h-[500px] rounded-xl" />
+              </div>
+            ) : marketError ? (
+              <div className="text-center py-8 border border-border rounded-xl">
+                <p className="text-sm text-muted-foreground mb-3">{marketError}</p>
+                <Button variant="outline" size="sm" onClick={() => void loadMarketView()}>Retry market chart</Button>
+              </div>
+            ) : roleDistribution.length === 0 ? (
+              <div className="text-center py-8 border border-border rounded-xl text-muted-foreground">
+                No role distribution data for this filter set.
+              </div>
+            ) : (
+              <div className="grid lg:grid-cols-[1fr_260px] gap-4">
+                <div className="rounded-xl border border-border/80 bg-background/70 p-4 md:p-5">
+                  <div className="h-[480px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={summary.roleCategoryCounts} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                      <BarChart data={roleDistribution} layout="vertical" margin={{ left: 14, right: 8, top: 6, bottom: 6 }}>
                         <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={90} />
-                        <Tooltip
-                          contentStyle={{ borderRadius: 8, fontSize: 13, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          tick={{ fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={130}
+                          tickFormatter={(value) => toReadableLabel(String(value))}
                         />
-                        <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={18}>
-                          {summary.roleCategoryCounts.map((_, i) => (
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 10,
+                            fontSize: 13,
+                            border: "1px solid hsl(var(--border))",
+                            background: "hsl(var(--background))",
+                          }}
+                        />
+                        <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={24}>
+                          {roleDistribution.map((_, i) => (
                             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                           ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                </ChartCard>
+                </div>
 
-                <ChartCard title="Seniority Distribution">
-                  <div className="h-64 flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={summary.seniorityCounts}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={90}
-                          innerRadius={50}
-                          dataKey="count"
-                          nameKey="name"
-                          paddingAngle={3}
-                          stroke="none"
-                        >
-                          {summary.seniorityCounts.map((_, i) => (
-                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{ borderRadius: 8, fontSize: 13, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
+                <div className="rounded-xl border border-border/80 bg-background/70 p-4 md:p-5 space-y-4">
+                  <p className="text-sm font-semibold text-foreground">Market Takeaways</p>
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-border/70 bg-card p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Dominant Role</p>
+                      <p className="text-sm font-semibold mt-1 text-foreground">{toReadableLabel(dominantRole)}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-card p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Common Seniority</p>
+                      <p className="text-sm font-semibold mt-1 text-foreground">{toReadableLabel(dominantSeniority)}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-card p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Remote Share</p>
+                      <p className="text-sm font-semibold mt-1 text-foreground">{workModeStats.shareLabel}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          <Card className="border-border/80 bg-card/95 p-4 md:p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-foreground">Market Insights</h3>
+            <p className="text-sm text-muted-foreground mt-1">Key takeaways generated from current job market data</p>
+            <ul className="mt-4 space-y-2">
+              {marketInsights.map((insight) => (
+                <li key={insight} className="text-sm text-foreground flex items-start gap-2 leading-relaxed">
+                  <span className="mt-1 inline-block h-2 w-2 rounded-full bg-primary/70" />
+                  <span>{insight}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <ChartCard title="Top Skills in Demand">
+              {topSkillsRanked.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Not enough data available for this time range</p>
+              ) : (
+                <div className="space-y-3">
+                  {topSkillsRanked.map((entry, idx) => (
+                    <div key={entry.name} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className={`truncate ${idx === 0 ? "text-sm font-bold text-foreground" : idx < 3 ? "text-sm font-semibold text-foreground" : "text-sm text-foreground/70"}`}>
+                          {idx + 1}. {toReadableLabel(entry.name)}
+                        </p>
+                        <Badge variant={idx < 3 ? "default" : "secondary"} className={`text-xs ${idx >= 3 ? "opacity-75" : ""}`}>{entry.count}</Badge>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${idx === 0 ? "bg-primary" : idx === 1 ? "bg-primary/80" : idx === 2 ? "bg-primary/65" : "bg-primary/35"}`}
+                          style={{ width: `${Math.max((entry.count / (topSkillsRanked[0]?.count || 1)) * 100, 10)}%` }}
                         />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex flex-wrap gap-2 justify-center mt-2">
-                    {summary.seniorityCounts.map((s, i) => (
-                      <div key={s.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                        {s.name} ({s.count})
                       </div>
-                    ))}
-                  </div>
-                </ChartCard>
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ChartCard>
 
-              {/* Top Skills & Technologies */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <ChartCard title="Top Skills in Demand">
-                  <div className="flex flex-wrap gap-2">
-                    {summary.topSkills.map((s) => (
-                      <Badge key={s.name} variant="secondary" className="text-sm px-3 py-1.5 gap-1.5">
-                        {s.name}
-                        <span className="text-xs text-muted-foreground font-normal">({s.count})</span>
-                      </Badge>
-                    ))}
-                  </div>
-                </ChartCard>
-
-                <ChartCard title="Top Technologies">
-                  <div className="flex flex-wrap gap-2">
-                    {summary.topTechnologies.map((t) => (
-                      <span key={t.name} className="px-3 py-1.5 text-sm font-medium rounded-lg bg-primary/8 text-primary border border-primary/15">
-                        {t.name}
-                        <span className="text-xs opacity-70 ml-1.5">({t.count})</span>
-                      </span>
-                    ))}
-                  </div>
-                </ChartCard>
-              </div>
-
-              {/* Top Companies & Countries */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <ChartCard title="Top Hiring Companies">
-                  <div className="space-y-2.5">
-                    {summary.topCompanies.slice(0, 6).map((c) => (
-                      <div key={c.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Building2 size={14} className="text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground">{c.name}</span>
-                        </div>
-                        <Badge variant="outline" className="text-xs">{c.count} jobs</Badge>
+            <ChartCard title="Top Technologies in Demand">
+              {topTechnologiesRanked.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Not enough data available for this time range</p>
+              ) : (
+                <div className="space-y-3">
+                  {topTechnologiesRanked.map((entry, idx) => (
+                    <div key={entry.name} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <p className={`truncate ${idx === 0 ? "text-sm font-bold text-foreground" : idx < 3 ? "text-sm font-semibold text-foreground" : "text-sm text-foreground/70"}`}>
+                          {idx + 1}. {toReadableLabel(entry.name)}
+                        </p>
+                        <Badge variant={idx < 3 ? "default" : "secondary"} className={`text-xs ${idx >= 3 ? "opacity-75" : ""}`}>{entry.count}</Badge>
                       </div>
-                    ))}
-                  </div>
-                </ChartCard>
-
-                <ChartCard title="Top Countries">
-                  <div className="space-y-2.5">
-                    {summary.topCountries.slice(0, 6).map((c) => (
-                      <div key={c.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Globe size={14} className="text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground">{c.name}</span>
-                        </div>
-                        <Badge variant="outline" className="text-xs">{c.count} jobs</Badge>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${idx === 0 ? "bg-primary" : idx === 1 ? "bg-primary/80" : idx === 2 ? "bg-primary/65" : "bg-primary/35"}`}
+                          style={{ width: `${Math.max((entry.count / (topTechnologiesRanked[0]?.count || 1)) * 100, 10)}%` }}
+                        />
                       </div>
-                    ))}
-                  </div>
-                </ChartCard>
-              </div>
-            </>
-          )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ChartCard>
+          </div>
 
-          {/* Featured Jobs */}
           <section>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-bold text-foreground">Featured Jobs</h2>
