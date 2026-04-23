@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTheme } from "next-themes";
 import { Link } from "react-router-dom";
 import { ArrowRight, SlidersHorizontal } from "lucide-react";
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
@@ -96,7 +97,11 @@ const rankedEntries = (counts: Record<string, number>) => {
     .sort((a, b) => b.count - a.count);
 };
 
+const HERO_DARK = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero-dark.png";
+const HERO_LIGHT = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero-light.png";
+
 const InsightsDashboardPage = () => {
+  const { resolvedTheme } = useTheme();
   const [summary, setSummary] = useState<JobSummary | null>(null);
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
   const [marketViewJobs, setMarketViewJobs] = useState<Job[]>([]);
@@ -331,7 +336,7 @@ const InsightsDashboardPage = () => {
 
       <section className="pt-16 w-full">
         <img
-          src="https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero.png"
+          src={resolvedTheme === "dark" ? HERO_DARK : HERO_LIGHT}
           alt="Job Market Intelligence"
           className="w-full object-cover"
         />
