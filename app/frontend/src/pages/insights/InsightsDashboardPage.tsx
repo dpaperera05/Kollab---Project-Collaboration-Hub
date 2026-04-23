@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Briefcase, Code2, Globe2, SlidersHorizontal, Sparkles, Users } from "lucide-react";
+import { ArrowRight, SlidersHorizontal } from "lucide-react";
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -75,17 +75,6 @@ const toReadableLabel = (value: string) => {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const formatDateLabel = (value?: string) => {
-  if (!value) return "Recently updated";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Recently updated";
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-};
-
 const getTimeRangeCutoff = (range: DashboardTimeRange) => {
   const now = Date.now();
   if (range === "24h") return now - 24 * 60 * 60 * 1000;
@@ -114,9 +103,6 @@ const InsightsDashboardPage = () => {
   const [filterOptions, setFilterOptions] = useState<JobFilters | null>(null);
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS);
 
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
-
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
 
@@ -129,15 +115,10 @@ const InsightsDashboardPage = () => {
 
   const loadSummary = async () => {
     try {
-      setSummaryLoading(true);
-      setSummaryError(null);
       const summaryData = await getJobMarketSummary();
       setSummary(summaryData);
-    } catch (err) {
-      setSummaryError(err instanceof Error ? err.message : "Failed to load job market insights.");
+    } catch {
       setSummary(null);
-    } finally {
-      setSummaryLoading(false);
     }
   };
 
@@ -302,18 +283,7 @@ const InsightsDashboardPage = () => {
     }
   }, [jobsAnalyzed, marketLoading, marketError, filters.timeRange]);
 
-  const latestPostedDate = useMemo(() => {
-    const source = marketViewJobs.length ? marketViewJobs : featuredJobs;
-    const latest = source
-      .map((job) => new Date(job.postedDate).getTime())
-      .filter((ts) => !Number.isNaN(ts))
-      .sort((a, b) => b - a)[0];
-    return latest ? new Date(latest).toISOString() : undefined;
-  }, [marketViewJobs, featuredJobs]);
-
   const timeRangeLabel = TIME_RANGE_OPTIONS.find((item) => item.value === filters.timeRange)?.label || "Last 7 Days";
-
-  const marketScopeText = filters.techJobsOnly ? "Tech jobs only" : "All jobs";
 
   const marketInsights = useMemo(() => {
     const insights: string[] = [];
@@ -492,62 +462,6 @@ const InsightsDashboardPage = () => {
               </p>
             </Card>
           )}
-
-          {summaryError && !summary && (
-            <div className="text-center py-8 border border-border rounded-xl">
-              <h2 className="text-xl font-bold mb-2">Could not load insights</h2>
-              <p className="text-muted-foreground mb-4">{summaryError}</p>
-              <Button onClick={() => void loadSummary()}>Try again</Button>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {summaryLoading && Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={`summary-skeleton-${i}`} className="h-24 rounded-xl" />
-            ))}
-
-            {!summaryLoading && summary && (
-              <>
-                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Jobs Analyzed</p>
-                    <Briefcase size={15} className="text-muted-foreground" />
-                  </div>
-                  <p className="text-3xl font-bold mt-3 text-foreground leading-none">{jobsAnalyzed.toLocaleString()}</p>
-                </Card>
-                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Demanded Role</p>
-                    <Code2 size={15} className="text-muted-foreground" />
-                  </div>
-                  <p className="text-xl font-semibold mt-3 text-foreground line-clamp-1">{toReadableLabel(dominantRole)}</p>
-                </Card>
-                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Common Seniority</p>
-                    <Users size={15} className="text-muted-foreground" />
-                  </div>
-                  <p className="text-xl font-semibold mt-3 text-foreground line-clamp-1">{toReadableLabel(dominantSeniority)}</p>
-                </Card>
-                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Remote Share</p>
-                    <Globe2 size={15} className="text-muted-foreground" />
-                  </div>
-                  <p className="text-3xl font-bold mt-3 text-foreground leading-none">{workModeStats.shareLabel}</p>
-                </Card>
-                <Card className="p-4 md:p-5 border border-border/50 bg-card/90 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Mentioned Skill / Tech</p>
-                    <Sparkles size={15} className="text-muted-foreground" />
-                  </div>
-                  <p className="text-xl font-semibold mt-3 text-foreground line-clamp-1">
-                    {toReadableLabel(topTechnology !== "Insufficient data" ? topTechnology : topSkill)}
-                  </p>
-                </Card>
-              </>
-            )}
-          </div>
 
           <Card className="border-border/80 bg-card/95 p-4 md:p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4 mb-5">
