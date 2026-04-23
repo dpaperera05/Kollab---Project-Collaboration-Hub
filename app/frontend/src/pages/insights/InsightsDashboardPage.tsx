@@ -359,40 +359,12 @@ const InsightsDashboardPage = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <section className="pt-24 pb-10 bg-gradient-to-b from-primary/[0.05] via-background to-background">
-        <Container>
-          <div className="py-1">
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-              <div className="space-y-3">
-                <Badge variant="outline" className="text-[11px] border-primary/35 text-primary bg-primary/[0.04] w-fit">
-                  AI Market Intelligence
-                </Badge>
-                <div>
-                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">Job Market Intelligence</h1>
-                  <p className="text-sm md:text-base text-muted-foreground mt-2 max-w-3xl leading-relaxed">
-                    Understand current market demand, role trends, and skill momentum through a real-time analytical view.
-                  </p>
-                </div>
-
-                <p className="text-xs md:text-sm text-muted-foreground/90 leading-relaxed">
-                  Last updated: {formatDateLabel(latestPostedDate)}
-                  <span className="mx-2">•</span>
-                  Range: {timeRangeLabel}
-                  <span className="mx-2">•</span>
-                  {marketLoading ? "Loading jobs analyzed" : `${jobsAnalyzed.toLocaleString()} jobs analyzed`}
-                  <span className="mx-2">•</span>
-                  {marketScopeText}
-                </p>
-              </div>
-
-              <Button className="self-start lg:self-end gap-2 h-11 px-5 rounded-xl shadow-sm" asChild>
-                <Link to="/insights/jobs">
-                  Explore Live Jobs <ArrowRight size={16} />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </Container>
+      <section className="pt-16 w-full">
+        <img
+          src="https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero.png"
+          alt="Job Market Intelligence"
+          className="w-full object-cover"
+        />
       </section>
 
       <div className="py-10">
