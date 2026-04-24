@@ -88,14 +88,14 @@ const toReadableLabel = (value: string) => {
 
 const ROLE_CATEGORY_LABELS: Record<string, string> = {
   // `devops_cloud`, `data_ai`, `other_tech`, `program_management` etc. — real DB snake_case values
-  devopscloud: "DevOps & Cloud",
-  devopsandcloud: "DevOps & Cloud",
-  dataai: "Data Science & AI",
-  dataandai: "Data Science & AI",
-  aianddata: "Data Science & AI",
-  othertech: "Other Tech",
-  otherengineering: "Other Tech",
-  programmanagement: "Program Management",
+  devopscloud: "DevOps & Cloud Engineer",
+  devopsandcloud: "DevOps & Cloud Engineer",
+  dataai: "AI/ML Engineer",
+  dataandai: "AI/ML Engineer",
+  aianddata: "AI/ML Engineer",
+  othertech: "Other Tech Jobs",
+  otherengineering: "Other Tech Jobs",
+  programmanagement: "Project Manager",
 
   // Front-End
   frontend: "Front-End Development",
@@ -126,15 +126,15 @@ const ROLE_CATEGORY_LABELS: Record<string, string> = {
   webdevelopment: "Full-Stack Development",
   softwareengineer: "Full-Stack Development",
   softwaredeveloper: "Full-Stack Development",
-  softwareengineering: "Full-Stack Development",
+  softwareengineering: "Software Engineer",
   softwaredevelopment: "Full-Stack Development",
   generalengineer: "Full-Stack Development",
   general: "Full-Stack Development",
 
   // DevOps & Cloud
-  devops: "DevOps & Cloud",
-  devopsengineer: "DevOps & Cloud",
-  devopsengineering: "DevOps & Cloud",
+  devops: "DevOps & Cloud Engineer",
+  devopsengineer: "DevOps & Cloud Engineer",
+  devopsengineering: "DevOps & Cloud Engineer",
   cloud: "DevOps & Cloud",
   cloudengineer: "DevOps & Cloud",
   cloudarchitect: "DevOps & Cloud",
@@ -154,7 +154,7 @@ const ROLE_CATEGORY_LABELS: Record<string, string> = {
   dataanalysis: "Data Science & ML",
   dataanalyst: "Data Science & ML",
   dataanalytics: "Data Science & ML",
-  analytics: "Data Science & ML",
+  analytics: "Data Analyst",
   businessanalytics: "Data Science & ML",
   businessanalyst: "Data Science & ML",
   ml: "Data Science & ML",
@@ -187,7 +187,7 @@ const ROLE_CATEGORY_LABELS: Record<string, string> = {
   flutter: "Mobile Development",
 
   // UI/UX Design
-  design: "UI/UX Design",
+  design: "UI/UX Designer",
   uxdesign: "UI/UX Design",
   uidesign: "UI/UX Design",
   uiux: "UI/UX Design",
@@ -206,7 +206,7 @@ const ROLE_CATEGORY_LABELS: Record<string, string> = {
   graphicdesigner: "UI/UX Design",
 
   // Product Management
-  product: "Product Management",
+  product: "Product Developer",
   productmanager: "Product Management",
   productmanagement: "Product Management",
   productowner: "Product Management",
@@ -215,7 +215,7 @@ const ROLE_CATEGORY_LABELS: Record<string, string> = {
 
   // QA & Testing
   qa: "QA & Testing",
-  qatesting: "QA & Testing",
+  qatesting: "QA Engineer",
   qualityassurance: "QA & Testing",
   qualityassuranceengineer: "QA & Testing",
   qaengineer: "QA & Testing",
@@ -226,8 +226,8 @@ const ROLE_CATEGORY_LABELS: Record<string, string> = {
   testautomation: "QA & Testing",
 
   // Cybersecurity
-  security: "Cybersecurity",
-  cybersecurity: "Cybersecurity",
+  security: "Cybersecurity Engineer",
+  cybersecurity: "Cybersecurity Engineer",
   securityengineer: "Cybersecurity",
   securityanalyst: "Cybersecurity",
   informationsecurity: "Cybersecurity",
