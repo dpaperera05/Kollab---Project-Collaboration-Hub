@@ -26,16 +26,16 @@ import type { Job } from "@/data/mockJobMarket";
 import type { JobFilters } from "@/data/mockJobMarket";
 
 const CHART_COLORS = [
-  "hsl(270 80% 60%)",
-  "hsl(256 75% 62%)",
-  "hsl(284 74% 58%)",
-  "hsl(298 68% 57%)",
-  "hsl(315 72% 62%)",
-  "hsl(243 70% 64%)",
-  "hsl(261 78% 54%)",
-  "hsl(290 65% 60%)",
-  "hsl(328 66% 60%)",
-  "hsl(247 72% 66%)",
+  "hsl(262 52% 58%)",
+  "hsl(240 45% 62%)",
+  "hsl(262 52% 58%)",
+  "hsl(240 45% 62%)",
+  "hsl(262 52% 58%)",
+  "hsl(240 45% 62%)",
+  "hsl(262 52% 58%)",
+  "hsl(240 45% 62%)",
+  "hsl(262 52% 58%)",
+  "hsl(240 45% 62%)",
 ];
 
 type DashboardFilters = {
