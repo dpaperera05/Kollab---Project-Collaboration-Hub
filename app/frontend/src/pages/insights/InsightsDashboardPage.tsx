@@ -471,10 +471,10 @@ const InsightsDashboardPage = () => {
       }
     }
 
-    // Always return every known category — zero-filled for those with no matches.
+    // Always return every known category in stable canonical order — never sort by count
+    // so the bars stay in the same position when filters change.
     return canonicalList
-      .map((cat) => ({ name: cat, count: counts[cat] || 0 }))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      .map((cat) => ({ name: cat, count: counts[cat] || 0 }));
   }, [roleDistData, summary, filterOptions]);
 
   // Skills and technologies always reflect overall market demand — not filtered by role chart filters.
@@ -508,52 +508,34 @@ const InsightsDashboardPage = () => {
 
       <div className="py-10">
         <Container className="space-y-8">
-          <Card className="border-border/80 bg-card/95 shadow-sm overflow-hidden">
+          <Card className="border border-primary/15 bg-card shadow-lg ring-1 ring-primary/5 overflow-hidden transition-shadow duration-300 hover:shadow-xl">
             {/* Section header */}
-            <div className="px-4 md:px-6 pt-5 pb-4 border-b border-border/60">
-              <h2 className="text-2xl md:text-[1.7rem] font-bold tracking-tight text-foreground">Role Distribution Across Current Market View</h2>
+            <div className="px-4 md:px-6 pt-5 pb-4 border-b border-border/60 bg-gradient-to-r from-primary/5 via-card to-card">
+              <div className="flex items-center gap-2.5">
+                <div className="w-1 h-6 rounded-full bg-gradient-to-b from-primary to-primary/40" />
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">Tech Role Distribution</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1 ml-3.5">Breakdown of tech job categories across the current market view.</p>
             </div>
 
             {/* Controls */}
-            <div className="px-4 md:px-6 py-4 bg-gradient-to-r from-card to-muted/20 border-b border-border/60">
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal size={16} className="text-primary" />
-                  <p className="text-sm font-semibold text-foreground">Market View Controls</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="text-xs" onClick={resetFilters}>Reset</Button>
-                  <Button
-                    size="sm"
-                    className="text-xs relative"
-                    onClick={applyFilters}
-                    disabled={roleDistLoading}
-                  >
-                    Apply Filters
-                    {isDirty && (
-                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
+            <div className="px-4 md:px-6 py-4 bg-muted/30 border-b border-border/50">
               {filtersLoading ? (
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="flex flex-wrap gap-3">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={`filter-skeleton-${i}`} className="h-10 rounded-md" />
+                    <Skeleton key={`filter-skeleton-${i}`} className="h-9 w-36 rounded-lg" />
                   ))}
                 </div>
               ) : (
                 <>
                   {filtersError && (
-                    <p className="text-xs text-muted-foreground mb-3">{filtersError}</p>
+                    <p className="text-xs text-destructive/70 mb-2">{filtersError}</p>
                   )}
-
-                  <div className="grid md:grid-cols-3 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Country</Label>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-semibold uppercase tracking-widest text-primary/60">Country</Label>
                       <Select value={filters.country || "__all__"} onValueChange={(value) => handleFilterUpdate({ country: value === "__all__" ? "" : value })}>
-                        <SelectTrigger className="h-10 bg-background/70">
+                        <SelectTrigger className="h-9 w-36 text-sm bg-background border-border/70 shadow-sm focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="All countries" />
                         </SelectTrigger>
                         <SelectContent>
@@ -565,25 +547,27 @@ const InsightsDashboardPage = () => {
                       </Select>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Seniority</Label>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-semibold uppercase tracking-widest text-primary/60">Seniority</Label>
                       <Select value={filters.seniority || "__all__"} onValueChange={(value) => handleFilterUpdate({ seniority: value === "__all__" ? "" : value })}>
-                        <SelectTrigger className="h-10 bg-background/70">
+                        <SelectTrigger className="h-9 w-36 text-sm bg-background border-border/70 shadow-sm focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="All levels" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__all__">All levels</SelectItem>
-                          {(filterOptions?.seniorityLevels || []).map((item) => (
-                            <SelectItem key={item} value={item}>{labelForSeniority(item)}</SelectItem>
-                          ))}
+                          {(filterOptions?.seniorityLevels || [])
+                            .filter((item) => item.toLowerCase() !== "unknown")
+                            .map((item) => (
+                              <SelectItem key={item} value={item}>{labelForSeniority(item)}</SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Work Mode</Label>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-semibold uppercase tracking-widest text-primary/60">Work Mode</Label>
                       <Select value={filters.workMode || "__all__"} onValueChange={(value) => handleFilterUpdate({ workMode: value === "__all__" ? "" : value })}>
-                        <SelectTrigger className="h-10 bg-background/70">
+                        <SelectTrigger className="h-9 w-36 text-sm bg-background border-border/70 shadow-sm focus:ring-2 focus:ring-primary/20">
                           <SelectValue placeholder="All modes" />
                         </SelectTrigger>
                         <SelectContent>
@@ -596,46 +580,64 @@ const InsightsDashboardPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground hover:text-foreground" onClick={resetFilters}>Reset</Button>
+                      <Button
+                        size="sm"
+                        className="h-9 text-xs px-4 relative shadow-sm"
+                        onClick={applyFilters}
+                        disabled={roleDistLoading}
+                      >
+                        <SlidersHorizontal size={13} className="mr-1.5" />
+                        Apply
+                        {isDirty && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}
             </div>
 
-            {/* Chart */}
+            {/* Chart — fixed height so entire chart is visible without scrolling */}
             <div className="p-4 md:p-6">
               {roleDistLoading ? (
-                <Skeleton className="h-[500px] rounded-xl" />
+                <Skeleton className="h-[440px] rounded-xl" />
               ) : roleDistError ? (
                 <div className="text-center py-8 border border-border rounded-xl">
                   <p className="text-sm text-muted-foreground mb-3">{roleDistError}</p>
                   <Button variant="outline" size="sm" onClick={() => void loadRoleDistribution()}>Retry market chart</Button>
                 </div>
               ) : (
-                <div className="rounded-xl border border-border/80 bg-background/70 p-4 md:p-5">
-                  <div className="h-[480px]">
+                <div className="rounded-xl border border-primary/10 bg-gradient-to-br from-background to-muted/20 p-4 md:p-5 shadow-inner">
+                  <div style={{ height: Math.max((roleDistribution.length || 1) * 44 + 32, 220) }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={roleDistribution} layout="vertical" margin={{ left: 14, right: 8, top: 6, bottom: 6 }}>
-                        <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                      <BarChart data={roleDistribution} layout="vertical" margin={{ left: 14, right: 24, top: 4, bottom: 4 }}>
+                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                         <YAxis
                           type="category"
                           dataKey="name"
-                          tick={{ fontSize: 12 }}
+                          tick={{ fontSize: 12, fontWeight: 500 }}
                           tickLine={false}
                           axisLine={false}
-                          width={180}
+                          width={190}
                           tickFormatter={(value) => labelForCategory(String(value))}
                         />
                         <Tooltip
                           labelFormatter={(label) => labelForCategory(String(label))}
                           formatter={(value) => [value, "Jobs"]}
+                          cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
                           contentStyle={{
                             borderRadius: 10,
                             fontSize: 13,
                             border: "1px solid hsl(var(--border))",
                             background: "hsl(var(--background))",
+                            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
                           }}
                         />
-                        <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={24}>
+                        <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={22} isAnimationActive={true} animationDuration={600} animationEasing="ease-out">
                           {roleDistribution.map((_, i) => (
                             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                           ))}
