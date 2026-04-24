@@ -488,7 +488,6 @@ const InsightsDashboardPage = () => {
             {/* Section header */}
             <div className="px-4 md:px-6 pt-5 pb-4 border-b border-border/60">
               <h2 className="text-2xl md:text-[1.7rem] font-bold tracking-tight text-foreground">Role Distribution Across Current Market View</h2>
-              <p className="text-sm text-muted-foreground mt-1">Showing tech jobs only &mdash; adjust filters to narrow by country, seniority, or work mode</p>
             </div>
 
             {/* Controls */}
