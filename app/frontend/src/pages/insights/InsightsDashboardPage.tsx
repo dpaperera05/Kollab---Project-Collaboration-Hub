@@ -1,15 +1,19 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { Link } from "react-router-dom";
-import { ArrowRight, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowRight, SlidersHorizontal,
+  Code2, Database, Cloud, Server, GitBranch, Box,
+  Network, Brain, Zap, FileCode, Layers, Terminal,
+  Shield, Globe, TrendingUp, Wrench, Cpu, ClipboardCheck,
+  GitMerge, Sparkles,
+} from "lucide-react";
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import ChartCard from "@/components/insights/ChartCard";
 import JobCard from "@/components/insights/JobCard";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -262,25 +266,82 @@ const CANONICAL_CATEGORIES = [
   "Security",
 ];
 
+const TECH_ICON_MAP: Record<string, typeof Code2> = {
+  // Languages
+  python: Code2, javascript: FileCode, js: FileCode,
+  typescript: FileCode, ts: FileCode, java: Code2,
+  kotlin: Code2, swift: Code2, rust: Code2, go: Code2,
+  golang: Code2, php: Code2, ruby: Code2, csharp: Code2,
+  cplusplus: Code2, scala: Code2,
+  // Frontend
+  react: Layers, reactjs: Layers, vue: Layers, vuejs: Layers,
+  angular: Layers, svelte: Layers, nextjs: Layers,
+  html: Globe, css: Globe, tailwind: Globe,
+  // Backend / Runtime
+  nodejs: Server, express: Server, django: Server,
+  flask: Server, fastapi: Server, spring: Server, rails: Server,
+  // Databases
+  sql: Database, mysql: Database, postgresql: Database,
+  postgres: Database, mongodb: Database, redis: Database,
+  elasticsearch: Database, dynamodb: Database, cassandra: Database, sqlite: Database,
+  // Cloud
+  aws: Cloud, azure: Cloud, gcp: Cloud, googlecloud: Cloud, cloudcomputing: Cloud,
+  // DevOps
+  docker: Box, kubernetes: Network, k8s: Network,
+  terraform: Wrench, ansible: Wrench, jenkins: GitMerge,
+  cicd: GitMerge, git: GitBranch, github: GitBranch,
+  gitlab: GitBranch, linux: Terminal, bash: Terminal,
+  shell: Terminal, nginx: Server,
+  // ML / AI
+  machinelearning: Brain, deeplearning: Brain, tensorflow: Brain,
+  pytorch: Brain, sklearn: Brain, ai: Brain, nlp: Brain,
+  computervision: Brain, llm: Brain,
+  // Security
+  cybersecurity: Shield, security: Shield,
+  // Testing
+  testing: ClipboardCheck, jest: ClipboardCheck, selenium: ClipboardCheck,
+  cypress: ClipboardCheck, unittest: ClipboardCheck, pytest: ClipboardCheck,
+  // General
+  microservices: Cpu, api: Globe, restapi: Globe, graphql: Globe,
+  agile: Zap, scrum: Zap, devops: Wrench,
+};
+
+const SKILL_DISPLAY_LABELS: Record<string, string> = {
+  javascript: "JavaScript", typescript: "TypeScript", python: "Python",
+  java: "Java", nodejs: "Node.js", react: "React", reactjs: "React",
+  vue: "Vue.js", vuejs: "Vue.js", angular: "Angular", nextjs: "Next.js",
+  svelte: "Svelte", aws: "AWS", azure: "Azure", gcp: "Google Cloud",
+  googlecloud: "Google Cloud", docker: "Docker", kubernetes: "Kubernetes",
+  k8s: "Kubernetes", sql: "SQL", mongodb: "MongoDB",
+  postgresql: "PostgreSQL", postgres: "PostgreSQL", mysql: "MySQL",
+  redis: "Redis", git: "Git", github: "GitHub", gitlab: "GitLab",
+  linux: "Linux", terraform: "Terraform", cicd: "CI/CD",
+  machinelearning: "Machine Learning", deeplearning: "Deep Learning",
+  tensorflow: "TensorFlow", pytorch: "PyTorch", graphql: "GraphQL",
+  restapi: "REST API", microservices: "Microservices", agile: "Agile",
+  scrum: "Scrum", devops: "DevOps", csharp: "C#", cplusplus: "C++",
+  golang: "Go", kotlin: "Kotlin", swift: "Swift", rust: "Rust",
+  php: "PHP", ruby: "Ruby", scala: "Scala",
+  elasticsearch: "Elasticsearch", nginx: "Nginx",
+  sklearn: "scikit-learn", nlp: "NLP", llm: "LLM",
+};
+
+const normalizeSkillKey = (raw: string): string =>
+  raw.toLowerCase().replace(/[\s.\-_/()+]+/g, "");
+
+const getSkillIcon = (name: string): typeof Code2 =>
+  TECH_ICON_MAP[normalizeSkillKey(name)] ?? TECH_ICON_MAP[name.toLowerCase()] ?? Code2;
+
+const getSkillLabel = (name: string): string => {
+  const key = normalizeSkillKey(name);
+  return SKILL_DISPLAY_LABELS[key] ?? SKILL_DISPLAY_LABELS[name.toLowerCase()] ?? toReadableLabel(name);
+};
+
 const normalizeCategoryKey = (raw: string): string =>
   raw.toLowerCase().replace(/[\s_\-\/]+/g, "");
 
 const labelForCategory = (raw: string): string =>
   ROLE_CATEGORY_LABELS[normalizeCategoryKey(raw)] ?? toReadableLabel(raw);
-
-const countBy = (values: string[]) => {
-  return values.reduce<Record<string, number>>((acc, value) => {
-    if (!value || !value.trim()) return acc;
-    acc[value] = (acc[value] || 0) + 1;
-    return acc;
-  }, {});
-};
-
-const rankedEntries = (counts: Record<string, number>) => {
-  return Object.entries(counts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
-};
 
 const HERO_DARK = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero-dark.png";
 const HERO_LIGHT = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero-light.png";
@@ -289,7 +350,6 @@ const InsightsDashboardPage = () => {
   const { resolvedTheme } = useTheme();
   const [summary, setSummary] = useState<JobSummary | null>(null);
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
-  const [marketViewJobs, setMarketViewJobs] = useState<Job[]>([]);
   const [filterOptions, setFilterOptions] = useState<JobFilters | null>(null);
   // `filters` = draft state shown in the selects; `appliedFilters` = committed state that drives the API call.
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS);
@@ -298,7 +358,6 @@ const InsightsDashboardPage = () => {
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
 
-  const [marketLoading, setMarketLoading] = useState(true);
 
   const [filtersLoading, setFiltersLoading] = useState(true);
   const [filtersError, setFiltersError] = useState<string | null>(null);
@@ -344,41 +403,6 @@ const InsightsDashboardPage = () => {
     }
   };
 
-  const loadMarketView = useCallback(async () => {
-    try {
-      setMarketLoading(true);
-
-      const baseQuery = {
-        limit: 100,
-        sortBy: "postedDate" as const,
-        sortOrder: "desc" as const,
-        country: appliedFilters.country || undefined,
-        seniority: appliedFilters.seniority || undefined,
-        workMode: appliedFilters.workMode || undefined,
-        isTechJob: true as const,
-      };
-
-      const firstPage = await getJobMarketJobs({ ...baseQuery, page: 1 });
-      const maxPages = Math.min(Math.max(firstPage.totalPages, 1), 5);
-      const pageRequests =
-        maxPages > 1
-          ? Array.from({ length: maxPages - 1 }, (_, idx) => getJobMarketJobs({ ...baseQuery, page: idx + 2 }))
-          : [];
-
-      const nextPages = pageRequests.length ? await Promise.all(pageRequests) : [];
-      const allJobs = [
-        ...firstPage.jobs,
-        ...nextPages.flatMap((pageResult) => pageResult.jobs),
-      ];
-
-      setMarketViewJobs(allJobs);
-    } catch {
-      setMarketViewJobs([]);
-    } finally {
-      setMarketLoading(false);
-    }
-  }, [appliedFilters]);
-
   useEffect(() => {
     void loadSummary();
     void loadFeaturedJobs();
@@ -402,10 +426,6 @@ const InsightsDashboardPage = () => {
       setRoleDistLoading(false);
     }
   }, [appliedFilters]);
-
-  useEffect(() => {
-    void loadMarketView();
-  }, [loadMarketView]);
 
   useEffect(() => {
     void loadRoleDistribution();
@@ -445,17 +465,9 @@ const InsightsDashboardPage = () => {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [roleDistData, summary, filterOptions]);
 
-  const topSkillsRanked = useMemo(() => {
-    if (marketViewJobs.length === 0) return summary?.topSkills || [];
-    const counts = countBy(marketViewJobs.flatMap((job) => job.skills));
-    return rankedEntries(counts).slice(0, 10);
-  }, [marketViewJobs, summary]);
-
-  const topTechnologiesRanked = useMemo(() => {
-    if (marketViewJobs.length === 0) return summary?.topTechnologies || [];
-    const counts = countBy(marketViewJobs.flatMap((job) => job.technologies));
-    return rankedEntries(counts).slice(0, 10);
-  }, [marketViewJobs, summary]);
+  // Skills and technologies always reflect overall market demand — not filtered by role chart filters.
+  const topSkillsRanked = useMemo(() => (summary?.topSkills || []).slice(0, 10), [summary]);
+  const topTechnologiesRanked = useMemo(() => (summary?.topTechnologies || []).slice(0, 10), [summary]);
 
   const handleFilterUpdate = (patch: Partial<DashboardFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -503,7 +515,7 @@ const InsightsDashboardPage = () => {
                     size="sm"
                     className="text-xs relative"
                     onClick={applyFilters}
-                    disabled={marketLoading}
+                    disabled={roleDistLoading}
                   >
                     Apply Filters
                     {isDirty && (
@@ -624,57 +636,90 @@ const InsightsDashboardPage = () => {
             </div>
           </Card>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <ChartCard title="Top Skills in Demand">
-              {topSkillsRanked.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Not enough data available for this time range</p>
-              ) : (
-                <div className="space-y-3">
-                  {topSkillsRanked.map((entry, idx) => (
-                    <div key={entry.name} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className={`truncate ${idx === 0 ? "text-sm font-bold text-foreground" : idx < 3 ? "text-sm font-semibold text-foreground" : "text-sm text-foreground/70"}`}>
-                          {idx + 1}. {toReadableLabel(entry.name)}
-                        </p>
-                        <Badge variant={idx < 3 ? "default" : "secondary"} className={`text-xs ${idx >= 3 ? "opacity-75" : ""}`}>{entry.count}</Badge>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${idx === 0 ? "bg-primary" : idx === 1 ? "bg-primary/80" : idx === 2 ? "bg-primary/65" : "bg-primary/35"}`}
-                          style={{ width: `${Math.max((entry.count / (topSkillsRanked[0]?.count || 1)) * 100, 10)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+          {/* Skill & Technology Signals */}
+          <section>
+            <div className="mb-6">
+              <h2 className="text-xl md:text-2xl font-bold text-foreground">Skill &amp; Technology Signals</h2>
+              <p className="text-sm text-muted-foreground mt-1">See which skills and tools appear most often across current tech job postings.</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="border-border/80 bg-card/95 shadow-sm overflow-hidden">
+                <div className="px-5 pt-5 pb-3 border-b border-border/50">
+                  <h3 className="text-base font-semibold text-foreground">Top Skills in Demand</h3>
                 </div>
-              )}
-            </ChartCard>
+                <div className="p-4">
+                  {topSkillsRanked.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                      <Sparkles size={28} className="text-muted-foreground/30" />
+                      <p className="text-sm text-muted-foreground">Not enough skill demand data available yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {topSkillsRanked.map((entry, idx) => {
+                        const Icon = getSkillIcon(entry.name);
+                        const isTop3 = idx < 3;
+                        return (
+                          <div
+                            key={entry.name}
+                            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${isTop3 ? "bg-primary/5 border border-primary/10" : "hover:bg-muted/40"}`}
+                          >
+                            <span className={`text-[11px] font-bold w-4 text-center flex-shrink-0 tabular-nums ${idx === 0 ? "text-primary" : idx === 1 ? "text-primary/60" : idx === 2 ? "text-primary/40" : "text-muted-foreground/30"}`}>
+                              {idx + 1}
+                            </span>
+                            <div className={`flex-shrink-0 ${isTop3 ? "text-primary" : "text-muted-foreground/50"}`}>
+                              <Icon size={15} />
+                            </div>
+                            <span className={`flex-1 truncate ${idx === 0 ? "text-sm font-semibold text-foreground" : isTop3 ? "text-sm font-medium text-foreground" : "text-sm text-foreground/60"}`}>
+                              {getSkillLabel(entry.name)}
+                            </span>
+                            {idx === 0 && <TrendingUp size={12} className="text-primary/50 flex-shrink-0" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </Card>
 
-            <ChartCard title="Top Technologies in Demand">
-              {topTechnologiesRanked.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Not enough data available for this time range</p>
-              ) : (
-                <div className="space-y-3">
-                  {topTechnologiesRanked.map((entry, idx) => (
-                    <div key={entry.name} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <p className={`truncate ${idx === 0 ? "text-sm font-bold text-foreground" : idx < 3 ? "text-sm font-semibold text-foreground" : "text-sm text-foreground/70"}`}>
-                          {idx + 1}. {toReadableLabel(entry.name)}
-                        </p>
-                        <Badge variant={idx < 3 ? "default" : "secondary"} className={`text-xs ${idx >= 3 ? "opacity-75" : ""}`}>{entry.count}</Badge>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${idx === 0 ? "bg-primary" : idx === 1 ? "bg-primary/80" : idx === 2 ? "bg-primary/65" : "bg-primary/35"}`}
-                          style={{ width: `${Math.max((entry.count / (topTechnologiesRanked[0]?.count || 1)) * 100, 10)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+              <Card className="border-border/80 bg-card/95 shadow-sm overflow-hidden">
+                <div className="px-5 pt-5 pb-3 border-b border-border/50">
+                  <h3 className="text-base font-semibold text-foreground">Top Technologies in Demand</h3>
                 </div>
-              )}
-            </ChartCard>
-          </div>
+                <div className="p-4">
+                  {topTechnologiesRanked.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                      <Sparkles size={28} className="text-muted-foreground/30" />
+                      <p className="text-sm text-muted-foreground">Not enough technology demand data available yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {topTechnologiesRanked.map((entry, idx) => {
+                        const Icon = getSkillIcon(entry.name);
+                        const isTop3 = idx < 3;
+                        return (
+                          <div
+                            key={entry.name}
+                            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${isTop3 ? "bg-primary/5 border border-primary/10" : "hover:bg-muted/40"}`}
+                          >
+                            <span className={`text-[11px] font-bold w-4 text-center flex-shrink-0 tabular-nums ${idx === 0 ? "text-primary" : idx === 1 ? "text-primary/60" : idx === 2 ? "text-primary/40" : "text-muted-foreground/30"}`}>
+                              {idx + 1}
+                            </span>
+                            <div className={`flex-shrink-0 ${isTop3 ? "text-primary" : "text-muted-foreground/50"}`}>
+                              <Icon size={15} />
+                            </div>
+                            <span className={`flex-1 truncate ${idx === 0 ? "text-sm font-semibold text-foreground" : isTop3 ? "text-sm font-medium text-foreground" : "text-sm text-foreground/60"}`}>
+                              {getSkillLabel(entry.name)}
+                            </span>
+                            {idx === 0 && <TrendingUp size={12} className="text-primary/50 flex-shrink-0" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </section>
 
           <section>
             <div className="flex items-center justify-between mb-5">
