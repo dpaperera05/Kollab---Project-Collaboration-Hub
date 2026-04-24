@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { Link } from "react-router-dom";
 import { ArrowRight, SlidersHorizontal } from "lucide-react";
@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ChartCard from "@/components/insights/ChartCard";
 import JobCard from "@/components/insights/JobCard";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -39,31 +38,44 @@ const CHART_COLORS = [
   "hsl(12 82% 56%)",
 ];
 
-type DashboardTimeRange = "24h" | "7d" | "30d";
-
 type DashboardFilters = {
-  timeRange: DashboardTimeRange;
   country: string;
-  roleCategory: string;
   seniority: string;
   workMode: string;
-  techJobsOnly: boolean;
 };
-
-const TIME_RANGE_OPTIONS: { label: string; value: DashboardTimeRange }[] = [
-  { label: "Last 24 Hours", value: "24h" },
-  { label: "Last 7 Days", value: "7d" },
-  { label: "Last 30 Days", value: "30d" },
-];
 
 const DEFAULT_FILTERS: DashboardFilters = {
-  timeRange: "7d",
   country: "",
-  roleCategory: "",
   seniority: "",
   workMode: "",
-  techJobsOnly: true,
 };
+
+const SENIORITY_LABELS: Record<string, string> = {
+  intern: "Intern",
+  junior: "Junior",
+  mid: "Mid Level",
+  senior: "Senior",
+  lead: "Lead",
+  manager: "Manager",
+  executive: "Executive",
+  staff: "Staff",
+};
+
+const WORK_MODE_LABELS: Record<string, string> = {
+  remote: "Remote",
+  hybrid: "Hybrid",
+  onsite: "On-site",
+  "on-site": "On-site",
+  "on site": "On-site",
+};
+
+const INVALID_WORK_MODES = new Set(["unknown", "", "n/a", "null", "undefined"]);
+
+const labelForSeniority = (value: string): string =>
+  SENIORITY_LABELS[value.toLowerCase()] ?? value.replace(/\b\w/g, (c) => c.toUpperCase());
+
+const labelForWorkMode = (value: string): string =>
+  WORK_MODE_LABELS[value.toLowerCase()] ?? value.replace(/\b\w/g, (c) => c.toUpperCase());
 
 const LOW_DATA_THRESHOLD = 50;
 
@@ -74,13 +86,6 @@ const toReadableLabel = (value: string) => {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
-};
-
-const getTimeRangeCutoff = (range: DashboardTimeRange) => {
-  const now = Date.now();
-  if (range === "24h") return now - 24 * 60 * 60 * 1000;
-  if (range === "7d") return now - 7 * 24 * 60 * 60 * 1000;
-  return now - 30 * 24 * 60 * 60 * 1000;
 };
 
 const countBy = (values: string[]) => {
@@ -116,7 +121,6 @@ const InsightsDashboardPage = () => {
 
   const [filtersLoading, setFiltersLoading] = useState(true);
   const [filtersError, setFiltersError] = useState<string | null>(null);
-  const [autoExpandedMessage, setAutoExpandedMessage] = useState<string | null>(null);
 
   const loadSummary = async () => {
     try {
@@ -160,15 +164,16 @@ const InsightsDashboardPage = () => {
       setMarketLoading(true);
       setMarketError(null);
 
+      const internalCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
       const baseQuery = {
         limit: 100,
         sortBy: "postedDate" as const,
         sortOrder: "desc" as const,
         country: filters.country || undefined,
-        roleCategory: filters.roleCategory || undefined,
         seniority: filters.seniority || undefined,
         workMode: filters.workMode || undefined,
-        isTechJob: filters.techJobsOnly ? true : undefined,
+        isTechJob: true as const,
       };
 
       const firstPage = await getJobMarketJobs({ ...baseQuery, page: 1 });
@@ -184,10 +189,9 @@ const InsightsDashboardPage = () => {
         ...nextPages.flatMap((pageResult) => pageResult.jobs),
       ];
 
-      const cutoff = getTimeRangeCutoff(filters.timeRange);
       const scopedJobs = allJobs.filter((job) => {
         const ts = new Date(job.postedDate).getTime();
-        return !Number.isNaN(ts) && ts >= cutoff;
+        return !Number.isNaN(ts) && ts >= internalCutoff;
       });
 
       setMarketViewJobs(scopedJobs);
@@ -271,25 +275,6 @@ const InsightsDashboardPage = () => {
   const jobsAnalyzed = marketViewJobs.length;
   const lowDataMode = jobsAnalyzed > 0 && jobsAnalyzed < LOW_DATA_THRESHOLD;
 
-  useEffect(() => {
-    if (marketLoading || marketError) return;
-    if (jobsAnalyzed <= 0) return;
-
-    if (jobsAnalyzed < LOW_DATA_THRESHOLD && filters.timeRange !== "30d") {
-      setFilters((prev) => ({ ...prev, timeRange: "30d" }));
-      setAutoExpandedMessage(
-        `Showing limited dataset (${jobsAnalyzed} jobs). Automatically expanded to Last 30 Days for better accuracy.`
-      );
-      return;
-    }
-
-    if (filters.timeRange === "30d") {
-      setAutoExpandedMessage(null);
-    }
-  }, [jobsAnalyzed, marketLoading, marketError, filters.timeRange]);
-
-  const timeRangeLabel = TIME_RANGE_OPTIONS.find((item) => item.value === filters.timeRange)?.label || "Last 7 Days";
-
   const marketInsights = useMemo(() => {
     const insights: string[] = [];
 
@@ -354,8 +339,8 @@ const InsightsDashboardPage = () => {
             </div>
 
             {filtersLoading ? (
-              <div className="grid md:grid-cols-3 xl:grid-cols-6 gap-3">
-                {Array.from({ length: 6 }).map((_, i) => (
+              <div className="grid md:grid-cols-3 gap-3">
+                {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={`filter-skeleton-${i}`} className="h-10 rounded-md" />
                 ))}
               </div>
@@ -365,21 +350,7 @@ const InsightsDashboardPage = () => {
                   <p className="text-xs text-muted-foreground mb-3">{filtersError}</p>
                 )}
 
-                <div className="grid md:grid-cols-3 xl:grid-cols-6 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Time Range</Label>
-                    <Select value={filters.timeRange} onValueChange={(value) => handleFilterUpdate({ timeRange: value as DashboardTimeRange })}>
-                      <SelectTrigger className="h-10 bg-background/70">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIME_RANGE_OPTIONS.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                <div className="grid md:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Country</Label>
                     <Select value={filters.country || "__all__"} onValueChange={(value) => handleFilterUpdate({ country: value === "__all__" ? "" : value })}>
@@ -396,21 +367,6 @@ const InsightsDashboardPage = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Role Category</Label>
-                    <Select value={filters.roleCategory || "__all__"} onValueChange={(value) => handleFilterUpdate({ roleCategory: value === "__all__" ? "" : value })}>
-                      <SelectTrigger className="h-10 bg-background/70">
-                        <SelectValue placeholder="All roles" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">All roles</SelectItem>
-                        {(filterOptions?.roleCategories || []).map((item) => (
-                          <SelectItem key={item} value={item}>{item}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
                     <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Seniority</Label>
                     <Select value={filters.seniority || "__all__"} onValueChange={(value) => handleFilterUpdate({ seniority: value === "__all__" ? "" : value })}>
                       <SelectTrigger className="h-10 bg-background/70">
@@ -419,7 +375,7 @@ const InsightsDashboardPage = () => {
                       <SelectContent>
                         <SelectItem value="__all__">All levels</SelectItem>
                         {(filterOptions?.seniorityLevels || []).map((item) => (
-                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                          <SelectItem key={item} value={item}>{labelForSeniority(item)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -433,48 +389,25 @@ const InsightsDashboardPage = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all__">All modes</SelectItem>
-                        {(filterOptions?.workModes || []).map((item) => (
-                          <SelectItem key={item} value={item}>{item}</SelectItem>
-                        ))}
+                        {(filterOptions?.workModes || [])
+                          .filter((item) => !INVALID_WORK_MODES.has(item.toLowerCase()))
+                          .map((item) => (
+                            <SelectItem key={item} value={item}>{labelForWorkMode(item)}</SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Tech Jobs Only</Label>
-                    <Card className="h-10 px-3 flex items-center justify-between border-border/80 bg-background/70">
-                      <span className="text-xs text-foreground">{filters.techJobsOnly ? "Enabled" : "Disabled"}</span>
-                      <Switch checked={filters.techJobsOnly} onCheckedChange={(checked) => handleFilterUpdate({ techJobsOnly: checked })} />
-                    </Card>
                   </div>
                 </div>
               </>
             )}
           </Card>
 
-          {autoExpandedMessage && (
-            <Card className="border border-amber-300/60 bg-amber-50/60 dark:bg-amber-900/10 p-3.5">
-              <p className="text-sm text-amber-900 dark:text-amber-200">
-                {autoExpandedMessage}
-              </p>
-            </Card>
-          )}
-
-          {!autoExpandedMessage && lowDataMode && (
-            <Card className="border border-amber-300/60 bg-amber-50/60 dark:bg-amber-900/10 p-3.5">
-              <p className="text-sm text-amber-900 dark:text-amber-200">
-                Limited data for selected time range. Showing limited dataset ({jobsAnalyzed} jobs).
-              </p>
-            </Card>
-          )}
-
           <Card className="border-border/80 bg-card/95 p-4 md:p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4 mb-5">
               <div>
                 <h2 className="text-2xl md:text-[1.7rem] font-bold tracking-tight text-foreground">Role Distribution Across Current Market View</h2>
-                <p className="text-sm text-muted-foreground mt-1">Role distribution based on current filters and selected time range</p>
+                <p className="text-sm text-muted-foreground mt-1">Role distribution based on current filters</p>
               </div>
-              <Badge variant="outline" className="text-xs border-border/80">{timeRangeLabel}</Badge>
             </div>
 
             {marketLoading ? (

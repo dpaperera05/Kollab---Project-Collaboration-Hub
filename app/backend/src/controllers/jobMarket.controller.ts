@@ -348,7 +348,15 @@ export const getJobMarketFilters = async (_req: Request, res: Response) => {
             { $sort: { _id: 1 } },
           ],
           workModes: [
-            { $match: { workMode: { $type: "string", $ne: "" } } },
+            {
+              $match: {
+                workMode: {
+                  $type: "string",
+                  $ne: "",
+                  $not: /^(unknown|n\/a|null|undefined)$/i,
+                },
+              },
+            },
             { $group: { _id: "$workMode" } },
             { $sort: { _id: 1 } },
           ],
@@ -371,7 +379,9 @@ export const getJobMarketFilters = async (_req: Request, res: Response) => {
     const payload = {
       roleCategories: (filtersAgg?.roleCategories || []).map((item) => item._id),
       seniorityLevels: (filtersAgg?.seniorityLevels || []).map((item) => item._id),
-      workModes: (filtersAgg?.workModes || []).map((item) => item._id),
+      workModes: (filtersAgg?.workModes || [])
+        .map((item) => item._id)
+        .filter((v) => !/^(unknown|n\/a|null|undefined)$/i.test(v.trim())),
       topCompanies: (filtersAgg?.topCompanies || []).map((item) => ({
         name: item._id,
         count: item.count,
