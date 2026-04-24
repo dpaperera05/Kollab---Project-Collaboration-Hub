@@ -75,6 +75,7 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
     const company = (req.query.company as string)?.trim();
     const country = (req.query.country as string)?.trim();
     const isTechJob = parseBoolean(req.query.isTechJob);
+    const postedDateFrom = (req.query.postedDateFrom as string)?.trim();
 
     const allowedSortFields = ["postedDate", "company", "title", "createdAt"];
     const requestedSortBy = (req.query.sortBy as string)?.trim() || "postedDate";
@@ -108,6 +109,11 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
 
     if (country) {
       query.country = country;
+    }
+
+    if (postedDateFrom) {
+      // postedDate is stored as an ISO string — lexicographic comparison works correctly for ISO 8601 dates
+      query.postedDate = { $gte: postedDateFrom };
     }
 
     if (search) {
@@ -144,6 +150,7 @@ export const getJobMarketJobs = async (req: Request, res: Response) => {
         workMode: workMode || null,
         company: company || null,
         country: country || null,
+        postedDateFrom: postedDateFrom || null,
         isTechJob: typeof isTechJob === "boolean" ? isTechJob : null,
         sortBy,
         sortOrder: sortOrder === 1 ? "asc" : "desc",
@@ -714,6 +721,51 @@ export const getJobMarketInsights = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch job market insights.",
+    });
+  }
+};
+
+/**
+ * GET /api/job-market/role-distribution
+ * Returns per-category job counts for ALL matching jobs via a server-side $group aggregation.
+ * This is the correct way to power the bar chart — paginating through job pages would only
+ * sample the most-recent N jobs, producing biased counts when filters are changed.
+ */
+export const getRoleDistribution = async (req: Request, res: Response) => {
+  try {
+    const seniority = (req.query.seniority as string)?.trim();
+    const workMode = (req.query.workMode as string)?.trim();
+    const country = (req.query.country as string)?.trim();
+    const postedDateFrom = (req.query.postedDateFrom as string)?.trim();
+
+    const match: Record<string, unknown> = {
+      isTechJob: true,
+      roleCategory: { $type: "string", $ne: "" },
+    };
+
+    if (seniority) match.seniority = seniority;
+    if (workMode) match.workMode = workMode;
+    if (country) match.country = country;
+    if (postedDateFrom) {
+      // postedDate is stored as an ISO string; lexicographic comparison is valid for ISO 8601
+      match.postedDate = { $gte: postedDateFrom };
+    }
+
+    const distribution = await JobMarketJob.aggregate<{ _id: string; count: number }>([
+      { $match: match },
+      { $group: { _id: "$roleCategory", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: distribution.map((item) => ({ name: item._id, count: item.count })),
+    });
+  } catch (error) {
+    console.error("Error fetching role distribution:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch role distribution.",
     });
   }
 };

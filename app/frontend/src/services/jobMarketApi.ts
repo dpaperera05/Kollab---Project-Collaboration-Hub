@@ -135,6 +135,7 @@ export interface GetJobMarketJobsParams {
   isTechJob?: boolean;
   company?: string;
   country?: string;
+  postedDateFrom?: string;
   sortBy?: "date" | "postedDate" | "title" | "company" | "createdAt";
   sortOrder?: "asc" | "desc";
 }
@@ -241,6 +242,7 @@ export async function getJobMarketJobs(params: GetJobMarketJobsParams = {}): Pro
           isTechJob: params.isTechJob,
           company: params.company,
           country: params.country,
+          postedDateFrom: params.postedDateFrom,
           sortBy: params.sortBy === "date" ? "postedDate" : params.sortBy,
           sortOrder: params.sortOrder,
         })
@@ -342,3 +344,34 @@ export const fetchSummary = getJobMarketSummary;
 export const fetchFilters = getJobMarketFilters;
 export const fetchJobs = getJobMarketJobs;
 export const fetchJobById = getJobMarketJobById;
+
+export interface GetRoleDistributionParams {
+  seniority?: string;
+  workMode?: string;
+  country?: string;
+  postedDateFrom?: string;
+}
+
+export async function getRoleDistribution(
+  params: GetRoleDistributionParams = {}
+): Promise<{ name: string; count: number }[]> {
+  return withMockFallback(
+    async () => {
+      const response = await requestJson<ApiResponse<{ name: string; count: number }[]>>(
+        buildUrl("/role-distribution", {
+          seniority: params.seniority,
+          workMode: params.workMode,
+          country: params.country,
+          postedDateFrom: params.postedDateFrom,
+        })
+      );
+
+      if (!response.success || !Array.isArray(response.data)) {
+        throw new Error(response.message || "Role distribution request failed");
+      }
+
+      return response.data;
+    },
+    () => mockSummary.roleCategoryCounts
+  );
+}

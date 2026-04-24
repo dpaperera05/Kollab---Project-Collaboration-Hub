@@ -20,22 +20,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getJobMarketSummary, getJobMarketJobs, getJobMarketFilters } from "@/services/jobMarketApi";
+import { getJobMarketSummary, getJobMarketJobs, getJobMarketFilters, getRoleDistribution } from "@/services/jobMarketApi";
 import type { JobSummary } from "@/data/mockJobMarket";
 import type { Job } from "@/data/mockJobMarket";
 import type { JobFilters } from "@/data/mockJobMarket";
 
 const CHART_COLORS = [
-  "hsl(214 85% 56%)",
-  "hsl(187 72% 42%)",
-  "hsl(154 60% 42%)",
-  "hsl(31 90% 56%)",
-  "hsl(345 72% 52%)",
-  "hsl(258 72% 62%)",
-  "hsl(202 80% 48%)",
-  "hsl(171 67% 38%)",
-  "hsl(43 93% 52%)",
-  "hsl(12 82% 56%)",
+  "hsl(270 80% 60%)",
+  "hsl(256 75% 62%)",
+  "hsl(284 74% 58%)",
+  "hsl(298 68% 57%)",
+  "hsl(315 72% 62%)",
+  "hsl(243 70% 64%)",
+  "hsl(261 78% 54%)",
+  "hsl(290 65% 60%)",
+  "hsl(328 66% 60%)",
+  "hsl(247 72% 66%)",
 ];
 
 type DashboardFilters = {
@@ -77,8 +77,6 @@ const labelForSeniority = (value: string): string =>
 const labelForWorkMode = (value: string): string =>
   WORK_MODE_LABELS[value.toLowerCase()] ?? value.replace(/\b\w/g, (c) => c.toUpperCase());
 
-const LOW_DATA_THRESHOLD = 50;
-
 const toReadableLabel = (value: string) => {
   if (!value) return "Unknown";
   return value
@@ -87,6 +85,188 @@ const toReadableLabel = (value: string) => {
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
+
+const ROLE_CATEGORY_LABELS: Record<string, string> = {
+  // `devops_cloud`, `data_ai`, `other_tech`, `program_management` etc. — real DB snake_case values
+  devopscloud: "DevOps & Cloud",
+  devopsandcloud: "DevOps & Cloud",
+  dataai: "Data Science & AI",
+  dataandai: "Data Science & AI",
+  aianddata: "Data Science & AI",
+  othertech: "Other Tech",
+  otherengineering: "Other Tech",
+  programmanagement: "Program Management",
+
+  // Front-End
+  frontend: "Front-End Development",
+  frontenddev: "Front-End Development",
+  frontenddeveloper: "Front-End Development",
+  frontendengineer: "Front-End Development",
+  frontendengineering: "Front-End Development",
+  frontendweb: "Front-End Development",
+  webfrontend: "Front-End Development",
+  uiengineer: "Front-End Development",
+  uideveloper: "Front-End Development",
+
+  // Back-End
+  backend: "Back-End Development",
+  backenddev: "Back-End Development",
+  backenddeveloper: "Back-End Development",
+  backendengineer: "Back-End Development",
+  backendengineering: "Back-End Development",
+  serverside: "Back-End Development",
+
+  // Full-Stack
+  fullstack: "Full-Stack Development",
+  fullstackdev: "Full-Stack Development",
+  fullstackdeveloper: "Full-Stack Development",
+  fullstackengineer: "Full-Stack Development",
+  fullstackengineering: "Full-Stack Development",
+  webdeveloper: "Full-Stack Development",
+  webdevelopment: "Full-Stack Development",
+  softwareengineer: "Full-Stack Development",
+  softwaredeveloper: "Full-Stack Development",
+  softwareengineering: "Full-Stack Development",
+  softwaredevelopment: "Full-Stack Development",
+  generalengineer: "Full-Stack Development",
+  general: "Full-Stack Development",
+
+  // DevOps & Cloud
+  devops: "DevOps & Cloud",
+  devopsengineer: "DevOps & Cloud",
+  devopsengineering: "DevOps & Cloud",
+  cloud: "DevOps & Cloud",
+  cloudengineer: "DevOps & Cloud",
+  cloudarchitect: "DevOps & Cloud",
+  cloudengineering: "DevOps & Cloud",
+  sre: "DevOps & Cloud",
+  sitereliability: "DevOps & Cloud",
+  sitereliabilityengineer: "DevOps & Cloud",
+  platformengineer: "DevOps & Cloud",
+  infrastructure: "DevOps & Cloud",
+  infrastructureengineer: "DevOps & Cloud",
+  cicd: "DevOps & Cloud",
+
+  // Data Science & ML
+  datascience: "Data Science & ML",
+  datascientist: "Data Science & ML",
+  datasciencist: "Data Science & ML",
+  dataanalysis: "Data Science & ML",
+  dataanalyst: "Data Science & ML",
+  dataanalytics: "Data Science & ML",
+  analytics: "Data Science & ML",
+  businessanalytics: "Data Science & ML",
+  businessanalyst: "Data Science & ML",
+  ml: "Data Science & ML",
+  machinelearning: "Data Science & ML",
+  mlengineer: "Data Science & ML",
+  mlengineering: "Data Science & ML",
+  ai: "Data Science & ML",
+  aiml: "Data Science & ML",
+  artificialintelligence: "Data Science & ML",
+  aiengineer: "Data Science & ML",
+  deeplearning: "Data Science & ML",
+  nlp: "Data Science & ML",
+  computervision: "Data Science & ML",
+  dataengineer: "Data Science & ML",
+  dataengineering: "Data Science & ML",
+
+  // Mobile
+  mobile: "Mobile Development",
+  mobiledev: "Mobile Development",
+  mobiledeveloper: "Mobile Development",
+  mobileengineer: "Mobile Development",
+  mobiledevelopment: "Mobile Development",
+  ios: "Mobile Development",
+  iosdeveloper: "Mobile Development",
+  iosengineer: "Mobile Development",
+  android: "Mobile Development",
+  androiddeveloper: "Mobile Development",
+  androidengineer: "Mobile Development",
+  reactnative: "Mobile Development",
+  flutter: "Mobile Development",
+
+  // UI/UX Design
+  design: "UI/UX Design",
+  uxdesign: "UI/UX Design",
+  uidesign: "UI/UX Design",
+  uiux: "UI/UX Design",
+  uiuxdesign: "UI/UX Design",
+  uiuxdesigner: "UI/UX Design",
+  uxdesigner: "UI/UX Design",
+  uidesigner: "UI/UX Design",
+  productdesign: "UI/UX Design",
+  productdesigner: "UI/UX Design",
+  uxresearch: "UI/UX Design",
+  uxresearcher: "UI/UX Design",
+  visualdesign: "UI/UX Design",
+  visualdesigner: "UI/UX Design",
+  interactiondesign: "UI/UX Design",
+  graphicdesign: "UI/UX Design",
+  graphicdesigner: "UI/UX Design",
+
+  // Product Management
+  product: "Product Management",
+  productmanager: "Product Management",
+  productmanagement: "Product Management",
+  productowner: "Product Management",
+  productlead: "Product Management",
+  programmanager: "Product Management",
+
+  // QA & Testing
+  qa: "QA & Testing",
+  qatesting: "QA & Testing",
+  qualityassurance: "QA & Testing",
+  qualityassuranceengineer: "QA & Testing",
+  qaengineer: "QA & Testing",
+  testingengineer: "QA & Testing",
+  tester: "QA & Testing",
+  sdet: "QA & Testing",
+  automationengineer: "QA & Testing",
+  testautomation: "QA & Testing",
+
+  // Cybersecurity
+  security: "Cybersecurity",
+  cybersecurity: "Cybersecurity",
+  securityengineer: "Cybersecurity",
+  securityanalyst: "Cybersecurity",
+  informationsecurity: "Cybersecurity",
+  infosec: "Cybersecurity",
+  appsecurity: "Cybersecurity",
+  networksecurity: "Cybersecurity",
+  pentesting: "Cybersecurity",
+  penetrationtesting: "Cybersecurity",
+
+  // Other niche
+  embedded: "Embedded Systems",
+  embeddedsystems: "Embedded Systems",
+  embeddedengineer: "Embedded Systems",
+  firmware: "Embedded Systems",
+  blockchain: "Blockchain",
+  blockchaindeveloper: "Blockchain",
+  web3: "Blockchain & Web3",
+  other: "Other",
+};
+
+// Ordered list of canonical category keys (raw values as stored in DB / mock data)
+const CANONICAL_CATEGORIES = [
+  "Frontend",
+  "Backend",
+  "Full-Stack",
+  "DevOps",
+  "Data Science",
+  "Mobile",
+  "Design",
+  "Product",
+  "QA",
+  "Security",
+];
+
+const normalizeCategoryKey = (raw: string): string =>
+  raw.toLowerCase().replace(/[\s_\-\/]+/g, "");
+
+const labelForCategory = (raw: string): string =>
+  ROLE_CATEGORY_LABELS[normalizeCategoryKey(raw)] ?? toReadableLabel(raw);
 
 const countBy = (values: string[]) => {
   return values.reduce<Record<string, number>>((acc, value) => {
@@ -111,16 +291,21 @@ const InsightsDashboardPage = () => {
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
   const [marketViewJobs, setMarketViewJobs] = useState<Job[]>([]);
   const [filterOptions, setFilterOptions] = useState<JobFilters | null>(null);
+  // `filters` = draft state shown in the selects; `appliedFilters` = committed state that drives the API call.
   const [filters, setFilters] = useState<DashboardFilters>(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<DashboardFilters>(DEFAULT_FILTERS);
 
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
 
   const [marketLoading, setMarketLoading] = useState(true);
-  const [marketError, setMarketError] = useState<string | null>(null);
 
   const [filtersLoading, setFiltersLoading] = useState(true);
   const [filtersError, setFiltersError] = useState<string | null>(null);
+
+  const [roleDistData, setRoleDistData] = useState<{ name: string; count: number }[] | null>(null);
+  const [roleDistLoading, setRoleDistLoading] = useState(true);
+  const [roleDistError, setRoleDistError] = useState<string | null>(null);
 
   const loadSummary = async () => {
     try {
@@ -162,17 +347,14 @@ const InsightsDashboardPage = () => {
   const loadMarketView = useCallback(async () => {
     try {
       setMarketLoading(true);
-      setMarketError(null);
-
-      const internalCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
       const baseQuery = {
         limit: 100,
         sortBy: "postedDate" as const,
         sortOrder: "desc" as const,
-        country: filters.country || undefined,
-        seniority: filters.seniority || undefined,
-        workMode: filters.workMode || undefined,
+        country: appliedFilters.country || undefined,
+        seniority: appliedFilters.seniority || undefined,
+        workMode: appliedFilters.workMode || undefined,
         isTechJob: true as const,
       };
 
@@ -189,19 +371,13 @@ const InsightsDashboardPage = () => {
         ...nextPages.flatMap((pageResult) => pageResult.jobs),
       ];
 
-      const scopedJobs = allJobs.filter((job) => {
-        const ts = new Date(job.postedDate).getTime();
-        return !Number.isNaN(ts) && ts >= internalCutoff;
-      });
-
-      setMarketViewJobs(scopedJobs);
-    } catch (err) {
-      setMarketError(err instanceof Error ? err.message : "Failed to load current market view.");
+      setMarketViewJobs(allJobs);
+    } catch {
       setMarketViewJobs([]);
     } finally {
       setMarketLoading(false);
     }
-  }, [filters]);
+  }, [appliedFilters]);
 
   useEffect(() => {
     void loadSummary();
@@ -209,27 +385,65 @@ const InsightsDashboardPage = () => {
     void loadFilterOptions();
   }, []);
 
+  const loadRoleDistribution = useCallback(async () => {
+    try {
+      setRoleDistLoading(true);
+      setRoleDistError(null);
+      const data = await getRoleDistribution({
+        country: appliedFilters.country || undefined,
+        seniority: appliedFilters.seniority || undefined,
+        workMode: appliedFilters.workMode || undefined,
+      });
+      setRoleDistData(data);
+    } catch (err) {
+      setRoleDistError(err instanceof Error ? err.message : "Failed to load role distribution.");
+      setRoleDistData(null);
+    } finally {
+      setRoleDistLoading(false);
+    }
+  }, [appliedFilters]);
+
   useEffect(() => {
     void loadMarketView();
   }, [loadMarketView]);
 
+  useEffect(() => {
+    void loadRoleDistribution();
+  }, [loadRoleDistribution]);
+
+  const isDirty =
+    filters.country !== appliedFilters.country ||
+    filters.seniority !== appliedFilters.seniority ||
+    filters.workMode !== appliedFilters.workMode;
+
   const roleDistribution = useMemo(() => {
-    if (marketViewJobs.length === 0) {
-      return summary?.roleCategoryCounts || [];
+    // Canonical list: all categories that exist in the DB (from the filters endpoint).
+    // Fall back to summary categories, then hardcoded list, until filterOptions loads.
+    const summaryCategories = summary?.roleCategoryCounts?.map((item) => item.name) ?? [];
+    const canonicalList: string[] =
+      filterOptions?.roleCategories?.length ? filterOptions.roleCategories
+      : summaryCategories.length ? summaryCategories
+      : CANONICAL_CATEGORIES;
+
+    const counts: Record<string, number> = {};
+    if (roleDistData && roleDistData.length > 0) {
+      // Primary: server-side $group aggregation — exact counts across ALL matching jobs,
+      // not a sample. This is the only correct way to show filtered role distribution.
+      for (const item of roleDistData) {
+        if (item.name) counts[item.name] = item.count;
+      }
+    } else if (summary?.roleCategoryCounts) {
+      // Fallback to all-time summary counts while the role distribution endpoint loads.
+      for (const item of summary.roleCategoryCounts) {
+        counts[item.name] = (counts[item.name] || 0) + item.count;
+      }
     }
 
-    const counts = countBy(marketViewJobs.map((job) => job.roleCategory || "Other"));
-    return rankedEntries(counts).slice(0, 10);
-  }, [marketViewJobs, summary]);
-
-  const seniorityDistribution = useMemo(() => {
-    if (marketViewJobs.length === 0) {
-      return summary?.seniorityCounts || [];
-    }
-
-    const counts = countBy(marketViewJobs.map((job) => job.seniority || "Unknown"));
-    return rankedEntries(counts);
-  }, [marketViewJobs, summary]);
+    // Always return every known category — zero-filled for those with no matches.
+    return canonicalList
+      .map((cat) => ({ name: cat, count: counts[cat] || 0 }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [roleDistData, summary, filterOptions]);
 
   const topSkillsRanked = useMemo(() => {
     if (marketViewJobs.length === 0) return summary?.topSkills || [];
@@ -243,76 +457,17 @@ const InsightsDashboardPage = () => {
     return rankedEntries(counts).slice(0, 10);
   }, [marketViewJobs, summary]);
 
-  const dominantRole = roleDistribution[0]?.name || summary?.topRoleCategory || "Insufficient data";
-  const dominantSeniority = seniorityDistribution[0]?.name || summary?.topSeniority || "Insufficient data";
-  const topSkill = topSkillsRanked[0]?.name || "Insufficient data";
-  const topTechnology = topTechnologiesRanked[0]?.name || "Insufficient data";
-
-  const workModeStats = useMemo(() => {
-    const knownModes = marketViewJobs
-      .map((job) => (job.workMode || "").trim())
-      .filter((mode) => mode.length > 0);
-    const knownCount = knownModes.length;
-    const remoteCount = knownModes.filter((mode) => mode.toLowerCase() === "remote").length;
-
-    if (knownCount < 10) {
-      return {
-        shareLabel: "Insufficient data",
-        insight: "Work mode split needs more records to be reliable.",
-      };
-    }
-
-    const remotePercent = Math.round((remoteCount / knownCount) * 100);
-    return {
-      shareLabel: `${remotePercent}%`,
-      insight:
-        remotePercent >= 50
-          ? `Remote roles lead the current view at ${remotePercent}% of known work modes.`
-          : `On-site and hybrid roles dominate, with remote at ${remotePercent}% of known work modes.`,
-    };
-  }, [marketViewJobs]);
-
-  const jobsAnalyzed = marketViewJobs.length;
-  const lowDataMode = jobsAnalyzed > 0 && jobsAnalyzed < LOW_DATA_THRESHOLD;
-
-  const marketInsights = useMemo(() => {
-    const insights: string[] = [];
-
-    if (dominantRole !== "Insufficient data") {
-      insights.push(
-        `${toReadableLabel(dominantRole)} dominates the current market, representing the largest share of active roles.`
-      );
-    }
-
-    if (dominantSeniority !== "Insufficient data") {
-      insights.push(`${toReadableLabel(dominantSeniority)} positions appear most frequently in the current dataset.`);
-    }
-
-    if (topTechnology !== "Insufficient data") {
-      insights.push(`${toReadableLabel(topTechnology)} is the most frequently mentioned technology across listings.`);
-    } else if (topSkill !== "Insufficient data") {
-      insights.push(`${toReadableLabel(topSkill)} appears as the most common capability in current listings.`);
-    }
-
-    if (workModeStats.shareLabel !== "Insufficient data") {
-      insights.push(`Remote roles account for ${workModeStats.shareLabel} of identified work modes.`);
-    } else {
-      insights.push(workModeStats.insight);
-    }
-
-    if (lowDataMode) {
-      insights.push("Data coverage is currently limited, so trend confidence is moderate rather than high.");
-    }
-
-    return insights.slice(0, 5);
-  }, [dominantRole, dominantSeniority, topTechnology, topSkill, workModeStats.insight, lowDataMode]);
-
   const handleFilterUpdate = (patch: Partial<DashboardFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
   };
 
+  const applyFilters = () => {
+    setAppliedFilters({ ...filters });
+  };
+
   const resetFilters = () => {
     setFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
   };
 
   return (
@@ -329,103 +484,110 @@ const InsightsDashboardPage = () => {
 
       <div className="py-10">
         <Container className="space-y-8">
-          <Card className="border-border/80 bg-gradient-to-r from-card to-muted/20 p-4 md:p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal size={16} className="text-primary" />
-                <p className="text-sm font-semibold text-foreground">Market View Controls</p>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs" onClick={resetFilters}>Reset Filters</Button>
+          <Card className="border-border/80 bg-card/95 shadow-sm overflow-hidden">
+            {/* Section header */}
+            <div className="px-4 md:px-6 pt-5 pb-4 border-b border-border/60">
+              <h2 className="text-2xl md:text-[1.7rem] font-bold tracking-tight text-foreground">Role Distribution Across Current Market View</h2>
+              <p className="text-sm text-muted-foreground mt-1">Showing tech jobs only &mdash; adjust filters to narrow by country, seniority, or work mode</p>
             </div>
 
-            {filtersLoading ? (
-              <div className="grid md:grid-cols-3 gap-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={`filter-skeleton-${i}`} className="h-10 rounded-md" />
-                ))}
-              </div>
-            ) : (
-              <>
-                {filtersError && (
-                  <p className="text-xs text-muted-foreground mb-3">{filtersError}</p>
-                )}
-
-                <div className="grid md:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Country</Label>
-                    <Select value={filters.country || "__all__"} onValueChange={(value) => handleFilterUpdate({ country: value === "__all__" ? "" : value })}>
-                      <SelectTrigger className="h-10 bg-background/70">
-                        <SelectValue placeholder="All countries" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">All countries</SelectItem>
-                        {(filterOptions?.countries || []).map((item) => (
-                          <SelectItem key={item} value={item}>{item}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Seniority</Label>
-                    <Select value={filters.seniority || "__all__"} onValueChange={(value) => handleFilterUpdate({ seniority: value === "__all__" ? "" : value })}>
-                      <SelectTrigger className="h-10 bg-background/70">
-                        <SelectValue placeholder="All levels" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">All levels</SelectItem>
-                        {(filterOptions?.seniorityLevels || []).map((item) => (
-                          <SelectItem key={item} value={item}>{labelForSeniority(item)}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Work Mode</Label>
-                    <Select value={filters.workMode || "__all__"} onValueChange={(value) => handleFilterUpdate({ workMode: value === "__all__" ? "" : value })}>
-                      <SelectTrigger className="h-10 bg-background/70">
-                        <SelectValue placeholder="All modes" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">All modes</SelectItem>
-                        {(filterOptions?.workModes || [])
-                          .filter((item) => !INVALID_WORK_MODES.has(item.toLowerCase()))
-                          .map((item) => (
-                            <SelectItem key={item} value={item}>{labelForWorkMode(item)}</SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            {/* Controls */}
+            <div className="px-4 md:px-6 py-4 bg-gradient-to-r from-card to-muted/20 border-b border-border/60">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal size={16} className="text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Market View Controls</p>
                 </div>
-              </>
-            )}
-          </Card>
-
-          <Card className="border-border/80 bg-card/95 p-4 md:p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-4 mb-5">
-              <div>
-                <h2 className="text-2xl md:text-[1.7rem] font-bold tracking-tight text-foreground">Role Distribution Across Current Market View</h2>
-                <p className="text-sm text-muted-foreground mt-1">Role distribution based on current filters</p>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="text-xs" onClick={resetFilters}>Reset</Button>
+                  <Button
+                    size="sm"
+                    className="text-xs relative"
+                    onClick={applyFilters}
+                    disabled={marketLoading}
+                  >
+                    Apply Filters
+                    {isDirty && (
+                      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    )}
+                  </Button>
+                </div>
               </div>
+
+              {filtersLoading ? (
+                <div className="grid md:grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={`filter-skeleton-${i}`} className="h-10 rounded-md" />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {filtersError && (
+                    <p className="text-xs text-muted-foreground mb-3">{filtersError}</p>
+                  )}
+
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Country</Label>
+                      <Select value={filters.country || "__all__"} onValueChange={(value) => handleFilterUpdate({ country: value === "__all__" ? "" : value })}>
+                        <SelectTrigger className="h-10 bg-background/70">
+                          <SelectValue placeholder="All countries" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">All countries</SelectItem>
+                          {(filterOptions?.countries || []).map((item) => (
+                            <SelectItem key={item} value={item}>{item}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Seniority</Label>
+                      <Select value={filters.seniority || "__all__"} onValueChange={(value) => handleFilterUpdate({ seniority: value === "__all__" ? "" : value })}>
+                        <SelectTrigger className="h-10 bg-background/70">
+                          <SelectValue placeholder="All levels" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">All levels</SelectItem>
+                          {(filterOptions?.seniorityLevels || []).map((item) => (
+                            <SelectItem key={item} value={item}>{labelForSeniority(item)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">Work Mode</Label>
+                      <Select value={filters.workMode || "__all__"} onValueChange={(value) => handleFilterUpdate({ workMode: value === "__all__" ? "" : value })}>
+                        <SelectTrigger className="h-10 bg-background/70">
+                          <SelectValue placeholder="All modes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">All modes</SelectItem>
+                          {(filterOptions?.workModes || [])
+                            .filter((item) => !INVALID_WORK_MODES.has(item.toLowerCase()))
+                            .map((item) => (
+                              <SelectItem key={item} value={item}>{labelForWorkMode(item)}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
-            {marketLoading ? (
-              <div className="grid lg:grid-cols-[1fr_260px] gap-4">
+            {/* Chart */}
+            <div className="p-4 md:p-6">
+              {roleDistLoading ? (
                 <Skeleton className="h-[500px] rounded-xl" />
-                <Skeleton className="h-[500px] rounded-xl" />
-              </div>
-            ) : marketError ? (
-              <div className="text-center py-8 border border-border rounded-xl">
-                <p className="text-sm text-muted-foreground mb-3">{marketError}</p>
-                <Button variant="outline" size="sm" onClick={() => void loadMarketView()}>Retry market chart</Button>
-              </div>
-            ) : roleDistribution.length === 0 ? (
-              <div className="text-center py-8 border border-border rounded-xl text-muted-foreground">
-                No role distribution data for this filter set.
-              </div>
-            ) : (
-              <div className="grid lg:grid-cols-[1fr_260px] gap-4">
+              ) : roleDistError ? (
+                <div className="text-center py-8 border border-border rounded-xl">
+                  <p className="text-sm text-muted-foreground mb-3">{roleDistError}</p>
+                  <Button variant="outline" size="sm" onClick={() => void loadRoleDistribution()}>Retry market chart</Button>
+                </div>
+              ) : (
                 <div className="rounded-xl border border-border/80 bg-background/70 p-4 md:p-5">
                   <div className="h-[480px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -437,10 +599,12 @@ const InsightsDashboardPage = () => {
                           tick={{ fontSize: 12 }}
                           tickLine={false}
                           axisLine={false}
-                          width={130}
-                          tickFormatter={(value) => toReadableLabel(String(value))}
+                          width={180}
+                          tickFormatter={(value) => labelForCategory(String(value))}
                         />
                         <Tooltip
+                          labelFormatter={(label) => labelForCategory(String(label))}
+                          formatter={(value) => [value, "Jobs"]}
                           contentStyle={{
                             borderRadius: 10,
                             fontSize: 13,
@@ -457,39 +621,8 @@ const InsightsDashboardPage = () => {
                     </ResponsiveContainer>
                   </div>
                 </div>
-
-                <div className="rounded-xl border border-border/80 bg-background/70 p-4 md:p-5 space-y-4">
-                  <p className="text-sm font-semibold text-foreground">Market Takeaways</p>
-                  <div className="space-y-3">
-                    <div className="rounded-lg border border-border/70 bg-card p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Dominant Role</p>
-                      <p className="text-sm font-semibold mt-1 text-foreground">{toReadableLabel(dominantRole)}</p>
-                    </div>
-                    <div className="rounded-lg border border-border/70 bg-card p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Most Common Seniority</p>
-                      <p className="text-sm font-semibold mt-1 text-foreground">{toReadableLabel(dominantSeniority)}</p>
-                    </div>
-                    <div className="rounded-lg border border-border/70 bg-card p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Remote Share</p>
-                      <p className="text-sm font-semibold mt-1 text-foreground">{workModeStats.shareLabel}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Card>
-
-          <Card className="border-border/80 bg-card/95 p-4 md:p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-foreground">Market Insights</h3>
-            <p className="text-sm text-muted-foreground mt-1">Key takeaways generated from current job market data</p>
-            <ul className="mt-4 space-y-2">
-              {marketInsights.map((insight) => (
-                <li key={insight} className="text-sm text-foreground flex items-start gap-2 leading-relaxed">
-                  <span className="mt-1 inline-block h-2 w-2 rounded-full bg-primary/70" />
-                  <span>{insight}</span>
-                </li>
-              ))}
-            </ul>
+              )}
+            </div>
           </Card>
 
           <div className="grid md:grid-cols-2 gap-6">
