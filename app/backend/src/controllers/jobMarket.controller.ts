@@ -769,3 +769,40 @@ export const getRoleDistribution = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getCompaniesRepresented = async (_req: Request, res: Response) => {
+  try {
+    const results = await JobMarketJob.aggregate<{ _id: string; source: string; latestDate: string }>([
+      {
+        $match: {
+          company: { $type: "string", $ne: "" },
+          normalizedCompany: { $not: /^(unknown|n\/a|null|undefined|remote)$/i },
+        },
+      },
+      {
+        $group: {
+          _id: "$company",
+          source: { $first: "$source" },
+          latestDate: { $max: "$postedDate" },
+        },
+      },
+      { $sort: { latestDate: -1, _id: 1 } },
+      { $limit: 12 },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: results.map((item) => ({
+        name: item._id,
+        normalizedName: item._id.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        source: item.source || null,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching companies represented:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch companies represented.",
+    });
+  }
+};

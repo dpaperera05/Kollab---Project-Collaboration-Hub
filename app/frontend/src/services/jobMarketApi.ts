@@ -337,6 +337,29 @@ export async function getJobMarketJobById(id: string): Promise<Job | null> {
   );
 }
 
+export interface CompanyRepresented {
+  name: string;
+  normalizedName: string;
+  source: string | null;
+}
+
+export async function getCompaniesRepresented(): Promise<CompanyRepresented[]> {
+  return withMockFallback(
+    async () => {
+      const response = await requestJson<ApiResponse<CompanyRepresented[]>>(
+        buildUrl("/companies-represented")
+      );
+
+      if (!response.success || !Array.isArray(response.data)) {
+        throw new Error(response.message || "Companies represented request failed");
+      }
+
+      return response.data;
+    },
+    () => []
+  );
+}
+
 // Backward-compatible exports for existing call sites.
 export type FetchJobsResult = GetJobMarketJobsResult;
 export type FetchJobsParams = GetJobMarketJobsParams;

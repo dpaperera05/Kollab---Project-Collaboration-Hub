@@ -343,6 +343,17 @@ const normalizeCategoryKey = (raw: string): string =>
 const labelForCategory = (raw: string): string =>
   ROLE_CATEGORY_LABELS[normalizeCategoryKey(raw)] ?? toReadableLabel(raw);
 
+//change to the company logo images
+const FEATURED_COMPANIES = [
+  { name: "Vercel",     logo: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/vercel.jpg" },
+  { name: "Datadog",   logo: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/datadog.jpg" },
+  { name: "Coinbase",  logo: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/coinbase.png" },
+  { name: "Stripe",    logo: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/stripe.png" },
+  { name: "WHOOP",     logo: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/whoop.png" },
+  { name: "Mistral AI",logo: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/mistral.png" },
+  { name: "Plaid",     logo: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/plaid.png" },
+];
+
 const HERO_DARK = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero-dark.png";
 const HERO_LIGHT = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/banners/job-market-hero-light.png";
 
@@ -365,6 +376,7 @@ const InsightsDashboardPage = () => {
   const [roleDistData, setRoleDistData] = useState<{ name: string; count: number }[] | null>(null);
   const [roleDistLoading, setRoleDistLoading] = useState(true);
   const [roleDistError, setRoleDistError] = useState<string | null>(null);
+
 
   const loadSummary = async () => {
     try {
@@ -635,6 +647,48 @@ const InsightsDashboardPage = () => {
               )}
             </div>
           </Card>
+
+          {/* Jobs Sourced From */}
+          <section>
+            <div className="mb-5">
+              <h2 className="text-xl md:text-2xl font-bold text-foreground">Jobs Sourced From</h2>
+              <p className="text-sm text-muted-foreground mt-1">Selected company job boards represented in the current market intelligence pipeline.</p>
+            </div>
+            <div
+              className="flex gap-3 overflow-x-auto pb-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+            >
+              {FEATURED_COMPANIES.map((company) => (
+                <div
+                  key={company.name}
+                  className="flex-shrink-0 flex items-center gap-3 rounded-xl border border-border/60 bg-white dark:bg-card shadow-sm hover:shadow-md hover:border-primary/25 transition-all duration-200 px-4 py-3 min-w-[148px]"
+                >
+                  <div className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden bg-muted/30">
+                    <img
+                      src={company.logo}
+                      alt={company.name}
+                      width={36}
+                      height={36}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        img.style.display = "none";
+                        const fallback = img.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = "flex";
+                      }}
+                    />
+                    <span
+                      className="hidden w-full h-full items-center justify-center text-sm font-bold text-primary/70"
+                      aria-hidden="true"
+                    >
+                      {company.name[0]}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">{company.name}</span>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {/* Skill & Technology Signals */}
           <section>
