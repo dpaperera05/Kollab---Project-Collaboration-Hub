@@ -49,15 +49,12 @@ const enrichWithOwner = async (projects: any[]): Promise<any[]> => {
 
 /**
  * Shape a raw (enriched) project document into the fields expected by ProjectCard
- * on the frontend, plus optional recommendation metadata.
+ * on the frontend. Only user-facing fields are included.
  */
 const toCardShape = (
   p: any,
-  extra?: {
-    matchScore?: number;
+  rec?: {
     matchPercentage?: number;
-    ruleBasedPercentage?: number;
-    semanticPercentage?: number;
     matchedSkills?: string[];
     matchedRoles?: string[];
     recommendationReasons?: string[];
@@ -85,8 +82,19 @@ const toCardShape = (
     total: r.seats,
     filled: r.status === "Filled" ? r.seats : 0,
   })),
-  ...(extra ?? {}),
+  ...(rec ?? {}),
 });
+
+/** Extra fields attached only when ?debug=true and NODE_ENV !== "production". */
+interface DebugFields {
+  _debug: {
+    matchScore: number;
+    ruleBasedPercentage: number;
+    semanticPercentage: number | undefined;
+    hasUserEmbedding: boolean;
+    hasProjectEmbedding: boolean;
+  };
+}
 
 // ── Controller ────────────────────────────────────────────────────────────────
 
@@ -164,6 +172,9 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
     // scoreProjectHybrid falls back to rule-based when either embedding is absent.
     // enriched projects keep all lean() fields including recommendationEmbedding
     // because we fetched with +recommendationEmbedding above.
+    const isDebug =
+      process.env.NODE_ENV !== "production" && req.query.debug === "true";
+
     const allScored = enriched
       .map((p) => {
         const projectEmbed = (p as any).recommendationEmbedding as number[] | undefined;
@@ -175,18 +186,28 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
     const matched = allScored.filter((s) => s.matchPercentage > 0);
     const scored = (matched.length > 0 ? matched : allScored).slice(0, MAX_RESULTS);
 
-    const projects = scored.map(
-      ({ project, matchScore, matchPercentage, ruleBasedPercentage, semanticPercentage, matchedSkills, matchedRoles, recommendationReasons }) =>
-        toCardShape(project, {
+    const projects = scored.map(({ project, matchScore, matchPercentage, ruleBasedPercentage, semanticPercentage, matchedSkills, matchedRoles, recommendationReasons }) => {
+      const card = toCardShape(project, {
+        matchPercentage,
+        matchedSkills,
+        matchedRoles,
+        recommendationReasons,
+      });
+
+      if (!isDebug) return card;
+
+      const projectEmbed = (project as any).recommendationEmbedding;
+      const debugFields: DebugFields = {
+        _debug: {
           matchScore,
-          matchPercentage,
           ruleBasedPercentage,
           semanticPercentage,
-          matchedSkills,
-          matchedRoles,
-          recommendationReasons,
-        }),
-    );
+          hasUserEmbedding: userEmbedding !== null,
+          hasProjectEmbedding: Array.isArray(projectEmbed) && projectEmbed.length > 0,
+        },
+      };
+      return { ...card, ...debugFields };
+    });
 
     return res.json({
       success: true,

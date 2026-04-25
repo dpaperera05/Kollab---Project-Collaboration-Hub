@@ -29,7 +29,6 @@ export type RecommendationProject = {
   posterName?: string;
   posterAvatar?: string;
   roles: Array<{ title: string; status?: "Open" | "Filled"; total?: number; filled?: number }>;
-  matchScore?: number;
   matchPercentage?: number;
   matchedSkills?: string[];
   matchedRoles?: string[];

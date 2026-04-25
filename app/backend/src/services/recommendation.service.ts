@@ -279,9 +279,9 @@ export function scoreProjectHybrid(
       // Hybrid blend: semantic is the majority signal
       finalMatchPercentage = Math.round(semanticPercentage * 0.6 + ruleBasedPercentage * 0.4);
 
-      // Add a semantic reason only when it meaningfully elevates the score
-      // and the concrete reasons haven't already filled the list
-      if (semanticPercentage >= 65 && reasons.length < 3) {
+      // Add a semantic reason only when there are fewer than 2 concrete reasons,
+      // so it never displaces a skill/role/domain match that is more informative.
+      if (semanticPercentage >= 65 && reasons.length < 2) {
         reasons.push("Semantically similar to your profile interests and skills");
       }
     }
