@@ -4,6 +4,10 @@ import { User } from "../models/user.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { scoreProject } from "../services/recommendation.service";
 import { generateEmbedding } from "../services/embeddingClient.service";
+import {
+  generateAndStoreProjectEmbedding,
+  generateMissingProjectEmbeddings,
+} from "../services/projectEmbedding.service";
 
 const MAX_RESULTS = 10;
 
@@ -200,5 +204,65 @@ export const testEmbedding = async (req: Request, res: Response) => {
       success: false,
       message: error?.message ?? "Failed to generate embedding",
     });
+  }
+};
+
+// ── Embedding generation endpoints (authenticated, admin/dev only) ─────────────
+
+/**
+ * POST /api/recommendations/projects/:projectId/generate-embedding
+ *
+ * Generate and store an embedding for a single project.
+ * Requires authentication. Available in all environments (marked as admin use).
+ *
+ * Path param: projectId — MongoDB ObjectId string
+ */
+export const generateProjectEmbedding = async (req: AuthRequest, res: Response) => {
+  const projectId = req.params.projectId as string;
+
+  if (!projectId) {
+    return res.status(400).json({ success: false, message: "projectId is required." });
+  }
+
+  try {
+    const summary = await generateAndStoreProjectEmbedding(projectId);
+    return res.json({ success: true, data: summary });
+  } catch (error: any) {
+    const msg: string = error?.message ?? "Failed to generate project embedding";
+    console.error(`[generate-embedding] ${msg}`);
+
+    if (msg.includes("Project not found")) {
+      return res.status(404).json({ success: false, message: msg });
+    }
+    if (
+      msg.toLowerCase().includes("unreachable") ||
+      msg.toLowerCase().includes("timed out") ||
+      msg.toLowerCase().includes("offline")
+    ) {
+      return res.status(502).json({ success: false, message: msg });
+    }
+    if (msg.toLowerCase().includes("dimensions")) {
+      return res.status(422).json({ success: false, message: msg });
+    }
+    return res.status(500).json({ success: false, message: msg });
+  }
+};
+
+/**
+ * POST /api/recommendations/projects/generate-missing-embeddings
+ *
+ * Batch-generate embeddings for all projects that do not yet have one.
+ * Processes at most 10 projects per call, "Open" status first.
+ * Per-project failures are recorded but do not abort the batch.
+ * Requires authentication. Available in all environments (marked as admin use).
+ */
+export const generateMissingEmbeddings = async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await generateMissingProjectEmbeddings();
+    return res.json({ success: true, data: result });
+  } catch (error: any) {
+    const msg: string = error?.message ?? "Failed to run batch embedding generation";
+    console.error(`[generate-missing-embeddings] ${msg}`);
+    return res.status(500).json({ success: false, message: msg });
   }
 };

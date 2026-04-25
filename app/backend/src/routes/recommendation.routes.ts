@@ -1,6 +1,11 @@
 import { Router } from "express";
-import { optionalAuth } from "../middleware/auth.middleware";
-import { getRecommendedProjects, testEmbedding } from "../controllers/recommendation.controller";
+import { authenticate, optionalAuth } from "../middleware/auth.middleware";
+import {
+  getRecommendedProjects,
+  testEmbedding,
+  generateProjectEmbedding,
+  generateMissingEmbeddings,
+} from "../controllers/recommendation.controller";
 
 const router = Router();
 
@@ -13,5 +18,26 @@ router.get("/projects", optionalAuth, getRecommendedProjects);
 // Development-only: verifies the Node backend can reach the Python embedding service.
 // Disabled automatically when NODE_ENV=production (handled inside the controller).
 router.post("/test-embedding", testEmbedding);
+
+// ── Embedding generation (admin / dev endpoints) ──────────────────────────────
+// Both routes require a valid JWT (authenticate).
+// No admin-role table exists yet in the schema, so authentication is the
+// current protection level. Restrict access via network/firewall in production.
+
+// POST /api/recommendations/projects/generate-missing-embeddings
+// Must be declared BEFORE the :projectId route so Express does not
+// misinterpret "generate-missing-embeddings" as a projectId.
+router.post(
+  "/projects/generate-missing-embeddings",
+  authenticate,
+  generateMissingEmbeddings,
+);
+
+// POST /api/recommendations/projects/:projectId/generate-embedding
+router.post(
+  "/projects/:projectId/generate-embedding",
+  authenticate,
+  generateProjectEmbedding,
+);
 
 export default router;
