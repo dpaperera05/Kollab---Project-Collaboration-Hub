@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, optionalAuth } from "../middleware/auth.middleware";
 import {
   getRecommendedProjects,
+  getRecommendationDebugQuality,
   testEmbedding,
   generateProjectEmbedding,
   generateMissingEmbeddings,
@@ -10,6 +11,13 @@ import {
 } from "../controllers/recommendation.controller";
 
 const router = Router();
+
+// GET /api/recommendations/projects/debug-quality
+// Development-only: structured scoring breakdown for the logged-in user.
+// Returns 404 automatically when NODE_ENV=production (handled inside the controller).
+// Must be declared BEFORE /projects so Express does not match "debug-quality"
+// against the plain /projects GET handler.
+router.get("/projects/debug-quality", authenticate, getRecommendationDebugQuality);
 
 // GET /api/recommendations/projects
 // Works for both guests (returns latest open projects) and authenticated users

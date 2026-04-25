@@ -224,6 +224,123 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
   }
 };
 
+/**
+ * GET /api/recommendations/projects/debug-quality
+ *
+ * Development-only: structured scoring breakdown for the logged-in user.
+ * Shows profile signals, embedding status, and per-project hybrid scoring
+ * detail so recommendation quality can be validated without changing the
+ * main endpoint.
+ *
+ * - Disabled in production (returns 404).
+ * - Requires authentication.
+ * - Never returns raw embedding arrays.
+ */
+export const getRecommendationDebugQuality = async (req: AuthRequest, res: Response) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ success: false, message: "Not found" });
+  }
+
+  try {
+    const userId = req.userId!;
+
+    // ── Load user profile signals ─────────────────────────────────────────────
+    const user = await User.findById(userId, "profile").lean();
+    const profile = user?.profile;
+
+    const profileSignals = {
+      skills: profile?.skills ?? [],
+      preferredRoles: profile?.preferredRoles ?? [],
+      domainInterests: profile?.domainInterests ?? [],
+      techStack: profile?.techStack ?? [],
+      expertiseSkills: profile?.expertiseSkills ?? [],
+    };
+
+    const hasSignals = Object.values(profileSignals).some((arr) => arr.length > 0);
+
+    // ── Load user embedding via raw driver ────────────────────────────────────
+    let userEmbedding: number[] | null = null;
+    try {
+      const rawUser = await User.collection.findOne(
+        { _id: new mongoose.Types.ObjectId(userId) },
+        { projection: { "profile.recommendationEmbedding": 1 } },
+      );
+      const candidate = (rawUser as any)?.profile?.recommendationEmbedding;
+      if (Array.isArray(candidate) && candidate.length > 0) {
+        userEmbedding = candidate as number[];
+      }
+    } catch {
+      userEmbedding = null;
+    }
+
+    // ── Load all open projects with embeddings ────────────────────────────────
+    const rawProjects = await Project.find({ status: "Open" })
+      .select("+recommendationEmbedding")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const enriched = await enrichWithOwner(rawProjects);
+
+    const totalOpenProjects = enriched.length;
+    const projectsWithEmbeddings = enriched.filter(
+      (p) => Array.isArray((p as any).recommendationEmbedding) && (p as any).recommendationEmbedding.length > 0,
+    ).length;
+    const projectsWithoutEmbeddings = totalOpenProjects - projectsWithEmbeddings;
+
+    // ── Score every project ───────────────────────────────────────────────────
+    const scored = enriched
+      .map((p) => {
+        const projectEmbed = (p as any).recommendationEmbedding as number[] | undefined;
+        const result = hasSignals && profile
+          ? scoreProjectHybrid(p, profile, userEmbedding, projectEmbed)
+          : null;
+
+        const hasProjectEmbedding = Array.isArray(projectEmbed) && projectEmbed.length > 0;
+
+        // Determine which scoring path was taken
+        const scoringMode =
+          result && userEmbedding && hasProjectEmbedding
+            ? "hybrid"
+            : result
+              ? "rule-based"
+              : "no-profile";
+
+        return {
+          projectId: (p as any)._id?.toString() ?? (p as any).id,
+          title: p.title as string,
+          domain: p.domain as string,
+          technologies: (p.technologies ?? []) as string[],
+          roles: ((p.roles ?? []) as any[]).map((r: any) => r.title as string),
+          matchPercentage: result?.matchPercentage ?? 0,
+          semanticPercentage: result?.semanticPercentage ?? null,
+          ruleBasedPercentage: result?.ruleBasedPercentage ?? 0,
+          matchedSkills: result?.matchedSkills ?? [],
+          matchedRoles: result?.matchedRoles ?? [],
+          recommendationReasons: result?.recommendationReasons ?? [],
+          hasProjectEmbedding,
+          scoringMode,
+        };
+      })
+      .sort((a, b) => b.matchPercentage - a.matchPercentage);
+
+    return res.json({
+      success: true,
+      data: {
+        userId,
+        profileSignals,
+        hasUserEmbedding: userEmbedding !== null,
+        totalOpenProjects,
+        projectsWithEmbeddings,
+        projectsWithoutEmbeddings,
+        scoredProjects: scored,
+      },
+    });
+  } catch (error) {
+    console.error("[debug-quality] Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to generate debug quality report" });
+  }
+};
+
 // ── Development-only test endpoint ────────────────────────────────────────────
 
 /**
