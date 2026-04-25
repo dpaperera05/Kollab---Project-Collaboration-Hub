@@ -38,3 +38,38 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 };
+
+/**
+ * Optional authentication middleware.
+ * If a valid Bearer token is present, populates req.userId.
+ * If no token or an invalid/expired token is provided, silently continues
+ * without setting req.userId — the request is treated as a guest.
+ */
+export const optionalAuth = async (req: Request, _res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, secret) as { id?: string };
+    if (decoded?.id) {
+      const userExists = await User.exists({ _id: decoded.id });
+      if (userExists) {
+        (req as AuthRequest).userId = decoded.id;
+      }
+    }
+  } catch {
+    // Invalid or expired token — treat as guest, do not reject
+  }
+
+  next();
+};
