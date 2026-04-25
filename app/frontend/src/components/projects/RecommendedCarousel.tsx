@@ -30,6 +30,7 @@ export type RecommendationProject = {
   posterAvatar?: string;
   roles: Array<{ title: string; status?: "Open" | "Filled"; total?: number; filled?: number }>;
   matchScore?: number;
+  matchPercentage?: number;
   matchedSkills?: string[];
   matchedRoles?: string[];
   recommendationReasons?: string[];
@@ -179,10 +180,10 @@ const RecommendedCarousel = ({ projects, title, subtitle, mode, loading = false 
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
-                      {/* Match score badge — personalized only */}
-                      {mode === "personalized" && project.matchScore !== undefined && (
+                      {/* Match percentage badge — personalized only */}
+                      {mode === "personalized" && project.matchPercentage !== undefined && (
                         <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold shadow">
-                          {project.matchScore} pts
+                          {project.matchPercentage}% Match
                         </span>
                       )}
                     </div>

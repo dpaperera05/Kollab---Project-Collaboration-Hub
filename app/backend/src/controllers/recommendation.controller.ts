@@ -48,6 +48,7 @@ const toCardShape = (
   p: any,
   extra?: {
     matchScore?: number;
+    matchPercentage?: number;
     matchedSkills?: string[];
     matchedRoles?: string[];
     recommendationReasons?: string[];
@@ -129,13 +130,16 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
     }
 
     // Score every open project against the user's profile
-    const scored = enriched
+    const allScored = enriched
       .map((p) => scoreProject(p, profile))
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, MAX_RESULTS);
+      .sort((a, b) => b.matchPercentage - a.matchPercentage || b.matchScore - a.matchScore);
 
-    const projects = scored.map(({ project, matchScore, matchedSkills, matchedRoles, recommendationReasons }) =>
-      toCardShape(project, { matchScore, matchedSkills, matchedRoles, recommendationReasons }),
+    // Prefer projects with at least 1% match; fall back to all scored if none qualify
+    const matched = allScored.filter((s) => s.matchPercentage > 0);
+    const scored = (matched.length > 0 ? matched : allScored).slice(0, MAX_RESULTS);
+
+    const projects = scored.map(({ project, matchScore, matchPercentage, matchedSkills, matchedRoles, recommendationReasons }) =>
+      toCardShape(project, { matchScore, matchPercentage, matchedSkills, matchedRoles, recommendationReasons }),
     );
 
     return res.json({
