@@ -8,6 +8,7 @@ import {
   generateAndStoreProjectEmbedding,
   generateMissingProjectEmbeddings,
 } from "../services/projectEmbedding.service";
+import { generateAndStoreUserRecommendationEmbedding } from "../services/userEmbedding.service";
 
 const MAX_RESULTS = 10;
 
@@ -264,5 +265,73 @@ export const generateMissingEmbeddings = async (_req: AuthRequest, res: Response
     const msg: string = error?.message ?? "Failed to run batch embedding generation";
     console.error(`[generate-missing-embeddings] ${msg}`);
     return res.status(500).json({ success: false, message: msg });
+  }
+};
+
+// ── User embedding endpoints (authenticated) ───────────────────────────────────
+
+/**
+ * Shared error mapper for user embedding failures.
+ */
+function handleUserEmbeddingError(res: Response, error: any): Response {
+  const msg: string = error?.message ?? "Failed to generate user embedding";
+  console.error(`[user-embedding] ${msg}`);
+
+  if (msg.includes("User not found")) {
+    return res.status(404).json({ success: false, message: msg });
+  }
+  if (msg.includes("not contain enough recommendation data")) {
+    return res.status(422).json({ success: false, message: msg });
+  }
+  if (
+    msg.toLowerCase().includes("unreachable") ||
+    msg.toLowerCase().includes("timed out") ||
+    msg.toLowerCase().includes("offline")
+  ) {
+    return res.status(502).json({ success: false, message: msg });
+  }
+  if (msg.toLowerCase().includes("dimensions")) {
+    return res.status(422).json({ success: false, message: msg });
+  }
+  return res.status(500).json({ success: false, message: msg });
+}
+
+/**
+ * POST /api/recommendations/users/me/generate-embedding
+ *
+ * Generate and store a recommendation embedding for the currently
+ * authenticated user. Requires a valid JWT (authenticate middleware).
+ * Never returns the raw embedding array.
+ */
+export const generateMyUserEmbedding = async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+
+  try {
+    const summary = await generateAndStoreUserRecommendationEmbedding(userId);
+    return res.json({ success: true, data: summary });
+  } catch (error: any) {
+    return handleUserEmbeddingError(res, error);
+  }
+};
+
+/**
+ * POST /api/recommendations/users/:userId/generate-embedding
+ *
+ * Generate and store a recommendation embedding for any user by id.
+ * Requires authentication. Intended for admin / development use.
+ * Never returns the raw embedding array.
+ */
+export const generateUserEmbeddingById = async (req: AuthRequest, res: Response) => {
+  const userId = req.params.userId as string;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "userId is required." });
+  }
+
+  try {
+    const summary = await generateAndStoreUserRecommendationEmbedding(userId);
+    return res.json({ success: true, data: summary });
+  } catch (error: any) {
+    return handleUserEmbeddingError(res, error);
   }
 };

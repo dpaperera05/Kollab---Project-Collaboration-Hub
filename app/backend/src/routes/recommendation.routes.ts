@@ -5,6 +5,8 @@ import {
   testEmbedding,
   generateProjectEmbedding,
   generateMissingEmbeddings,
+  generateMyUserEmbedding,
+  generateUserEmbeddingById,
 } from "../controllers/recommendation.controller";
 
 const router = Router();
@@ -19,12 +21,11 @@ router.get("/projects", optionalAuth, getRecommendedProjects);
 // Disabled automatically when NODE_ENV=production (handled inside the controller).
 router.post("/test-embedding", testEmbedding);
 
-// ── Embedding generation (admin / dev endpoints) ──────────────────────────────
+// ── Project embedding generation (admin / dev endpoints) ──────────────────────
 // Both routes require a valid JWT (authenticate).
 // No admin-role table exists yet in the schema, so authentication is the
-// current protection level. Restrict access via network/firewall in production.
+// current protection level.
 
-// POST /api/recommendations/projects/generate-missing-embeddings
 // Must be declared BEFORE the :projectId route so Express does not
 // misinterpret "generate-missing-embeddings" as a projectId.
 router.post(
@@ -33,11 +34,22 @@ router.post(
   generateMissingEmbeddings,
 );
 
-// POST /api/recommendations/projects/:projectId/generate-embedding
 router.post(
   "/projects/:projectId/generate-embedding",
   authenticate,
   generateProjectEmbedding,
 );
+
+// ── User embedding generation (authenticated) ──────────────────────────────────
+// /me must be declared BEFORE /:userId so Express doesn't treat the literal
+// string "me" as a userId parameter.
+
+// POST /api/recommendations/users/me/generate-embedding
+// Generate embedding for the currently logged-in user.
+router.post("/users/me/generate-embedding", authenticate, generateMyUserEmbedding);
+
+// POST /api/recommendations/users/:userId/generate-embedding
+// Generate embedding for any user by id. Admin / development use.
+router.post("/users/:userId/generate-embedding", authenticate, generateUserEmbeddingById);
 
 export default router;
