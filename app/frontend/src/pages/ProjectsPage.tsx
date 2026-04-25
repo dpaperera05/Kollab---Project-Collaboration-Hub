@@ -11,9 +11,9 @@ import RecommendedCarousel from "@/components/projects/RecommendedCarousel";
 import PaginationBar from "@/components/projects/PaginationBar";
 import ProjectsHeroIllustration from "@/components/projects/ProjectsHeroIllustration";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockProjects } from "@/data/mockProjects";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { getSession } from "@/lib/authStore";
+import type { RecommendationProject } from "@/components/projects/RecommendedCarousel";
 
 type BackendProject = {
   _id: string;
@@ -35,9 +35,17 @@ type BackendProject = {
   owner?: { id?: string; name?: string; avatar?: string; rating?: number };
 };
 
-const recommendedProjects = mockProjects;
-
 const PAGE_SIZE = 9;
+
+type RecommendationApiResponse = {
+  success: boolean;
+  data: {
+    mode: "personalized" | "latest";
+    title: string;
+    subtitle: string;
+    projects: RecommendationProject[];
+  };
+};
 
 const DEFAULT_FILTERS: FilterState = {
   domain: "All",
@@ -104,6 +112,31 @@ const ProjectsPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  const [recData, setRecData] = useState<RecommendationApiResponse["data"]>({
+    mode: "latest",
+    title: "Latest Projects",
+    subtitle: "Browse the most recently posted open projects",
+    projects: [],
+  });
+  const [isLoadingRecs, setIsLoadingRecs] = useState(true);
+
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      setIsLoadingRecs(true);
+      try {
+        // apiGet automatically attaches Authorization header when the user is logged in
+        const res = await apiGet<RecommendationApiResponse>("/recommendations/projects");
+        if (res?.data) {
+          setRecData(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load recommendations", err);
+      } finally {
+        setIsLoadingRecs(false);
+      }
+    };
+    loadRecommendations();
+  }, []);
 
   useEffect(() => {
     const loadBookmarks = async () => {
@@ -274,7 +307,13 @@ const ProjectsPage = () => {
         <Container className="py-8 space-y-8">
           {/* AI Recommended Carousel */}
           <div className="rounded-xl border border-border bg-card/50 p-5">
-            <RecommendedCarousel projects={recommendedProjects} />
+            <RecommendedCarousel
+              projects={recData.projects}
+              title={recData.title}
+              subtitle={recData.subtitle}
+              mode={recData.mode}
+              loading={isLoadingRecs}
+            />
           </div>
 
           {/* Filters */}
