@@ -1,0 +1,23 @@
+# Python virtual environment — never commit this
+venv/
+.venv/
+env/
+
+# Hugging Face model cache downloaded locally
+.cache/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
