@@ -1,8 +1,9 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { Project } from "../models/project.model";
 import { User } from "../models/user.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { scoreProject } from "../services/recommendation.service";
+import { generateEmbedding } from "../services/embeddingClient.service";
 
 const MAX_RESULTS = 10;
 
@@ -154,5 +155,50 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
   } catch (error) {
     console.error("[recommendations] Error generating recommendations:", error);
     return res.status(500).json({ success: false, message: "Failed to load recommendations" });
+  }
+};
+
+// ── Development-only test endpoint ────────────────────────────────────────────
+
+/**
+ * POST /api/recommendations/test-embedding
+ *
+ * Verifies that the Node backend can successfully communicate with the Python
+ * embedding service. Available in development only (NODE_ENV !== "production").
+ *
+ * Accepts: { "text": "..." }
+ * Returns a confirmation object — never returns the raw embedding array.
+ */
+export const testEmbedding = async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ success: false, message: "Not found" });
+  }
+
+  const { text } = req.body;
+
+  if (typeof text !== "string" || !text.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: "Request body must include a non-empty 'text' string.",
+    });
+  }
+
+  try {
+    const result = await generateEmbedding(text.trim());
+
+    // Return only confirmation metadata — never the full embedding array
+    return res.json({
+      success: true,
+      model: result.model,
+      dimensions: result.dimensions,
+      textLength: text.trim().length,
+      embeddingGenerated: true,
+    });
+  } catch (error: any) {
+    console.error("[test-embedding] Error:", error?.message ?? error);
+    return res.status(502).json({
+      success: false,
+      message: error?.message ?? "Failed to generate embedding",
+    });
   }
 };
