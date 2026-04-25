@@ -10,6 +10,8 @@ export interface ScoredProject {
   ruleBasedPercentage: number;
   /** Semantic cosine similarity converted to 0–100. Undefined if embeddings were unavailable. */
   semanticPercentage?: number;
+  /** Raw cosine similarity in [-1, 1]. Only present when both embeddings were available. Never expose directly in API responses. */
+  rawCosineSimilarity?: number;
   matchedSkills: string[];
   matchedRoles: string[];
   recommendationReasons: string[];
@@ -81,6 +83,45 @@ const overlap = (a: string[], b: string[]): string[] => {
   return a.filter((x) => setB.has(x));
 };
 
+// ── Canonical synonym expansion ───────────────────────────────────────────────
+
+/**
+ * Synonym groups for canonical matching.
+ * Each inner array contains normalised (lowercase-trimmed) terms that should be
+ * treated as equivalent when matching user skills to project signals.
+ */
+const SYNONYM_GROUPS: readonly string[][] = [
+  ["express", "express.js"],
+  ["node", "node.js"],
+  ["react", "react.js"],
+  ["machine learning", "ml"],
+  ["ai & ml", "ai / machine learning", "ai/machine learning"],
+];
+
+/** Map from normalised term → its full synonym set (O(1) lookup). */
+const SYNONYM_MAP = new Map<string, Set<string>>();
+for (const group of SYNONYM_GROUPS) {
+  const groupSet = new Set(group.map((s) => s.toLowerCase().trim()));
+  for (const term of groupSet) {
+    SYNONYM_MAP.set(term, groupSet);
+  }
+}
+
+/** Expand a single normalised term to include all its synonyms. */
+const expandSynonyms = (term: string): string[] => {
+  const synonyms = SYNONYM_MAP.get(term);
+  return synonyms ? [...synonyms] : [term];
+};
+
+/**
+ * Like `overlap` but uses synonym expansion so that e.g. "node" matches "Node.js".
+ * Both `a` and `b` must be pre-normalised (lowercase-trimmed).
+ */
+const overlapSynonyms = (a: string[], b: string[]): string[] => {
+  const expandedB = new Set(b.flatMap(expandSynonyms));
+  return a.filter((x) => expandSynonyms(x).some((e) => expandedB.has(e)));
+};
+
 // ── Percentage formula ─────────────────────────────────────────────────────────
 
 /**
@@ -150,10 +191,10 @@ export function scoreProject(
   const projectTags = normalise(project.tags ?? []);
   const projectDomainAndTags = [...new Set([...projectDomain, ...projectTags])];
 
-  // ── Overlaps ──────────────────────────────────────────────────────────────
-  const skillMatches = overlap(userSkills, [...projectTech, ...projectTags]);
-  const roleMatches = overlap(userRoles, projectRoleTitles);
-  const domainMatches = overlap(userDomains, projectDomainAndTags);
+  // ── Overlaps (synonym-aware) ───────────────────────────────────────────────
+  const skillMatches = overlapSynonyms(userSkills, [...projectTech, ...projectTags]);
+  const roleMatches = overlapSynonyms(userRoles, projectRoleTitles);
+  const domainMatches = overlapSynonyms(userDomains, projectDomainAndTags);
 
   // ── Raw score (used for sort stability when percentages tie) ──────────────
   const matchScore =
@@ -267,21 +308,42 @@ export function scoreProjectHybrid(
   let finalMatchPercentage = ruleBasedPercentage;
   const reasons = [...ruleBased.recommendationReasons];
 
+  // Calibration constants: cosine ≤ COSINE_MIN scores 0%; cosine ≥ COSINE_MAX scores 100%.
+  // Values in between are linearly interpolated. This deliberately discards weak/moderate
+  // similarity so the semantic signal only contributes when the match is genuinely strong.
+  const COSINE_MIN = 0.35;
+  const COSINE_MAX = 0.75;
+
+  let rawCosineSimilarity: number | undefined;
+
   if (
     Array.isArray(userEmbed) && userEmbed.length === EMBEDDING_DIMENSIONS &&
     Array.isArray(projectEmbed) && projectEmbed.length === EMBEDDING_DIMENSIONS
   ) {
     const similarity = cosineSimilarity(userEmbed, projectEmbed);
     if (similarity !== null) {
-      // Normalize [-1, 1] → [0, 100] and clamp
-      semanticPercentage = Math.max(0, Math.min(100, Math.round(((similarity + 1) / 2) * 100)));
+      rawCosineSimilarity = similarity;
 
-      // Hybrid blend: semantic is the majority signal
-      finalMatchPercentage = Math.round(semanticPercentage * 0.6 + ruleBasedPercentage * 0.4);
+      // Calibrated mapping: weak matches (≤ 0.35) → 0, strong matches (≥ 0.75) → 100
+      semanticPercentage = Math.max(
+        0,
+        Math.min(100, Math.round(((similarity - COSINE_MIN) / (COSINE_MAX - COSINE_MIN)) * 100)),
+      );
 
-      // Add a semantic reason only when there are fewer than 2 concrete reasons,
-      // so it never displaces a skill/role/domain match that is more informative.
-      if (semanticPercentage >= 65 && reasons.length < 2) {
+      // Hybrid blend: rule-based signals carry more weight (55%) because they are
+      // concrete and explainable; semantic improves ranking but does not dominate.
+      finalMatchPercentage = Math.round(semanticPercentage * 0.45 + ruleBasedPercentage * 0.55);
+
+      // Floor rule: if there are no concrete matches and semantic signal is weak,
+      // cap the score so these projects sort below anything with real skill/role matches.
+      if (ruleBasedPercentage === 0 && semanticPercentage < 40) {
+        finalMatchPercentage = Math.min(finalMatchPercentage, 15);
+      }
+
+      // Show semantic reason only when:
+      //   1. There are fewer than 2 concrete reasons (skill/role/domain didn't already explain it).
+      //   2. The semantic signal is genuinely strong (≥ 70% after calibration).
+      if (semanticPercentage >= 70 && reasons.length < 2) {
         reasons.push("Semantically similar to your profile interests and skills");
       }
     }
@@ -292,6 +354,7 @@ export function scoreProjectHybrid(
     matchPercentage: finalMatchPercentage,
     ruleBasedPercentage,
     semanticPercentage,
+    rawCosineSimilarity,
     recommendationReasons: reasons,
   };
 }

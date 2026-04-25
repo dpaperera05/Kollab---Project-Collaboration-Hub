@@ -91,6 +91,7 @@ interface DebugFields {
     matchScore: number;
     ruleBasedPercentage: number;
     semanticPercentage: number | undefined;
+    cosineSimilarity: number | undefined;
     hasUserEmbedding: boolean;
     hasProjectEmbedding: boolean;
   };
@@ -186,7 +187,7 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
     const matched = allScored.filter((s) => s.matchPercentage > 0);
     const scored = (matched.length > 0 ? matched : allScored).slice(0, MAX_RESULTS);
 
-    const projects = scored.map(({ project, matchScore, matchPercentage, ruleBasedPercentage, semanticPercentage, matchedSkills, matchedRoles, recommendationReasons }) => {
+    const projects = scored.map(({ project, matchScore, matchPercentage, ruleBasedPercentage, semanticPercentage, rawCosineSimilarity, matchedSkills, matchedRoles, recommendationReasons }) => {
       const card = toCardShape(project, {
         matchPercentage,
         matchedSkills,
@@ -202,6 +203,9 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
           matchScore,
           ruleBasedPercentage,
           semanticPercentage,
+          cosineSimilarity: rawCosineSimilarity !== undefined
+            ? Math.round(rawCosineSimilarity * 1000) / 1000
+            : undefined,
           hasUserEmbedding: userEmbedding !== null,
           hasProjectEmbedding: Array.isArray(projectEmbed) && projectEmbed.length > 0,
         },
@@ -311,8 +315,17 @@ export const getRecommendationDebugQuality = async (req: AuthRequest, res: Respo
           domain: p.domain as string,
           technologies: (p.technologies ?? []) as string[],
           roles: ((p.roles ?? []) as any[]).map((r: any) => r.title as string),
+          // Full skill signals including from roles — helps trace why a skill matched
+          projectSkillSignals: {
+            technologies: (p.technologies ?? []) as string[],
+            roleRequiredSkills: ((p.roles ?? []) as any[]).flatMap((r: any) => r.requiredSkills ?? []) as string[],
+            roleNiceToHaveSkills: ((p.roles ?? []) as any[]).flatMap((r: any) => r.niceToHaveSkills ?? []) as string[],
+          },
           matchPercentage: result?.matchPercentage ?? 0,
           semanticPercentage: result?.semanticPercentage ?? null,
+          cosineSimilarity: result?.rawCosineSimilarity !== undefined
+            ? Math.round(result.rawCosineSimilarity * 1000) / 1000
+            : null,
           ruleBasedPercentage: result?.ruleBasedPercentage ?? 0,
           matchedSkills: result?.matchedSkills ?? [],
           matchedRoles: result?.matchedRoles ?? [],
