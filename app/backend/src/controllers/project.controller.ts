@@ -3,6 +3,10 @@ import { Project } from "../models/project.model";
 import { User } from "../models/user.model";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { recordActivity } from "../services/activity.service";
+import {
+  shouldRegenerateProjectEmbedding,
+  triggerProjectEmbedding,
+} from "../services/embeddingFreshness.service";
 
 const ensureStringArray = (val: unknown): string[] => {
   if (!Array.isArray(val)) return [];
@@ -360,6 +364,8 @@ export const createProject = async (req: Request, res: Response) => {
     projectTitle: project.title,
     description: `Posted a new project: ${project.title}`,
   });
+  // Trigger embedding generation in the background — must not block the response
+  triggerProjectEmbedding(project._id.toString(), "created");
   return res.status(201).json({ success: true, data: { project } });
 };
 
@@ -425,6 +431,20 @@ export const updateProject = async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: err?.message || "Poster upload failed" });
   }
 
+  // Snapshot the embedding-relevant fields before mutation so we can decide
+  // whether to regenerate after save.
+  const beforeSnapshot = {
+    title: project.title,
+    summary: project.summary,
+    problemStatement: project.problemStatement,
+    domain: project.domain,
+    technologies: [...(project.technologies ?? [])],
+    tags: [...(project.tags ?? [])],
+    difficulty: project.difficulty,
+    duration: project.duration,
+    roles: JSON.parse(JSON.stringify(project.roles ?? [])),
+  };
+
   project.title = String(title).trim();
   project.summary = String(summary).trim();
   project.problemStatement = typeof problemStatement === "string" ? problemStatement.trim() : undefined;
@@ -441,6 +461,18 @@ export const updateProject = async (req: Request, res: Response) => {
   project.tags = ensureStringArray(tags);
   project.roles = cleanedRoles;
 
+  const afterSnapshot = {
+    title: project.title,
+    summary: project.summary,
+    problemStatement: project.problemStatement,
+    domain: project.domain,
+    technologies: project.technologies,
+    tags: project.tags,
+    difficulty: project.difficulty,
+    duration: project.duration,
+    roles: project.roles,
+  };
+
   await project.save();
   void recordActivity({
     userId,
@@ -449,6 +481,10 @@ export const updateProject = async (req: Request, res: Response) => {
     projectTitle: project.title,
     description: `Updated project: ${project.title}`,
   });
+  // Regenerate embedding only if relevant fields changed
+  if (shouldRegenerateProjectEmbedding(beforeSnapshot, afterSnapshot)) {
+    triggerProjectEmbedding(project._id.toString(), "updated");
+  }
   return res.json({ success: true, data: { project } });
 };
 

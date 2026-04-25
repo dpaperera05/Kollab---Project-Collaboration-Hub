@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { User } from "../models/user.model";
 import { toUserResponse } from "../utils/userResponse";
+import {
+  shouldRegenerateUserRecommendationEmbedding,
+  triggerUserRecommendationEmbedding,
+} from "../services/embeddingFreshness.service";
 
 const ALLOWED_ONBOARDING_STEPS = [
   "/onboarding/role",
@@ -79,6 +83,15 @@ export const updateOnboardingProfile = async (req: Request, res: Response) => {
     ? (user.profile as any).toObject()
     : { ...(user.profile || {}) };
 
+  // Snapshot recommendation-relevant fields before mutation
+  const beforeEmbedSnapshot = {
+    skills: profile.skills,
+    preferredRoles: profile.preferredRoles,
+    domainInterests: profile.domainInterests,
+    techStack: profile.techStack,
+    expertiseSkills: profile.expertiseSkills,
+  };
+
   const cleanedProfile = {
     ...profile,
     name: typeof name === "string" ? name.trim() : profile.name,
@@ -131,6 +144,18 @@ export const updateOnboardingProfile = async (req: Request, res: Response) => {
   }
 
   await user.save();
+
+  // Regenerate user recommendation embedding if relevant profile fields changed
+  const afterEmbedSnapshot = {
+    skills: cleanedProfile.skills,
+    preferredRoles: cleanedProfile.preferredRoles,
+    domainInterests: cleanedProfile.domainInterests,
+    techStack: cleanedProfile.techStack,
+    expertiseSkills: cleanedProfile.expertiseSkills,
+  };
+  if (shouldRegenerateUserRecommendationEmbedding(beforeEmbedSnapshot, afterEmbedSnapshot)) {
+    triggerUserRecommendationEmbedding(userId, "onboarding_updated");
+  }
 
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
