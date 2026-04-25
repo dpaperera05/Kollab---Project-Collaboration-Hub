@@ -1,10 +1,15 @@
 import { IUserProfile } from "../models/user.model";
 import { IProject, IProjectRole } from "../models/project.model";
+import { EMBEDDING_DIMENSIONS } from "../config/embedding";
 
 export interface ScoredProject {
   project: IProject & { id: string; owner?: Record<string, unknown> };
   matchScore: number;
   matchPercentage: number;
+  /** Rule-based percentage before any semantic blending (0–100). */
+  ruleBasedPercentage: number;
+  /** Semantic cosine similarity converted to 0–100. Undefined if embeddings were unavailable. */
+  semanticPercentage?: number;
   matchedSkills: string[];
   matchedRoles: string[];
   recommendationReasons: string[];
@@ -192,8 +197,101 @@ export function scoreProject(
     project,
     matchScore,
     matchPercentage,
+    ruleBasedPercentage: matchPercentage,
     matchedSkills,
     matchedRoles,
+    recommendationReasons: reasons,
+  };
+}
+
+// ── Cosine similarity ──────────────────────────────────────────────────────────
+
+/**
+ * Compute cosine similarity between two embedding vectors.
+ *
+ * Returns a value in [-1, 1], or null if either input is invalid:
+ *   - not an array
+ *   - different lengths
+ *   - length !== EMBEDDING_DIMENSIONS
+ *   - zero-magnitude vector
+ */
+export function cosineSimilarity(a: number[], b: number[]): number | null {
+  if (!Array.isArray(a) || !Array.isArray(b)) return null;
+  if (a.length !== b.length) return null;
+  if (a.length !== EMBEDDING_DIMENSIONS) return null;
+
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+
+  const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+  if (magnitude === 0) return null;
+
+  return dot / magnitude;
+}
+
+// ── Hybrid scoring ─────────────────────────────────────────────────────────────
+
+/**
+ * Score a project using a hybrid of semantic similarity and rule-based matching.
+ *
+ * When both a user embedding and a project embedding are available:
+ *   semanticPercentage  = clamp(round(((cosine + 1) / 2) * 100), 0, 100)
+ *   finalMatchPercentage = round(semanticPercentage * 0.6 + ruleBasedPercentage * 0.4)
+ *
+ * When either embedding is missing the result is identical to scoreProject().
+ *
+ * @param project     Enriched (owner-joined) project document
+ * @param profile     Logged-in user's profile
+ * @param userEmbed   User's profile.recommendationEmbedding (optional)
+ * @param projectEmbed  Project's recommendationEmbedding (optional)
+ */
+export function scoreProjectHybrid(
+  project: IProject & { id: string; owner?: Record<string, unknown> },
+  profile: IUserProfile,
+  userEmbed?: number[] | null,
+  projectEmbed?: number[] | null,
+): ScoredProject {
+  // Always run rule-based scoring first
+  const ruleBased = scoreProject(project, profile);
+  const ruleBasedPercentage = ruleBased.matchPercentage;
+
+  // Try semantic scoring
+  let semanticPercentage: number | undefined;
+  let finalMatchPercentage = ruleBasedPercentage;
+  const reasons = [...ruleBased.recommendationReasons];
+
+  if (
+    Array.isArray(userEmbed) && userEmbed.length === EMBEDDING_DIMENSIONS &&
+    Array.isArray(projectEmbed) && projectEmbed.length === EMBEDDING_DIMENSIONS
+  ) {
+    const similarity = cosineSimilarity(userEmbed, projectEmbed);
+    if (similarity !== null) {
+      // Normalize [-1, 1] → [0, 100] and clamp
+      semanticPercentage = Math.max(0, Math.min(100, Math.round(((similarity + 1) / 2) * 100)));
+
+      // Hybrid blend: semantic is the majority signal
+      finalMatchPercentage = Math.round(semanticPercentage * 0.6 + ruleBasedPercentage * 0.4);
+
+      // Add a semantic reason only when it meaningfully elevates the score
+      // and the concrete reasons haven't already filled the list
+      if (semanticPercentage >= 65 && reasons.length < 3) {
+        reasons.push("Semantically similar to your profile interests and skills");
+      }
+    }
+  }
+
+  return {
+    ...ruleBased,
+    matchPercentage: finalMatchPercentage,
+    ruleBasedPercentage,
+    semanticPercentage,
     recommendationReasons: reasons,
   };
 }

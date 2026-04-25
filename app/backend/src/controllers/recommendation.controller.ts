@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Project } from "../models/project.model";
 import { User } from "../models/user.model";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { scoreProject } from "../services/recommendation.service";
+import { scoreProjectHybrid } from "../services/recommendation.service";
 import { generateEmbedding } from "../services/embeddingClient.service";
 import {
   generateAndStoreProjectEmbedding,
@@ -55,6 +56,8 @@ const toCardShape = (
   extra?: {
     matchScore?: number;
     matchPercentage?: number;
+    ruleBasedPercentage?: number;
+    semanticPercentage?: number;
     matchedSkills?: string[];
     matchedRoles?: string[];
     recommendationReasons?: string[];
@@ -91,8 +94,11 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
   try {
     const userId = req.userId;
 
-    // Fetch all open projects, newest first (used as-is for guests, scored for members)
+    // Fetch all open projects, including their embeddings for hybrid scoring.
+    // recommendationEmbedding has select:false on a top-level schema field so
+    // the + prefix override works correctly here (unlike the nested user profile).
     const rawProjects = await Project.find({ status: "Open" })
+      .select("+recommendationEmbedding")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -135,17 +141,51 @@ export const getRecommendedProjects = async (req: AuthRequest, res: Response) =>
       });
     }
 
-    // Score every open project against the user's profile
+    // ── Fetch user embedding via raw driver ───────────────────────────────────
+    // profile.recommendationEmbedding has select:false on a nested sub-schema.
+    // The Mongoose + prefix override does not propagate through nested schemas,
+    // so we go directly to the MongoDB driver to read it.
+    let userEmbedding: number[] | null = null;
+    try {
+      const rawUser = await User.collection.findOne(
+        { _id: new mongoose.Types.ObjectId(userId) },
+        { projection: { "profile.recommendationEmbedding": 1 } },
+      );
+      const candidate = (rawUser as any)?.profile?.recommendationEmbedding;
+      if (Array.isArray(candidate) && candidate.length > 0) {
+        userEmbedding = candidate as number[];
+      }
+    } catch {
+      // Embedding fetch failure must not block recommendations
+      userEmbedding = null;
+    }
+
+    // ── Hybrid scoring ────────────────────────────────────────────────────────
+    // scoreProjectHybrid falls back to rule-based when either embedding is absent.
+    // enriched projects keep all lean() fields including recommendationEmbedding
+    // because we fetched with +recommendationEmbedding above.
     const allScored = enriched
-      .map((p) => scoreProject(p, profile))
+      .map((p) => {
+        const projectEmbed = (p as any).recommendationEmbedding as number[] | undefined;
+        return scoreProjectHybrid(p, profile, userEmbedding, projectEmbed);
+      })
       .sort((a, b) => b.matchPercentage - a.matchPercentage || b.matchScore - a.matchScore);
 
     // Prefer projects with at least 1% match; fall back to all scored if none qualify
     const matched = allScored.filter((s) => s.matchPercentage > 0);
     const scored = (matched.length > 0 ? matched : allScored).slice(0, MAX_RESULTS);
 
-    const projects = scored.map(({ project, matchScore, matchPercentage, matchedSkills, matchedRoles, recommendationReasons }) =>
-      toCardShape(project, { matchScore, matchPercentage, matchedSkills, matchedRoles, recommendationReasons }),
+    const projects = scored.map(
+      ({ project, matchScore, matchPercentage, ruleBasedPercentage, semanticPercentage, matchedSkills, matchedRoles, recommendationReasons }) =>
+        toCardShape(project, {
+          matchScore,
+          matchPercentage,
+          ruleBasedPercentage,
+          semanticPercentage,
+          matchedSkills,
+          matchedRoles,
+          recommendationReasons,
+        }),
     );
 
     return res.json({
