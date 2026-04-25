@@ -25,6 +25,13 @@ export interface IUserProfile {
     timezone?: string;
     note?: string;
   }>;
+  // ── Embedding fields (technical backend only — never exposed in public API) ──
+  // If the embedding model changes, all stored embeddings must be regenerated
+  // because vector dimensions and semantic space will differ between models.
+  recommendationEmbedding?: number[];
+  recommendationEmbeddingText?: string;
+  recommendationEmbeddingModel?: string;
+  recommendationEmbeddingUpdatedAt?: Date;
 }
 
 export interface IUser extends Document {
@@ -72,6 +79,14 @@ const profileSchema = new Schema<IUserProfile>(
         note: { type: String, trim: true },
       },
     ],
+    // ── Embedding fields ────────────────────────────────────────────────────
+    // Never returned in public API responses — excluded in user serialisation.
+    // If the embedding model changes, all stored embeddings must be regenerated
+    // because vector dimensions and semantic space will differ between models.
+    recommendationEmbedding: { type: [Number], select: false },
+    recommendationEmbeddingText: { type: String, trim: true, select: false },
+    recommendationEmbeddingModel: { type: String, trim: true, select: false },
+    recommendationEmbeddingUpdatedAt: { type: Date, select: false },
   },
   { _id: false }
 );
