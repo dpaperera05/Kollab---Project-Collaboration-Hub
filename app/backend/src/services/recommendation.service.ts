@@ -1,6 +1,13 @@
 import { IUserProfile } from "../models/user.model";
 import { IProject, IProjectRole } from "../models/project.model";
 import { EMBEDDING_DIMENSIONS } from "../config/embedding";
+import {
+  expandRecommendationTerms,
+  weightedOverlap,
+  sumWeights,
+  matchDisplayLabel,
+  TermMatch,
+} from "./recommendationAliases";
 
 export interface ScoredProject {
   project: IProject & { id: string; owner?: Record<string, unknown> };
@@ -15,112 +22,17 @@ export interface ScoredProject {
   matchedSkills: string[];
   matchedRoles: string[];
   recommendationReasons: string[];
+  /** Debug: exact-tier skill/tech matches. Never exposed in public API responses. */
+  exactSkillMatches: TermMatch[];
+  /** Debug: alias+related-tier skill/tech matches. Never exposed in public API responses. */
+  relatedSkillMatches: TermMatch[];
 }
-
-// ── Display-name formatting ────────────────────────────────────────────────────
-
-/**
- * Terms that should always appear in a specific casing.
- * Keys are lowercase; values are the canonical display form.
- */
-const SPECIAL_CASES: Record<string, string> = {
-  "node.js": "Node.js",
-  "react.js": "React.js",
-  "vue.js": "Vue.js",
-  "next.js": "Next.js",
-  "nuxt.js": "Nuxt.js",
-  "express.js": "Express.js",
-  "three.js": "Three.js",
-  "typescript": "TypeScript",
-  "javascript": "JavaScript",
-  "graphql": "GraphQL",
-  "mongodb": "MongoDB",
-  "postgresql": "PostgreSQL",
-  "mysql": "MySQL",
-  "github": "GitHub",
-  "gitlab": "GitLab",
-  "devops": "DevOps",
-  "tailwindcss": "TailwindCSS",
-  "tailwind css": "Tailwind CSS",
-};
-
-/** Words that should be rendered entirely in uppercase. */
-const ACRONYMS = new Set([
-  "ai", "ml", "ui", "ux", "api", "qa", "css", "html", "sql",
-  "orm", "sdk", "ios", "aws", "gcp", "ci", "cd", "rest", "http",
-  "https", "jwt", "dto", "orm", "db",
-]);
-
-/**
- * Format a raw skill/role/domain string into a clean display name.
- * Handles acronyms, special technology names, and standard title-casing.
- */
-const formatDisplayName = (s: string): string => {
-  const lower = s.toLowerCase().trim();
-  if (SPECIAL_CASES[lower]) return SPECIAL_CASES[lower];
-  return s
-    .trim()
-    .split(/\s+/)
-    .map((word) => {
-      const lw = word.toLowerCase();
-      if (ACRONYMS.has(lw)) return lw.toUpperCase();
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(" ");
-};
-
-const dedupFormat = (arr: string[]): string[] => [...new Set(arr)].map(formatDisplayName);
 
 // ── Overlap helpers ────────────────────────────────────────────────────────────
 
 /** Normalise strings to lowercase-trimmed for comparison. */
 const normalise = (arr: (string | undefined | null)[]): string[] =>
   arr.filter((s): s is string => typeof s === "string" && s.length > 0).map((s) => s.toLowerCase().trim());
-
-/** Elements of `a` that also appear in `b` (both pre-normalised). */
-const overlap = (a: string[], b: string[]): string[] => {
-  const setB = new Set(b);
-  return a.filter((x) => setB.has(x));
-};
-
-// ── Canonical synonym expansion ───────────────────────────────────────────────
-
-/**
- * Synonym groups for canonical matching.
- * Each inner array contains normalised (lowercase-trimmed) terms that should be
- * treated as equivalent when matching user skills to project signals.
- */
-const SYNONYM_GROUPS: readonly string[][] = [
-  ["express", "express.js"],
-  ["node", "node.js"],
-  ["react", "react.js"],
-  ["machine learning", "ml"],
-  ["ai & ml", "ai / machine learning", "ai/machine learning"],
-];
-
-/** Map from normalised term → its full synonym set (O(1) lookup). */
-const SYNONYM_MAP = new Map<string, Set<string>>();
-for (const group of SYNONYM_GROUPS) {
-  const groupSet = new Set(group.map((s) => s.toLowerCase().trim()));
-  for (const term of groupSet) {
-    SYNONYM_MAP.set(term, groupSet);
-  }
-}
-
-/** Expand a single normalised term to include all its synonyms. */
-const expandSynonyms = (term: string): string[] => {
-  const synonyms = SYNONYM_MAP.get(term);
-  return synonyms ? [...synonyms] : [term];
-};
-
-/**
- * Like `overlap` but uses synonym expansion so that e.g. "node" matches "Node.js".
- * Both `a` and `b` must be pre-normalised (lowercase-trimmed).
- */
-const overlapSynonyms = (a: string[], b: string[]): string[] => {
-  const expandedB = new Set(b.flatMap(expandSynonyms));
-  return a.filter((x) => expandSynonyms(x).some((e) => expandedB.has(e)));
-};
 
 // ── Percentage formula ─────────────────────────────────────────────────────────
 
@@ -133,11 +45,12 @@ const overlapSynonyms = (a: string[], b: string[]): string[] => {
  *   25% – domain / tag interest match
  *
  * Each sub-score is a value 0–1 calculated as:
- *   matched / min(available project signals, cap)
+ *   weightedMatchCount / min(available project signals, cap)
  * where `cap` avoids penalising projects with very large tech stacks.
+ * Related matches contribute fractional counts via their tier weights (0.7 or 0.4).
  */
 const computeMatchPercentage = (
-  skillMatches: number,
+  skillWeightedCount: number,
   roleMatches: number,
   domainMatches: number,
   projectTechCount: number,
@@ -148,7 +61,7 @@ const computeMatchPercentage = (
   const roleDenominator = Math.max(Math.min(projectRoleCount, 3), 1);
   const domainDenominator = Math.max(Math.min(projectDomainTagCount, 3), 1);
 
-  const skillScore = Math.min(skillMatches / skillDenominator, 1);
+  const skillScore = Math.min(skillWeightedCount / skillDenominator, 1);
   const roleScore = Math.min(roleMatches / roleDenominator, 1);
   const domainScore = Math.min(domainMatches / domainDenominator, 1);
 
@@ -168,70 +81,95 @@ export function scoreProject(
   profile: IUserProfile,
 ): ScoredProject {
   // ── User signals ──────────────────────────────────────────────────────────
-  const userSkills = normalise([
+  const rawUserSkills = [
     ...(profile.skills ?? []),
     ...(profile.techStack ?? []),
     ...(profile.expertiseSkills ?? []),
-  ]);
-  const userRoles = normalise(profile.preferredRoles ?? []);
-  const userDomains = normalise(profile.domainInterests ?? []);
+  ];
+  const userSkillsExpanded = expandRecommendationTerms(rawUserSkills);
+  const userRolesExpanded = expandRecommendationTerms(profile.preferredRoles ?? []);
+  const userDomainsExpanded = expandRecommendationTerms(profile.domainInterests ?? []);
 
   // ── Project signals ───────────────────────────────────────────────────────
-  const projectTech = normalise([
+  const projectTechRaw = [
     ...(project.technologies ?? []),
     ...((project.roles as IProjectRole[]) ?? []).flatMap((r) => [
       ...(r.requiredSkills ?? []),
       ...(r.niceToHaveSkills ?? []),
     ]),
+  ];
+  const projectRoleTitlesRaw = ((project.roles as IProjectRole[]) ?? []).map((r) => r.title);
+  const projectDomainAndTagsRaw = [
+    project.domain,
+    ...(project.tags ?? []),
+  ].filter((s): s is string => typeof s === "string");
+
+  // ── Weighted overlaps ─────────────────────────────────────────────────────
+  const skillMatches = weightedOverlap(userSkillsExpanded, projectTechRaw);
+  const roleMatches = weightedOverlap(userRolesExpanded, [
+    ...projectRoleTitlesRaw,
+    ...projectDomainAndTagsRaw,
   ]);
-  const projectRoleTitles = normalise(
-    ((project.roles as IProjectRole[]) ?? []).map((r) => r.title),
-  );
-  const projectDomain = normalise([project.domain]);
-  const projectTags = normalise(project.tags ?? []);
-  const projectDomainAndTags = [...new Set([...projectDomain, ...projectTags])];
+  const domainMatches = weightedOverlap(userDomainsExpanded, projectDomainAndTagsRaw);
 
-  // ── Overlaps (synonym-aware) ───────────────────────────────────────────────
-  const skillMatches = overlapSynonyms(userSkills, [...projectTech, ...projectTags]);
-  const roleMatches = overlapSynonyms(userRoles, projectRoleTitles);
-  const domainMatches = overlapSynonyms(userDomains, projectDomainAndTags);
+  const exactSkillMatches = skillMatches.filter((m) => m.tier === "exact");
+  const relatedSkillMatches = skillMatches.filter((m) => m.tier !== "exact");
 
-  // ── Raw score (used for sort stability when percentages tie) ──────────────
-  const matchScore =
-    skillMatches.length * 2 +
-    roleMatches.length * 3 +
-    domainMatches.length * 2;
+  // ── Weighted counts ───────────────────────────────────────────────────────
+  const skillWeightedCount = sumWeights(skillMatches);
+  const roleWeightedCount = sumWeights(roleMatches);
+  const domainWeightedCount = sumWeights(domainMatches);
 
-  // ── Percentage (used for display) ─────────────────────────────────────────
+  // ── Raw score (sort stability) ────────────────────────────────────────────
+  const matchScore = skillWeightedCount * 2 + roleWeightedCount * 3 + domainWeightedCount * 2;
+
+  // ── Percentage ────────────────────────────────────────────────────────────
+  const projectTechNorm = normalise(projectTechRaw);
+  const projectRoleNorm = normalise(projectRoleTitlesRaw);
+  const projectDomainNorm = normalise(projectDomainAndTagsRaw);
+
   const matchPercentage = computeMatchPercentage(
-    skillMatches.length,
-    roleMatches.length,
-    domainMatches.length,
-    projectTech.length,
-    projectRoleTitles.length,
-    projectDomainAndTags.length,
+    skillWeightedCount,
+    roleWeightedCount,
+    domainWeightedCount,
+    projectTechNorm.length,
+    projectRoleNorm.length,
+    projectDomainNorm.length,
   );
 
-  // ── Human-readable display labels ─────────────────────────────────────────
-  const matchedSkills = dedupFormat(skillMatches);
-  const matchedRoles = dedupFormat(roleMatches);
+  // ── Display labels ────────────────────────────────────────────────────────
+  const matchedSkillLabels = [...new Set(exactSkillMatches.map((m) => matchDisplayLabel(m)))];
+  const matchedRoleLabels = [...new Set(roleMatches.filter((m) => m.tier === "exact").map((m) => matchDisplayLabel(m)))];
 
   // ── Recommendation reasons ────────────────────────────────────────────────
+  // Priority: exact skills → exact roles → exact domains → related skills → related roles
   const reasons: string[] = [];
 
-  if (matchedSkills.length > 0) {
-    const topSkills = matchedSkills.slice(0, 2).join(" and ");
-    reasons.push(`Matches your ${topSkills} skills`);
+  if (exactSkillMatches.length > 0) {
+    reasons.push(`Matches your ${matchedSkillLabels.slice(0, 2).join(" and ")} skills`);
   }
 
-  if (matchedRoles.length > 0) {
-    const topRoles = matchedRoles.slice(0, 2).join(" and ");
-    reasons.push(`Fits your preferred ${topRoles} role`);
+  if (matchedRoleLabels.length > 0 && reasons.length < 2) {
+    reasons.push(`Fits your preferred ${matchedRoleLabels.slice(0, 2).join(" and ")} role`);
   }
 
-  if (domainMatches.length > 0) {
-    const topDomains = dedupFormat(domainMatches).slice(0, 2).join(" and ");
-    reasons.push(`Related to your ${topDomains} interest`);
+  const exactDomainMatches = domainMatches.filter((m) => m.tier === "exact");
+  if (exactDomainMatches.length > 0 && reasons.length < 2) {
+    const top = [...new Set(exactDomainMatches.map((m) => matchDisplayLabel(m)))].slice(0, 2).join(" and ");
+    reasons.push(`Related to your ${top} interest`);
+  }
+
+  if (relatedSkillMatches.length > 0 && reasons.length < 2) {
+    const top = relatedSkillMatches[0];
+    const projectLabel = top.projectTerm.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    reasons.push(`Related to your ${matchDisplayLabel(top)} skills through ${projectLabel}`);
+  }
+
+  const relatedRoleMatches = roleMatches.filter((m) => m.tier !== "exact");
+  if (relatedRoleMatches.length > 0 && reasons.length < 2) {
+    const top = relatedRoleMatches[0];
+    const projectLabel = top.projectTerm.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    reasons.push(`Related to your ${matchDisplayLabel(top)} preference through ${projectLabel}`);
   }
 
   return {
@@ -239,9 +177,11 @@ export function scoreProject(
     matchScore,
     matchPercentage,
     ruleBasedPercentage: matchPercentage,
-    matchedSkills,
-    matchedRoles,
+    matchedSkills: matchedSkillLabels,
+    matchedRoles: matchedRoleLabels,
     recommendationReasons: reasons,
+    exactSkillMatches,
+    relatedSkillMatches,
   };
 }
 
@@ -356,5 +296,7 @@ export function scoreProjectHybrid(
     semanticPercentage,
     rawCosineSimilarity,
     recommendationReasons: reasons,
+    exactSkillMatches: ruleBased.exactSkillMatches,
+    relatedSkillMatches: ruleBased.relatedSkillMatches,
   };
 }

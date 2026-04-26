@@ -330,6 +330,18 @@ export const getRecommendationDebugQuality = async (req: AuthRequest, res: Respo
           matchedSkills: result?.matchedSkills ?? [],
           matchedRoles: result?.matchedRoles ?? [],
           recommendationReasons: result?.recommendationReasons ?? [],
+          exactSkillMatches: (result?.exactSkillMatches ?? []).map((m) => ({
+            userTerm: m.userTerm,
+            projectTerm: m.projectTerm,
+            tier: m.tier,
+            weight: m.weight,
+          })),
+          relatedSkillMatches: (result?.relatedSkillMatches ?? []).map((m) => ({
+            userTerm: m.userTerm,
+            projectTerm: m.projectTerm,
+            tier: m.tier,
+            weight: m.weight,
+          })),
           hasProjectEmbedding,
           scoringMode,
         };
