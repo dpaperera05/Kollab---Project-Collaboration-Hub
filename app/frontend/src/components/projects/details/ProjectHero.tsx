@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/data/mockProjects";
 
@@ -23,8 +23,20 @@ interface ProjectHeroProps {
 }
 
 const ProjectHero = ({ project }: ProjectHeroProps) => {
+  const navigate = useNavigate();
   const statusConfig = STATUS_CONFIG[project.status]   ?? DEFAULT_STATUS_CONFIG;
   const diffConfig   = DIFFICULTY_CONFIG[project.difficulty] ?? DEFAULT_DIFFICULTY_CONFIG;
+
+  const handleBack = () => {
+    // If there is a real previous page in session history, go back to it so
+    // search query params (/projects?q=...) are preserved. Fall back to the
+    // projects listing when the user opened this page directly in a new tab.
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/projects");
+    }
+  };
 
   return (
     <div className="relative w-full overflow-hidden" style={{ minHeight: 300 }}>
@@ -41,13 +53,14 @@ const ProjectHero = ({ project }: ProjectHeroProps) => {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 md:pb-14">
 
         <div className="mb-6">
-          <Link
-            to="/projects"
+          <button
+            type="button"
+            onClick={handleBack}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors group"
           >
             <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
             Back to Projects
-          </Link>
+          </button>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
