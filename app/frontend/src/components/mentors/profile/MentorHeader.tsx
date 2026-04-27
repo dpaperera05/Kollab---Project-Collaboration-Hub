@@ -1,5 +1,5 @@
 import { ArrowLeft, Star, CalendarCheck, MessageSquare } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { Mentor } from "@/types/mentor";
 
@@ -22,18 +22,31 @@ interface MentorHeaderProps {
 }
 
 const MentorHeader = ({ mentor, colorIndex, avgRating, reviewCount, onBook, onMessage }: MentorHeaderProps) => {
+  const navigate = useNavigate();
   const totalReviews = reviewCount > 0 ? reviewCount : mentor.reviewsCount;
   const displayRating = reviewCount > 0 ? avgRating : mentor.rating;
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/mentors");
+    }
+  };
 
   return (
     <div className="border-b border-border bg-card/60">
       <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-6">
-        {/* Back link */}
+        {/* Back button */}
         <div className="pt-4 pb-2">
-          <Link to="/mentors" className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary transition-colors">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
             <ArrowLeft size={14} />
             Back to Mentors
-          </Link>
+          </button>
         </div>
 
         {/* Profile row */}
