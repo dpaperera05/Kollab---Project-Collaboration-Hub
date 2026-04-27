@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { GraduationCap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { GraduationCap, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
@@ -14,14 +15,52 @@ import { mapUserToMentor } from "@/lib/mentorMapper";
 
 const PAGE_SIZE = 9;
 
-const DEFAULT_FILTERS: MentorFilterState = {
-  expertise: [],
-  domain: "All",
-  languages: [],
-  rate: "All",
-};
+// ── URL helpers ───────────────────────────────────────────────────────────────
 
-const EmptyState = ({ onClear }: { onClear: () => void }) => (
+function filtersFromParams(sp: URLSearchParams): MentorFilterState {
+  return {
+    expertise: sp.get("expertise") ? sp.get("expertise")!.split(",").filter(Boolean) : [],
+    domain: sp.get("domain") || "All",
+    languages: sp.get("languages") ? sp.get("languages")!.split(",").filter(Boolean) : [],
+    rate: sp.get("rate") || "All",
+  };
+}
+
+function buildFilterParams(f: MentorFilterState, base: URLSearchParams): void {
+  if (f.expertise.length > 0) base.set("expertise", f.expertise.join(","));
+  else base.delete("expertise");
+  if (f.domain && f.domain !== "All") base.set("domain", f.domain);
+  else base.delete("domain");
+  if (f.languages.length > 0) base.set("languages", f.languages.join(","));
+  else base.delete("languages");
+  if (f.rate && f.rate !== "All") base.set("rate", f.rate);
+  else base.delete("rate");
+}
+
+// ── Types for API responses ───────────────────────────────────────────────────
+
+interface SmartMentorUser extends KollabUser {
+  smartScore?: number;
+  searchReasons?: string[];
+}
+
+interface SmartSearchApiResponse {
+  success: boolean;
+  data: {
+    mode: "smart-search" | "keyword-fallback";
+    query: string;
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    users: SmartMentorUser[];
+    message?: string;
+  };
+}
+
+// ── Empty / no-results states ─────────────────────────────────────────────────
+
+const FilterEmptyState = ({ onClear }: { onClear: () => void }) => (
   <div className="col-span-full flex flex-col items-center justify-center py-24 text-center gap-5">
     <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
       <GraduationCap size={28} className="text-primary" />
@@ -33,6 +72,7 @@ const EmptyState = ({ onClear }: { onClear: () => void }) => (
       </p>
     </div>
     <button
+      type="button"
       onClick={onClear}
       className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-brand-sm"
     >
@@ -41,53 +81,142 @@ const EmptyState = ({ onClear }: { onClear: () => void }) => (
   </div>
 );
 
+const SmartEmptyState = ({ onClear }: { onClear: () => void }) => (
+  <div className="col-span-full flex flex-col items-center justify-center py-24 text-center gap-5">
+    <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
+      <Sparkles size={28} className="text-primary" />
+    </div>
+    <div className="space-y-2">
+      <h3 className="text-xl font-bold text-foreground">No mentors found for this search</h3>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        Try different keywords or remove some filters.
+      </p>
+    </div>
+    <button
+      type="button"
+      onClick={onClear}
+      className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-brand-sm"
+    >
+      Clear Search
+    </button>
+  </div>
+);
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 const MentorsPage = () => {
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<MentorFilterState>(DEFAULT_FILTERS);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ── Derive state from URL (source of truth) ────────────────────────────────
+  const q          = searchParams.get("q") || "";
+  const currentPage = Math.max(parseInt(searchParams.get("page") || "1", 10) || 1, 1);
+  const sortBy     = searchParams.get("sortBy") || undefined;
+
+  // ── Local input state (decoupled from URL; only commits on Enter/Search) ───
+  const [inputValue, setInputValue] = useState(q);
+
+  // ── Normal listing cache (fetch-all-once; filtered client-side) ────────────
+  const [allMentors, setAllMentors] = useState<Mentor[]>([]);
+  const allMentorsLoadedRef = useRef(false);
+
+  // ── Smart search results (paginated from backend) ─────────────────────────
+  const [smartMentors, setSmartMentors]       = useState<Mentor[]>([]);
+  const [smartTotal, setSmartTotal]           = useState(0);
+  const [smartTotalPages, setSmartTotalPages] = useState(0);
+  const [searchMode, setSearchMode]           = useState<"smart-search" | "keyword-fallback" | null>(null);
+
+  // ── Shared UI state ────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
+  // ── Sync inputValue when URL q changes (browser back / forward) ────────────
   useEffect(() => {
-    const fetchMentors = async () => {
-      try {
-        setLoading(true);
-        const res = await apiGet<{ success: boolean; data: { users: KollabUser[] } }>("/profile/mentors");
-        const mapped = (res.data.users || []).map(mapUserToMentor);
-        setMentors(mapped);
-        setError(null);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load mentors");
-        setMentors([]);
-      } finally {
+    setInputValue(q);
+  }, [q]);
+
+  // ── Main data-fetch effect ─────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+
+    if (q) {
+      // ── Smart search path ────────────────────────────────────────────────
+      const filters = filtersFromParams(searchParams);
+      const params  = new URLSearchParams({
+        q,
+        page:     String(currentPage),
+        pageSize: String(PAGE_SIZE),
+      });
+      if (filters.expertise.length > 0) params.set("expertise", filters.expertise.join(","));
+      if (filters.domain !== "All")      params.set("domain",    filters.domain);
+      if (filters.languages.length > 0) params.set("languages", filters.languages.join(","));
+      if (filters.rate !== "All")        params.set("rate",      filters.rate);
+      if (sortBy)                        params.set("sortBy",    sortBy);
+
+      setLoading(true);
+      apiGet<SmartSearchApiResponse>(`/profile/mentors/smart-search?${params.toString()}`)
+        .then((res) => {
+          if (cancelled) return;
+          const mapped = (res.data.users || []).map((u) => mapUserToMentor(u));
+          setSmartMentors(mapped);
+          setSmartTotal(res.data.total);
+          setSmartTotalPages(res.data.totalPages);
+          setSearchMode(res.data.mode);
+          setError(null);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          const msg = err instanceof Error ? err.message : "Search failed";
+          setError(msg);
+          setSmartMentors([]);
+          setSmartTotal(0);
+          setSmartTotalPages(0);
+        })
+        .finally(() => { if (!cancelled) setLoading(false); });
+    } else {
+      // ── Normal listing path ──────────────────────────────────────────────
+      setSearchMode(null);
+      setSmartMentors([]);
+
+      if (allMentorsLoadedRef.current) {
+        // Already fetched — just clear loading; client-side filter handles the rest
         setLoading(false);
+        return;
       }
-    };
 
-    fetchMentors();
-  }, []);
-
-  const filtered = useMemo(() => {
-    let result = [...mentors];
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (m) =>
-          m.name.toLowerCase().includes(q) ||
-          m.headline.toLowerCase().includes(q) ||
-          m.bio.toLowerCase().includes(q) ||
-          m.expertiseTags.some((t) => t.toLowerCase().includes(q)) ||
-          m.domainTags.some((t) => t.toLowerCase().includes(q)) ||
-          m.languages.some((l) => l.toLowerCase().includes(q))
-      );
+      setLoading(true);
+      apiGet<{ success: boolean; data: { users: KollabUser[] } }>("/profile/mentors")
+        .then((res) => {
+          if (cancelled) return;
+          const mapped = (res.data.users || []).map((u) => mapUserToMentor(u));
+          setAllMentors(mapped);
+          allMentorsLoadedRef.current = true;
+          setError(null);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          const msg = err instanceof Error ? err.message : "Failed to load mentors";
+          setError(msg);
+          setAllMentors([]);
+        })
+        .finally(() => { if (!cancelled) setLoading(false); });
     }
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString()]);
+
+  // ── Client-side filter for normal listing ──────────────────────────────────
+  const filteredMentors = useMemo(() => {
+    if (q) return []; // smart search mode — not used
+    const filters = filtersFromParams(searchParams);
+    let result = [...allMentors];
 
     if (filters.expertise.length > 0)
       result = result.filter((m) => filters.expertise.some((e) => m.expertiseTags.includes(e)));
     if (filters.domain !== "All")
-      result = result.filter((m) => m.domainTags.some((d) => d.toLowerCase().includes(filters.domain.toLowerCase())));
+      result = result.filter((m) =>
+        m.domainTags.some((d) => d.toLowerCase().includes(filters.domain.toLowerCase())),
+      );
     if (filters.languages.length > 0)
       result = result.filter((m) => filters.languages.some((l) => m.languages.includes(l)));
     if (filters.rate === "Free")
@@ -96,40 +225,121 @@ const MentorsPage = () => {
       result = result.filter((m) => m.rate !== "Free");
 
     return result;
-  }, [search, filters, mentors]);
+  // searchParams.toString() covers all filter changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMentors, searchParams.toString(), q]);
 
-  const paginated = useMemo(() => {
+  // ── Paginate normal listing client-side ────────────────────────────────────
+  const paginatedNormal = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+    return filteredMentors.slice(start, start + PAGE_SIZE);
+  }, [filteredMentors, currentPage]);
+
+  // ── Derived display values ─────────────────────────────────────────────────
+  const displayMentors = q ? smartMentors     : paginatedNormal;
+  const totalItems     = q ? smartTotal       : filteredMentors.length;
+  const totalPages     = q ? smartTotalPages  : Math.ceil(filteredMentors.length / PAGE_SIZE);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleSearch = (val: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val.trim()) {
+        next.set("q", val.trim());
+      } else {
+        next.delete("q");
+      }
+      next.delete("page"); // reset to 1
+      return next;
+    }, { replace: false });
+  };
+
+  const handleInputChange = (val: string) => {
+    setInputValue(val);
+    // If the user clears via the X button (val === ""), immediately update URL
+    if (!val) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("q");
+        next.delete("page");
+        return next;
+      }, { replace: true });
+    }
+  };
+
+  const handleFilterChange = (f: MentorFilterState) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      buildFilterParams(f, next);
+      next.delete("page");
+      return next;
+    }, { replace: true });
+  };
 
   const handleClear = () => {
-    setFilters(DEFAULT_FILTERS);
-    setSearch("");
-    setCurrentPage(1);
+    setInputValue("");
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
+
+  const handlePageChange = (page: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (page > 1) next.set("page", String(page));
+      else next.delete("page");
+      return next;
+    }, { replace: false });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  const filters = filtersFromParams(searchParams);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
       <main className="flex-1 pt-20">
-        <MentorsHero search={search} onSearchChange={(val) => { setSearch(val); setCurrentPage(1); }} />
+        <MentorsHero
+          search={inputValue}
+          onSearchChange={handleInputChange}
+          onSearch={handleSearch}
+        />
 
         <Container className="py-8 space-y-8">
           {/* Filters */}
           <div className="rounded-xl border border-border bg-card p-4">
-            <MentorFilters filters={filters} onChange={(f) => { setFilters(f); setCurrentPage(1); }} onClear={handleClear} />
+            <MentorFilters
+              filters={filters}
+              onChange={handleFilterChange}
+              onClear={handleClear}
+            />
           </div>
+
+          {/* Smart search mode indicator */}
+          {q && searchMode && !loading && (
+            <div className="flex items-center gap-2">
+              {searchMode === "smart-search" ? (
+                <span className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                  <Sparkles size={12} />
+                  AI Smart Search results for: <span className="font-semibold">"{q}"</span>
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Search results for: <span className="font-medium text-foreground">"{q}"</span>
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Results count */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {loading ? "Loading mentors..." : error ? (
+              {loading ? "Loading mentors…" : error ? (
                 <span className="text-destructive">{error}</span>
               ) : (
                 <>
-                  <span className="font-semibold text-foreground">{filtered.length}</span> mentor{filtered.length !== 1 ? "s" : ""} found
+                  <span className="font-semibold text-foreground">{totalItems}</span>{" "}
+                  mentor{totalItems !== 1 ? "s" : ""} found
                 </>
               )}
             </p>
@@ -138,28 +348,35 @@ const MentorsPage = () => {
           {/* Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {loading ? (
-              <div className="col-span-full py-12 text-center text-sm text-muted-foreground">Loading mentors...</div>
+              <div className="col-span-full py-12 text-center text-sm text-muted-foreground">
+                Loading mentors…
+              </div>
             ) : error ? (
               <div className="col-span-full py-12 text-center text-sm text-destructive">{error}</div>
-            ) : paginated.length === 0 ? (
-              <EmptyState onClear={handleClear} />
+            ) : displayMentors.length === 0 ? (
+              q ? (
+                <SmartEmptyState onClear={handleClear} />
+              ) : (
+                <FilterEmptyState onClear={handleClear} />
+              )
             ) : (
-              paginated.map((mentor, idx) => (
-                <MentorCard key={mentor.id} mentor={mentor} index={idx + (currentPage - 1) * PAGE_SIZE} />
+              displayMentors.map((mentor, idx) => (
+                <MentorCard
+                  key={mentor.id}
+                  mentor={mentor}
+                  index={idx + (currentPage - 1) * PAGE_SIZE}
+                />
               ))
             )}
           </div>
 
           {/* Pagination */}
-          {filtered.length > PAGE_SIZE && (
+          {totalPages > 1 && (
             <PaginationBar
-              totalItems={filtered.length}
+              totalItems={totalItems}
               pageSize={PAGE_SIZE}
               currentPage={currentPage}
-              onPageChange={(page) => {
-                setCurrentPage(page);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
+              onPageChange={handlePageChange}
             />
           )}
         </Container>
@@ -171,3 +388,4 @@ const MentorsPage = () => {
 };
 
 export default MentorsPage;
+

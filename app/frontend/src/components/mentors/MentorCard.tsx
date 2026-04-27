@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Star, CalendarCheck, ChevronRight, Globe } from "lucide-react";
+import { Star, CalendarCheck, ChevronRight, Globe, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Mentor } from "@/types/mentor";
 import BookSessionModal from "./BookSessionModal";
@@ -59,6 +59,13 @@ const MentorCard = ({ mentor, index }: MentorCardProps) => {
               <h3 className="font-bold text-foreground truncate">{mentor.name}</h3>
               <p className="text-xs text-muted-foreground truncate mt-0.5">{mentor.headline}</p>
             </div>
+            {/* Smart search relevance badge */}
+            {mentor.smartScore !== undefined && (
+              <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                <Sparkles size={9} />
+                {mentor.smartScore}%
+              </span>
+            )}
           </div>
 
           {/* Expertise tags */}
@@ -81,6 +88,13 @@ const MentorCard = ({ mentor, index }: MentorCardProps) => {
               </span>
             ))}
           </div>
+
+          {/* Smart search: first reason */}
+          {mentor.searchReasons && mentor.searchReasons.length > 0 && (
+            <p className="text-[11px] text-muted-foreground italic truncate">
+              {mentor.searchReasons[0]}
+            </p>
+          )}
 
           {/* Languages */}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
