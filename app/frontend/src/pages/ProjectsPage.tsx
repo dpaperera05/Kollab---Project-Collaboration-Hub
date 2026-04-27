@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, FolderOpen } from "lucide-react";
+import { FolderOpen, Plus, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
@@ -33,6 +33,28 @@ type BackendProject = {
   roles?: Array<{ title: string; status?: "Open" | "Filled"; seats?: number }>;
   ownerId?: string;
   owner?: { id?: string; name?: string; avatar?: string; rating?: number };
+};
+
+/** Shape returned by GET /api/projects/public/smart-search */
+type SmartSearchProject = BackendProject & {
+  id: string;      // smart-search returns id (not _id)
+  posterName?: string;
+  posterAvatar?: string;
+  smartScore?: number;
+  searchReasons?: string[];
+};
+
+type SmartSearchApiResponse = {
+  success: boolean;
+  data: {
+    mode: "smart-search" | "keyword-fallback";
+    query: string;
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    projects: SmartSearchProject[];
+  };
 };
 
 const PAGE_SIZE = 9;
@@ -83,15 +105,19 @@ const ProjectsSkeleton = () => (
   </>
 );
 
-const EmptyState = ({ onClear }: { onClear: () => void }) => (
+const EmptyState = ({ onClear, isSearch }: { onClear: () => void; isSearch?: boolean }) => (
   <div className="col-span-full flex flex-col items-center justify-center py-24 text-center gap-5">
     <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
       <FolderOpen size={28} className="text-primary" />
     </div>
     <div className="space-y-2">
-      <h3 className="text-xl font-bold text-foreground">No projects match your filters</h3>
+      <h3 className="text-xl font-bold text-foreground">
+        {isSearch ? "No projects found for this search" : "No projects match your filters"}
+      </h3>
       <p className="text-sm text-muted-foreground max-w-sm">
-        Try adjusting your search or filters to find what you're looking for.
+        {isSearch
+          ? "Try different keywords or remove some filters."
+          : "Try adjusting your search or filters to find what you're looking for."}
       </p>
     </div>
     <button
@@ -112,6 +138,7 @@ const ProjectsPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  const [smartSearchMode, setSmartSearchMode] = useState<"smart-search" | "keyword-fallback" | null>(null);
   const [recData, setRecData] = useState<RecommendationApiResponse["data"]>({
     mode: "latest",
     title: "Latest Projects",
@@ -164,7 +191,6 @@ const ProjectsPage = () => {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        if (search.trim()) params.set("q", search.trim());
         if (filters.domain !== "All") params.set("domain", filters.domain);
         if (filters.technologies.length > 0) params.set("technologies", filters.technologies.join(","));
         if (filters.roleType !== "All") params.set("roleType", filters.roleType);
@@ -172,40 +198,83 @@ const ProjectsPage = () => {
         if (filters.duration !== "All") params.set("duration", filters.duration);
         if (filters.status !== "All") params.set("status", filters.status);
         if (filters.tags.length > 0) params.set("tags", filters.tags.join(","));
-        if (filters.sortBy) params.set("sortBy", filters.sortBy);
         params.set("page", String(currentPage));
         params.set("pageSize", String(PAGE_SIZE));
 
-        const res = await apiGet<{ success: boolean; data: { projects: BackendProject[]; total: number; page: number; pageSize: number } }>(
-          `/projects/public?${params.toString()}`,
-        );
+        if (search.trim()) {
+          // ── Smart Search path ──────────────────────────────────────────────
+          params.set("q", search.trim());
+          // Default to Most Relevant when user has not explicitly changed sort
+          const sortBy = filters.sortBy === "Newest" ? "Most Relevant" : filters.sortBy;
+          params.set("sortBy", sortBy);
 
-        const mapped = (res?.data?.projects ?? []).map((p) => ({
-          id: p._id,
-          title: p.title,
-          summary: p.summary,
-          domain: p.domain,
-          difficulty: p.difficulty,
-          status: p.status,
-          technologies: p.technologies ?? [],
-          tags: p.tags ?? [],
-          postedAt: p.postedAt ?? p.createdAt ?? new Date().toISOString(),
-          compensation: p.compensation,
-          weeklyHours: p.weeklyHours,
-          duration: p.duration,
-          posterImage: p.posterImage,
-          posterName: p.owner?.name || "Project owner",
-          posterAvatar: p.owner?.avatar,
-          roles: (p.roles ?? []).map((role) => ({
-            title: role.title,
-            status: role.status,
-            total: role.seats,
-            filled: role.status === "Filled" ? role.seats : 0,
-          })),
-        }));
-        setProjects(mapped);
-        setTotalCount(res?.data?.total ?? mapped.length);
-        setCurrentPage(res?.data?.page ?? currentPage);
+          const res = await apiGet<SmartSearchApiResponse>(`/projects/public/smart-search?${params.toString()}`);
+          setSmartSearchMode(res?.data?.mode ?? "smart-search");
+
+          const mapped = (res?.data?.projects ?? []).map((p) => ({
+            id: p.id ?? p._id,
+            title: p.title,
+            summary: p.summary,
+            domain: p.domain,
+            difficulty: p.difficulty,
+            status: p.status,
+            technologies: p.technologies ?? [],
+            tags: p.tags ?? [],
+            postedAt: p.postedAt ?? p.createdAt ?? new Date().toISOString(),
+            compensation: p.compensation,
+            weeklyHours: p.weeklyHours,
+            duration: p.duration,
+            posterImage: p.posterImage,
+            posterName: p.posterName ?? p.owner?.name ?? "Project owner",
+            posterAvatar: p.posterAvatar ?? p.owner?.avatar,
+            roles: (p.roles ?? []).map((role) => ({
+              title: role.title,
+              status: role.status,
+              total: role.seats,
+              filled: role.status === "Filled" ? role.seats : 0,
+            })),
+            smartScore: p.smartScore,
+            searchReasons: p.searchReasons,
+          }));
+          setProjects(mapped);
+          setTotalCount(res?.data?.total ?? mapped.length);
+          setCurrentPage(res?.data?.page ?? currentPage);
+        } else {
+          // ── Normal listing path ────────────────────────────────────────────
+          setSmartSearchMode(null);
+          if (filters.sortBy) params.set("sortBy", filters.sortBy);
+
+          const res = await apiGet<{ success: boolean; data: { projects: BackendProject[]; total: number; page: number; pageSize: number } }>(
+            `/projects/public?${params.toString()}`,
+          );
+
+          const mapped = (res?.data?.projects ?? []).map((p) => ({
+            id: p._id,
+            title: p.title,
+            summary: p.summary,
+            domain: p.domain,
+            difficulty: p.difficulty,
+            status: p.status,
+            technologies: p.technologies ?? [],
+            tags: p.tags ?? [],
+            postedAt: p.postedAt ?? p.createdAt ?? new Date().toISOString(),
+            compensation: p.compensation,
+            weeklyHours: p.weeklyHours,
+            duration: p.duration,
+            posterImage: p.posterImage,
+            posterName: p.owner?.name || "Project owner",
+            posterAvatar: p.owner?.avatar,
+            roles: (p.roles ?? []).map((role) => ({
+              title: role.title,
+              status: role.status,
+              total: role.seats,
+              filled: role.status === "Filled" ? role.seats : 0,
+            })),
+          }));
+          setProjects(mapped);
+          setTotalCount(res?.data?.total ?? mapped.length);
+          setCurrentPage(res?.data?.page ?? currentPage);
+        }
       } catch (err) {
         console.error("Failed to load projects", err);
         setProjects([]);
@@ -226,6 +295,7 @@ const ProjectsPage = () => {
   const handleClear = () => {
     setFilters(DEFAULT_FILTERS);
     setSearch("");
+    setSmartSearchMode(null);
     setCurrentPage(1);
   };
 
@@ -285,7 +355,7 @@ const ProjectsPage = () => {
                   </p>
                 </div>
 
-                <SmartSearchBar value={search} onChange={handleSearch} />
+                <SmartSearchBar value={search} onChange={handleSearch} onSearch={handleSearch} />
 
                 <button
                   onClick={handleAddProject}
@@ -321,12 +391,25 @@ const ProjectsPage = () => {
             <ProjectFilters filters={filters} onChange={handleFilterChange} onClear={handleClear} />
           </div>
 
-          {/* Results count */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">{totalCount}</span> project
-              {totalCount !== 1 ? "s" : ""} found
-            </p>
+          {/* Results count + search mode indicator */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            {search.trim() && smartSearchMode ? (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <Sparkles size={14} />
+                  {smartSearchMode === "smart-search" ? "AI Smart Search results for:" : "Search results for:"}
+                </span>
+                <span className="text-sm text-foreground font-semibold">&ldquo;{search}&rdquo;</span>
+                <span className="text-xs text-muted-foreground">
+                  ({totalCount} project{totalCount !== 1 ? "s" : ""})
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{totalCount}</span> project
+                {totalCount !== 1 ? "s" : ""} found
+              </p>
+            )}
           </div>
 
           {/* Grid */}
@@ -334,7 +417,7 @@ const ProjectsPage = () => {
             {isLoading ? (
               <ProjectsSkeleton />
             ) : projects.length === 0 ? (
-              <EmptyState onClear={handleClear} />
+              <EmptyState onClear={handleClear} isSearch={!!search.trim()} />
             ) : (
               projects.map((project) => (
                 <ProjectCard
