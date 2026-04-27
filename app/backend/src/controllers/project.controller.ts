@@ -219,13 +219,28 @@ export const smartSearchPublicProjects = async (req: Request, res: Response) => 
     const result = await smartSearchProjects(
       q.trim(),
       enriched,
-      { page, pageSize, sortBy: typeof sortBy === "string" ? sortBy : undefined },
+      { page, pageSize, sortBy: typeof sortBy === "string" ? sortBy : undefined, debug: isDebug },
     );
 
     // ── Strip internal _scoring unless debug mode ────────────────────────────
     const projects = result.projects.map(({ _scoring, ...pub }) => {
       if (isDebug && _scoring) {
-        return { ...pub, _debug: _scoring };
+        return {
+          ...pub,
+          _debug: {
+            smartScore:          pub.smartScore,
+            semanticScore:       _scoring.semanticScore,
+            keywordScore:        _scoring.keywordScore,
+            finalSmartScore:     _scoring.finalSmartScore,
+            cosineSimilarity:    _scoring.cosineSimilarity !== null
+                                   ? Math.round(_scoring.cosineSimilarity * 1000) / 1000
+                                   : null,
+            hasProjectEmbedding: _scoring.hasProjectEmbedding,
+            passedThreshold:     _scoring.passedThreshold,
+            thresholdReason:     _scoring.thresholdReason,
+            searchReasons:       pub.searchReasons,
+          },
+        };
       }
       return pub;
     });
@@ -241,6 +256,7 @@ export const smartSearchPublicProjects = async (req: Request, res: Response) => 
         totalPages: result.totalPages,
         projects,
         ...(result.message ? { message: result.message } : {}),
+        ...(isDebug && result.debugSummary ? { debugSummary: result.debugSummary } : {}),
       },
     });
   } catch (err) {

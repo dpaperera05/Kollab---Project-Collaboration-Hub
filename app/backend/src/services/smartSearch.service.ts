@@ -124,6 +124,16 @@ export interface SmartSearchScored {
   };
 }
 
+/** Aggregate statistics included only when debug=true is requested */
+export interface SmartSearchDebugSummary {
+  query: string;
+  totalCandidateProjects: number;
+  totalRelevantProjects: number;
+  projectsWithEmbeddings: number;
+  projectsWithoutEmbeddings: number;
+  mode: SmartSearchMode;
+}
+
 export interface SmartSearchResult {
   mode: SmartSearchMode;
   query: string;
@@ -134,6 +144,8 @@ export interface SmartSearchResult {
   projects: SmartSearchScored[];
   /** Set when no projects pass the relevance threshold */
   message?: string;
+  /** Populated only when the caller requests debug mode */
+  debugSummary?: SmartSearchDebugSummary;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -356,6 +368,8 @@ export interface SmartSearchOptions {
   page?: number;
   pageSize?: number;
   sortBy?: string;
+  /** When true, attach debugSummary and per-project _scoring to the result */
+  debug?: boolean;
 }
 
 /**
@@ -375,6 +389,7 @@ export async function smartSearchProjects(
   const page = Math.max(opts.page ?? 1, 1);
   const pageSize = Math.min(Math.max(opts.pageSize ?? 9, 1), 50);
   const sortBy = opts.sortBy;
+  const debug = opts.debug ?? false;
 
   const queryTokens = tokenise(query);
   let mode: SmartSearchMode = "smart-search";
@@ -436,6 +451,22 @@ export async function smartSearchProjects(
     return meetsThreshold;
   });
 
+  // ── Debug summary (computed regardless of whether any projects pass) ─────────
+  const projectsWithEmbeddings = allScored.filter(
+    ({ project }) =>
+      Array.isArray(project.recommendationEmbedding) &&
+      project.recommendationEmbedding.length === EMBEDDING_DIMENSIONS,
+  ).length;
+
+  const debugSummary: SmartSearchDebugSummary = {
+    query,
+    totalCandidateProjects: allScored.length,
+    totalRelevantProjects: passing.length,
+    projectsWithEmbeddings,
+    projectsWithoutEmbeddings: allScored.length - projectsWithEmbeddings,
+    mode,
+  };
+
   // ── No results — return clean empty payload ──────────────────────────────────
   if (passing.length === 0) {
     return {
@@ -447,6 +478,7 @@ export async function smartSearchProjects(
       totalPages: 0,
       projects: [],
       message: "No relevant projects found for this search.",
+      ...(debug ? { debugSummary } : {}),
     };
   }
 
@@ -466,5 +498,5 @@ export async function smartSearchProjects(
   // ── Paginate ─────────────────────────────────────────────────────────────────
   const paginated = sortedAll.slice((page - 1) * pageSize, page * pageSize);
 
-  return { mode, query, page, pageSize, total, totalPages, projects: paginated };
+  return { mode, query, page, pageSize, total, totalPages, projects: paginated, ...(debug ? { debugSummary } : {}) };
 }
