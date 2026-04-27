@@ -3,26 +3,28 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/data/mockProjects";
 
-const STATUS_CONFIG = {
-  Open: { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/20 border-emerald-400/40", dot: "bg-emerald-500" },
-  Ongoing: { color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/20 border-blue-400/40", dot: "bg-blue-500" },
-  Filled: { color: "text-orange-400", bg: "bg-orange-500/20 border-orange-400/40", dot: "bg-orange-400" },
-  Finished: { color: "text-zinc-300", bg: "bg-zinc-500/20 border-zinc-400/40", dot: "bg-zinc-400" },
+const STATUS_CONFIG: Record<string, { color: string; bg: string; dot: string }> = {
+  Open:     { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/20 border-emerald-400/40", dot: "bg-emerald-500" },
+  Ongoing:  { color: "text-blue-600 dark:text-blue-400",       bg: "bg-blue-500/20 border-blue-400/40",      dot: "bg-blue-500"   },
+  Filled:   { color: "text-orange-400",                        bg: "bg-orange-500/20 border-orange-400/40",  dot: "bg-orange-400" },
+  Finished: { color: "text-zinc-300",                          bg: "bg-zinc-500/20 border-zinc-400/40",      dot: "bg-zinc-400"   },
 };
+const DEFAULT_STATUS_CONFIG  = { color: "text-white/80",  bg: "bg-white/10 border-white/20",  dot: "bg-white/60" };
 
-const DIFFICULTY_CONFIG = {
-  Beginner: { color: "text-emerald-300", bg: "bg-emerald-500/20 border-emerald-400/40" },
-  Intermediate: { color: "text-amber-300", bg: "bg-amber-500/20 border-amber-400/40" },
-  Advanced: { color: "text-rose-300", bg: "bg-rose-500/20 border-rose-400/40" },
+const DIFFICULTY_CONFIG: Record<string, { color: string; bg: string }> = {
+  Beginner:     { color: "text-emerald-300", bg: "bg-emerald-500/20 border-emerald-400/40" },
+  Intermediate: { color: "text-amber-300",   bg: "bg-amber-500/20 border-amber-400/40"   },
+  Advanced:     { color: "text-rose-300",    bg: "bg-rose-500/20 border-rose-400/40"     },
 };
+const DEFAULT_DIFFICULTY_CONFIG = { color: "text-white/80", bg: "bg-white/10 border-white/20" };
 
 interface ProjectHeroProps {
   project: Project;
 }
 
 const ProjectHero = ({ project }: ProjectHeroProps) => {
-  const statusConfig = STATUS_CONFIG[project.status];
-  const diffConfig = DIFFICULTY_CONFIG[project.difficulty];
+  const statusConfig = STATUS_CONFIG[project.status]   ?? DEFAULT_STATUS_CONFIG;
+  const diffConfig   = DIFFICULTY_CONFIG[project.difficulty] ?? DEFAULT_DIFFICULTY_CONFIG;
 
   return (
     <div className="relative w-full overflow-hidden" style={{ minHeight: 300 }}>
