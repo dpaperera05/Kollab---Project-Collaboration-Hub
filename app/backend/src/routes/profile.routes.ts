@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware";
-import { changePassword, getMe, updateProfile, deleteAccount, uploadAvatar, getPublicProfile, listPublicMembers, getMemberProfile, listPublicMentors, smartSearchMentorsHandler } from "../controllers/profile.controller";
+import { changePassword, getMe, updateProfile, deleteAccount, uploadAvatar, getPublicProfile, listPublicMembers, getMemberProfile, listPublicMentors, smartSearchMentorsHandler, smartSearchMembersHandler } from "../controllers/profile.controller";
 
 const router = Router();
 
 router.get("/public/:id", getPublicProfile);
+router.get("/members/smart-search", smartSearchMembersHandler);
 router.get("/members", listPublicMembers);
 router.get("/members/:id", getMemberProfile);
 router.get("/mentors/smart-search", smartSearchMentorsHandler);
