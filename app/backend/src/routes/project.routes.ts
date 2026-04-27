@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware";
 import {
   listPublicProjects,
+  smartSearchPublicProjects,
   getPublicProjectById,
   listOwnedProjects,
   listJoinedProjects,
@@ -17,6 +18,9 @@ import {
 const router = Router();
 
 router.get("/public", listPublicProjects);
+// smart-search must be registered before /public/:id so "smart-search" is not
+// interpreted as a project id by the dynamic route below.
+router.get("/public/smart-search", smartSearchPublicProjects);
 router.get("/public/:id", getPublicProjectById);
 
 router.use(authenticate);
