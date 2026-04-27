@@ -240,6 +240,7 @@ export const smartSearchPublicProjects = async (req: Request, res: Response) => 
         total: result.total,
         totalPages: result.totalPages,
         projects,
+        ...(result.message ? { message: result.message } : {}),
       },
     });
   } catch (err) {

@@ -31,6 +31,11 @@ import { cosineSimilarity } from "./recommendation.service";
 const COSINE_MIN = 0.35;
 const COSINE_MAX = 0.75;
 
+// ── Relevance thresholds — a project must pass at least one ──────────────────
+const FINAL_SCORE_THRESHOLD = 30;
+const SEMANTIC_THRESHOLD    = 40;
+const KEYWORD_THRESHOLD     = 25;
+
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export type SmartSearchMode = "smart-search" | "keyword-fallback";
@@ -77,7 +82,9 @@ export interface RawProjectDoc {
 }
 
 export interface SmartSearchScored {
-  // ── Public card fields ────────────────────────────────────────────────────
+  // ── Public card fields (same shape as listPublicProjects enriched response) ──
+  /** String version of _id — mirrors listPublicProjects so the frontend can use p._id */
+  _id: string;
   id: string;
   title: string;
   summary: string;
@@ -112,6 +119,8 @@ export interface SmartSearchScored {
     keywordScore: number;
     finalSmartScore: number;
     hasProjectEmbedding: boolean;
+    passedThreshold: boolean;
+    thresholdReason: string;
   };
 }
 
@@ -123,6 +132,8 @@ export interface SmartSearchResult {
   total: number;
   totalPages: number;
   projects: SmartSearchScored[];
+  /** Set when no projects pass the relevance threshold */
+  message?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -263,15 +274,26 @@ function shapeProject(
   cosineSim: number | null,
   keywordScore: number,
   matchedTokens: Set<string>,
+  finalSmartScore: number,
 ): SmartSearchScored {
-  const finalSmartScore = Math.round(semanticScore * 0.7 + keywordScore * 0.3);
   const hasProjectEmbedding = Array.isArray(project.recommendationEmbedding) &&
     project.recommendationEmbedding.length === EMBEDDING_DIMENSIONS;
 
-  const projectId = project._id?.toString?.() ?? (project.id as string) ?? "";
+  // project.id is set as a string by enrichProjectsWithOwner (primary, reliable).
+  // String(project._id) is the ObjectId hex string (fallback).
+  // This guarantees a non-empty string ID regardless of the _id unknown type.
+  const id: string = (project.id as string) || String(project._id) || "";
+
+  const thresholdReason =
+    finalSmartScore >= FINAL_SCORE_THRESHOLD
+      ? `finalSmartScore=${finalSmartScore} >= ${FINAL_SCORE_THRESHOLD}`
+      : semanticScore >= SEMANTIC_THRESHOLD
+        ? `semanticScore=${semanticScore} >= ${SEMANTIC_THRESHOLD}`
+        : `keywordScore=${keywordScore} >= ${KEYWORD_THRESHOLD}`;
 
   return {
-    id: projectId,
+    id,
+    _id: id,   // same string as id — lets the frontend use p._id exactly like listPublicProjects
     title: project.title ?? "",
     summary: project.summary ?? "",
     problemStatement: project.problemStatement,
@@ -293,7 +315,7 @@ function shapeProject(
     roles: (project.roles ?? []).map((r) => ({
       title: r.title ?? "",
       status: r.status,
-      total: r.seats,
+      total: r.seats,    // raw lean doc still has `seats` — already pre-enrichment
       filled: r.status === "Filled" ? r.seats : 0,
     })),
     smartScore: finalSmartScore,
@@ -304,6 +326,8 @@ function shapeProject(
       keywordScore,
       finalSmartScore,
       hasProjectEmbedding,
+      passedThreshold: true,
+      thresholdReason,
     },
   };
 }
@@ -366,8 +390,17 @@ export async function smartSearchProjects(
     mode = "keyword-fallback";
   }
 
-  // ── Score all projects ───────────────────────────────────────────────────────
-  const scored: SmartSearchScored[] = projects.map((project) => {
+  // ── Intermediate scoring ─────────────────────────────────────────────────────
+  interface ScoredIntermediate {
+    project: RawProjectDoc;
+    keywordScore: number;
+    matchedTokens: Set<string>;
+    semanticScore: number;
+    cosineSim: number | null;
+    finalSmartScore: number;
+  }
+
+  const allScored: ScoredIntermediate[] = projects.map((project) => {
     const { score: keywordScore, matchedTokens } = computeKeywordScore(queryTokens, project);
 
     let semanticScore = 0;
@@ -384,15 +417,53 @@ export async function smartSearchProjects(
       }
     }
 
-    return shapeProject(project, semanticScore, cosineSim, keywordScore, matchedTokens);
+    const finalSmartScore = Math.round(semanticScore * 0.7 + keywordScore * 0.3);
+    return { project, keywordScore, matchedTokens, semanticScore, cosineSim, finalSmartScore };
   });
+
+  // ── Filter by relevance threshold ────────────────────────────────────────────
+  // A project passes if at least one condition holds:
+  //   finalSmartScore >= 30  |  semanticScore >= 40  |  keywordScore >= 25
+  // In keyword-fallback mode, additionally require at least one keyword match.
+  const passing = allScored.filter(({ keywordScore, semanticScore, finalSmartScore, matchedTokens }) => {
+    const meetsThreshold =
+      finalSmartScore >= FINAL_SCORE_THRESHOLD ||
+      semanticScore   >= SEMANTIC_THRESHOLD    ||
+      keywordScore    >= KEYWORD_THRESHOLD;
+    if (mode === "keyword-fallback") {
+      return meetsThreshold && matchedTokens.size > 0;
+    }
+    return meetsThreshold;
+  });
+
+  // ── No results — return clean empty payload ──────────────────────────────────
+  if (passing.length === 0) {
+    return {
+      mode,
+      query,
+      page,
+      pageSize,
+      total: 0,
+      totalPages: 0,
+      projects: [],
+      message: "No relevant projects found for this search.",
+    };
+  }
+
+  // ── Shape passing projects ───────────────────────────────────────────────────
+  const scored: SmartSearchScored[] = passing.map(
+    ({ project, keywordScore, matchedTokens, semanticScore, cosineSim, finalSmartScore }) =>
+      shapeProject(project, semanticScore, cosineSim, keywordScore, matchedTokens, finalSmartScore),
+  );
 
   // ── Sort ─────────────────────────────────────────────────────────────────────
   const sortedAll = sortProjects(scored, sortBy);
 
-  // ── Paginate ─────────────────────────────────────────────────────────────────
-  const total = sortedAll.length;
+  // ── Total is based on filtered (passing) results, not all candidates ─────────
+  const total = scored.length;
   const totalPages = Math.ceil(total / pageSize);
+
+  // ── Paginate ─────────────────────────────────────────────────────────────────
   const paginated = sortedAll.slice((page - 1) * pageSize, page * pageSize);
 
   return { mode, query, page, pageSize, total, totalPages, projects: paginated };

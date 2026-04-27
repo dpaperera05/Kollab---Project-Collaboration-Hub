@@ -35,9 +35,19 @@ type BackendProject = {
   owner?: { id?: string; name?: string; avatar?: string; rating?: number };
 };
 
-/** Shape returned by GET /api/projects/public/smart-search */
-type SmartSearchProject = BackendProject & {
-  id: string;      // smart-search returns id (not _id)
+/** Shape returned by GET /api/projects/public/smart-search
+ * Both `_id` and `id` are string IDs (smart search always returns both).
+ * `roles` is already pre-mapped (total/filled) by the service — no seats field.
+ */
+type SmartSearchProject = Omit<BackendProject, "roles"> & {
+  id: string;
+  roles?: Array<{
+    title: string;
+    status?: "Open" | "Filled";
+    /** Already mapped from seats by the service */
+    total?: number;
+    filled?: number;
+  }>;
   posterName?: string;
   posterAvatar?: string;
   smartScore?: number;
@@ -212,7 +222,7 @@ const ProjectsPage = () => {
           setSmartSearchMode(res?.data?.mode ?? "smart-search");
 
           const mapped = (res?.data?.projects ?? []).map((p) => ({
-            id: p.id ?? p._id,
+            id: p._id,   // use _id exactly like normal listing — both are set as the same hex string
             title: p.title,
             summary: p.summary,
             domain: p.domain,
@@ -227,11 +237,12 @@ const ProjectsPage = () => {
             posterImage: p.posterImage,
             posterName: p.posterName ?? p.owner?.name ?? "Project owner",
             posterAvatar: p.posterAvatar ?? p.owner?.avatar,
+            // roles are pre-mapped by service (total/filled already set — no seats field)
             roles: (p.roles ?? []).map((role) => ({
               title: role.title,
               status: role.status,
-              total: role.seats,
-              filled: role.status === "Filled" ? role.seats : 0,
+              total: role.total,
+              filled: role.filled ?? 0,
             })),
             smartScore: p.smartScore,
             searchReasons: p.searchReasons,
