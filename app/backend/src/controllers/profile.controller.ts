@@ -308,7 +308,8 @@ export const smartSearchMembersHandler = async (req: Request, res: Response) => 
         totalPages: result.totalPages,
         users:      members,   // key is "users" to stay compatible with the existing frontend mapper
         ...(result.message       ? { message:      result.message      } : {}),
-        ...(isDebug && result.debugSummary ? { debugSummary: result.debugSummary } : {}),
+        ...(isDebug && result.debugSummary    ? { debugSummary:    result.debugSummary    } : {}),
+        ...(isDebug && result.debugCandidates ? { debugCandidates: result.debugCandidates } : {}),
       },
     });
   } catch (err) {

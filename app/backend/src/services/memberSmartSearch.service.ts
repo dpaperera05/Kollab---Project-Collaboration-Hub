@@ -31,9 +31,9 @@ const COSINE_MIN = 0.35;
 const COSINE_MAX = 0.75;
 
 // ── Relevance thresholds — a member must pass at least one ────────────────────
-const FINAL_SCORE_THRESHOLD = 30;
-const SEMANTIC_THRESHOLD    = 40;
-const KEYWORD_THRESHOLD     = 25;
+const FINAL_SCORE_THRESHOLD = 35;
+const SEMANTIC_THRESHOLD    = 45;
+const KEYWORD_THRESHOLD     = 30;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -173,6 +173,20 @@ export interface MemberSmartSearchResult {
   message?: string;
   /** Populated only when debug mode is requested */
   debugSummary?: MemberSmartSearchDebugSummary;
+  /**
+   * All scored candidates (passing AND filtered out) — only when debug=true.
+   * Use this to verify that low-score members are correctly excluded.
+   */
+  debugCandidates?: Array<{
+    id: string;
+    name?: string;
+    finalSmartScore: number;
+    smartScore: number;
+    semanticScore: number;
+    keywordScore: number;
+    passedThreshold: boolean;
+    thresholdReason: string;
+  }>;
 }
 
 export interface MemberSmartSearchOptions {
@@ -330,6 +344,7 @@ function shapeMember(
   keywordScore: number,
   matchedTokens: Set<string>,
   finalSmartScore: number,
+  mode: MemberSmartSearchMode,
 ): MemberSmartSearchScored {
   const hasMemberEmbedding =
     Array.isArray(member.profile?.recommendationEmbedding) &&
@@ -337,12 +352,12 @@ function shapeMember(
 
   const id: string = (member.id as string) || String(member._id) || "";
 
-  const thresholdReason =
-    finalSmartScore >= FINAL_SCORE_THRESHOLD
-      ? `finalSmartScore=${finalSmartScore} >= ${FINAL_SCORE_THRESHOLD}`
-      : semanticScore >= SEMANTIC_THRESHOLD
-        ? `semanticScore=${semanticScore} >= ${SEMANTIC_THRESHOLD}`
-        : `keywordScore=${keywordScore} >= ${KEYWORD_THRESHOLD}`;
+  // All members reaching shapeMember have already passed the threshold.
+  // In smart-search mode: finalSmartScore >= FINAL_SCORE_THRESHOLD.
+  // In keyword-fallback mode: keywordScore >= KEYWORD_THRESHOLD.
+  const thresholdReason = mode === "keyword-fallback"
+    ? `keywordScore=${keywordScore} >= ${KEYWORD_THRESHOLD}`
+    : `finalSmartScore=${finalSmartScore} >= ${FINAL_SCORE_THRESHOLD}`;
 
   const p = member.profile ?? {};
 
@@ -486,19 +501,46 @@ export async function smartSearchMembers(
   });
 
   // ── Filter by relevance threshold ────────────────────────────────────────────
-  // A member passes if at least one condition holds:
-  //   finalSmartScore >= 30  |  semanticScore >= 40  |  keywordScore >= 25
-  // In keyword-fallback mode, also require at least one keyword match.
-  const passing = allScored.filter(({ keywordScore, semanticScore, finalSmartScore, matchedTokens }) => {
-    const meetsThreshold =
-      finalSmartScore >= FINAL_SCORE_THRESHOLD ||
-      semanticScore   >= SEMANTIC_THRESHOLD    ||
-      keywordScore    >= KEYWORD_THRESHOLD;
+  // Strict rule:
+  //   smart-search mode:    include only if finalSmartScore >= FINAL_SCORE_THRESHOLD (35)
+  //   keyword-fallback mode: include only if keywordScore   >= KEYWORD_THRESHOLD     (30)
+  //
+  // The OR approach was intentionally removed: a high keywordScore alone (e.g. 57)
+  // can produce a finalSmartScore as low as 17 when semanticScore = 0 (no embedding).
+  // That 17 is what gets shown on the card as smartScore, so it must be the gate too.
+  const passing = allScored.filter(({ keywordScore, finalSmartScore }) => {
     if (mode === "keyword-fallback") {
-      return meetsThreshold && matchedTokens.size > 0;
+      return keywordScore >= KEYWORD_THRESHOLD;
     }
-    return meetsThreshold;
+    return finalSmartScore >= FINAL_SCORE_THRESHOLD;
   });
+
+  // ── Debug candidates (all scored, passing + rejected) — only built when debug=true ──
+  const debugCandidates = debug
+    ? allScored.map(({ member, finalSmartScore, semanticScore, keywordScore }) => {
+        const id = (member.id as string) || String(member._id) || "";
+        const memberPassed = mode === "keyword-fallback"
+          ? keywordScore >= KEYWORD_THRESHOLD
+          : finalSmartScore >= FINAL_SCORE_THRESHOLD;
+        const thresholdReason = memberPassed
+          ? (mode === "keyword-fallback"
+              ? `keywordScore=${keywordScore} >= ${KEYWORD_THRESHOLD} (passed)`
+              : `finalSmartScore=${finalSmartScore} >= ${FINAL_SCORE_THRESHOLD} (passed)`)
+          : (mode === "keyword-fallback"
+              ? `keywordScore=${keywordScore} < ${KEYWORD_THRESHOLD} (filtered out)`
+              : `finalSmartScore=${finalSmartScore} < ${FINAL_SCORE_THRESHOLD} (filtered out)`);
+        return {
+          id,
+          name: member.profile?.name || member.name,
+          finalSmartScore,
+          smartScore: finalSmartScore,
+          semanticScore,
+          keywordScore,
+          passedThreshold: memberPassed,
+          thresholdReason,
+        };
+      })
+    : undefined;
 
   // ── Debug summary ────────────────────────────────────────────────────────────
   const membersWithEmbeddings = allScored.filter(
@@ -526,15 +568,15 @@ export async function smartSearchMembers(
       total: 0,
       totalPages: 0,
       members: [],
-      message: "No relevant members found for this search.",
-      ...(debug ? { debugSummary } : {}),
+      message: "No relevant people found for this search.",
+      ...(debug ? { debugSummary, debugCandidates } : {}),
     };
   }
 
   // ── Shape passing members ────────────────────────────────────────────────────
   const scored: MemberSmartSearchScored[] = passing.map(
     ({ member, keywordScore, matchedTokens, semanticScore, cosineSim, finalSmartScore }) =>
-      shapeMember(member, semanticScore, cosineSim, keywordScore, matchedTokens, finalSmartScore),
+      shapeMember(member, semanticScore, cosineSim, keywordScore, matchedTokens, finalSmartScore, mode),
   );
 
   // ── Sort ─────────────────────────────────────────────────────────────────────
@@ -553,6 +595,6 @@ export async function smartSearchMembers(
     total,
     totalPages,
     members: paginated,
-    ...(debug ? { debugSummary } : {}),
+    ...(debug ? { debugSummary, debugCandidates } : {}),
   };
 }

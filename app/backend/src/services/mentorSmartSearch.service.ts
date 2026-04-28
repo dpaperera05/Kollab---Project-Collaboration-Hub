@@ -31,9 +31,9 @@ const COSINE_MIN = 0.35;
 const COSINE_MAX = 0.75;
 
 // ── Relevance thresholds — a mentor must pass at least one ────────────────────
-const FINAL_SCORE_THRESHOLD = 30;
-const SEMANTIC_THRESHOLD    = 40;
-const KEYWORD_THRESHOLD     = 25;
+const FINAL_SCORE_THRESHOLD = 35;
+const SEMANTIC_THRESHOLD    = 45;
+const KEYWORD_THRESHOLD     = 30;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -470,17 +470,18 @@ export async function smartSearchMentors(
 
   // ── Filter by relevance threshold ────────────────────────────────────────────
   // A mentor passes if at least one condition holds:
-  //   finalSmartScore >= 30  |  semanticScore >= 40  |  keywordScore >= 25
-  // In keyword-fallback mode, also require at least one keyword match.
-  const passing = allScored.filter(({ keywordScore, semanticScore, finalSmartScore, matchedTokens }) => {
-    const meetsThreshold =
+  //   finalSmartScore >= 35  |  semanticScore >= 45  |  keywordScore >= 30
+  // In keyword-fallback mode (no embedding), semanticScore is always 0 so only
+  // keywordScore matters — require keywordScore >= KEYWORD_THRESHOLD explicitly.
+  const passing = allScored.filter(({ keywordScore, semanticScore, finalSmartScore }) => {
+    if (mode === "keyword-fallback") {
+      return keywordScore >= KEYWORD_THRESHOLD;
+    }
+    return (
       finalSmartScore >= FINAL_SCORE_THRESHOLD ||
       semanticScore   >= SEMANTIC_THRESHOLD    ||
-      keywordScore    >= KEYWORD_THRESHOLD;
-    if (mode === "keyword-fallback") {
-      return meetsThreshold && matchedTokens.size > 0;
-    }
-    return meetsThreshold;
+      keywordScore    >= KEYWORD_THRESHOLD
+    );
   });
 
   // ── Debug summary ────────────────────────────────────────────────────────────
