@@ -1,4 +1,5 @@
 import { Bug, Layers, Clock, Zap, Trophy } from "lucide-react";
+import { Link } from "react-router-dom";
 import Container from "@/components/ui/Container";
 import SectionTitle from "@/components/ui/SectionTitle";
 
@@ -87,13 +88,13 @@ const Simulations = () => {
 
         {/* CTA */}
         <div className="mt-10 text-center">
-          <a
-            href="#"
+          <Link
+            to="/simulations"
             className="inline-flex items-center gap-2 px-8 py-3.5 text-sm font-semibold text-primary-foreground rounded-xl bg-primary shadow-brand hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_8px_30px_hsl(270_80%_60%_/_0.4)] transition-all duration-200"
           >
             <Zap size={16} />
             Try a simulation
-          </a>
+          </Link>
         </div>
       </Container>
     </section>

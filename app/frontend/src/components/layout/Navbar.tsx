@@ -13,7 +13,7 @@ const navLinks = [
   { label: "Projects", href: "/projects" },
   { label: "People", href: "/people" },
   { label: "Mentors", href: "/mentors" },
-  { label: "Job Simulations", href: "#" },
+  { label: "Job Simulations", href: "/simulations" },
   { label: "Events", href: "/events" },
   { label: "Blogs", href: "/blogs" },
   { label: "Insights", href: "/insights" },

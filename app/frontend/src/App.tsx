@@ -45,6 +45,10 @@ import InterestsStep from "./pages/onboarding/InterestsStep";
 import InsightsDashboardPage from "./pages/insights/InsightsDashboardPage";
 import JobExplorerPage from "./pages/insights/JobExplorerPage";
 import JobDetailsPage from "./pages/insights/JobDetailsPage";
+import SimulationsListPage from "./pages/simulations/SimulationsListPage";
+import SimulationDetailPage from "./pages/simulations/SimulationDetailPage";
+import SimulationPlayerPage from "./pages/simulations/SimulationPlayerPage";
+import SimulationResultPage from "./pages/simulations/SimulationResultPage";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +112,10 @@ const App = () => (
             <Route path="/insights/jobs" element={<JobExplorerPage />} />
             <Route path="/insights/jobs/:id" element={<JobDetailsPage />} />
 
+            <Route path="/simulations" element={<SimulationsListPage />} />
+            <Route path="/simulations/results/:attemptId" element={<SimulationResultPage />} />
+            <Route path="/simulations/:slug" element={<SimulationDetailPage />} />
+            <Route path="/simulations/:slug/play" element={<SimulationPlayerPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
