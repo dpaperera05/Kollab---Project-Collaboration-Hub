@@ -41,6 +41,8 @@ export interface SimulationTask {
   options?: string[];
   points: number;
   aiGraded: boolean;
+  /** Map of skill name → weight. Present on the public response when the task has skill weights. */
+  skillWeights?: Record<string, number>;
 }
 
 export interface SimulationStage {
