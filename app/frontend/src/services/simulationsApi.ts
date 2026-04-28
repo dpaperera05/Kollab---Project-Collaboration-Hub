@@ -75,6 +75,8 @@ export interface AIGradingResult {
   rubricScores: AIRubricScore[];
   totalEarned: number;
   totalMax: number;
+  /** Per-skill points earned from this task (matches backend ISkillBreakdown). */
+  skillPoints?: Record<string, number>;
   overallFeedback?: string;
   pending: boolean;
   error?: string;
@@ -85,6 +87,8 @@ export interface RuleBasedResult {
   earnedPoints: number;
   maxPoints: number;
   correct: boolean;
+  /** Per-skill points earned from this task (matches backend IRuleBasedResult). */
+  skillPoints?: Record<string, number>;
   feedback?: string;
 }
 
@@ -96,6 +100,8 @@ export interface SimulationAttempt {
   startedAt: string;
   submittedAt?: string;
   completedAt?: string;
+  /** Saved answers — needed by the player page to pre-populate resumed attempts. */
+  answers?: unknown[];
   earnedPoints: number;
   totalPoints: number;
   finalScore: number;
