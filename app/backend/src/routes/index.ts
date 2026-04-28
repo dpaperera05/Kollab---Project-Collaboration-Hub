@@ -14,6 +14,7 @@ import workspaceRoutes from "./workspace.routes";
 import activityRoutes from "./activity.routes";
 import jobMarketRoutes from "./jobMarket.routes";
 import recommendationRoutes from "./recommendation.routes";
+import simulationRoutes from "./simulation.routes";
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use("/workspace", workspaceRoutes);
 router.use("/activities", activityRoutes);
 router.use("/job-market", jobMarketRoutes);
 router.use("/recommendations", recommendationRoutes);
+router.use("/simulations", simulationRoutes);
 
 export default router;
