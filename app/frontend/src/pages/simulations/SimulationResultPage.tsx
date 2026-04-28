@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getSession } from "@/lib/authStore";
 import {
   fetchMySimulationAttempts,
+  fetchSimulation,
   type SimulationAttempt,
   type SimulationSummary,
   type SubmitSimulationResponse,
@@ -142,6 +143,16 @@ const scoreBarClass = (score: number) => {
   return "bg-rose-500";
 };
 
+/**
+ * Format a numeric point value with at most 1 decimal place.
+ * Strips a trailing ".0" so whole numbers display cleanly.
+ * Examples: 8.600000000000001 → "8.6", 10.0 → "10", 1.8000000000000003 → "1.8"
+ */
+const formatNumber = (n: number): string => {
+  const s = n.toFixed(1);
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
+};
+
 // ── Score circle ──────────────────────────────────────────────────────────────
 
 interface ScoreCircleProps {
@@ -203,13 +214,33 @@ const ScoreCircle = ({ score, passed, size = 140 }: ScoreCircleProps) => {
 
 // ── Skill bar row ─────────────────────────────────────────────────────────────
 
-const SkillRow = ({ skill }: { skill: SkillBreakdown }) => {
+const SkillRow = ({
+  skill,
+  isStrongest,
+  isWeakest,
+}: {
+  skill: SkillBreakdown;
+  isStrongest?: boolean;
+  isWeakest?: boolean;
+}) => {
   const pct = Math.round(skill.score);
   return (
     <div className="flex items-center gap-4">
-      <span className="w-44 flex-shrink-0 truncate text-sm font-medium text-foreground">
-        {skill.skill}
-      </span>
+      <div className="w-48 flex-shrink-0 flex items-center gap-1.5 min-w-0">
+        <span className="truncate text-sm font-medium text-foreground">
+          {skill.skill}
+        </span>
+        {isStrongest && (
+          <span className="flex-shrink-0 rounded-full bg-emerald-100 px-1.5 py-px text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+            Best
+          </span>
+        )}
+        {isWeakest && (
+          <span className="flex-shrink-0 rounded-full bg-rose-100 px-1.5 py-px text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+            Focus
+          </span>
+        )}
+      </div>
       <div className="relative flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
         <div
           className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ${scoreBarClass(pct)}`}
@@ -219,8 +250,8 @@ const SkillRow = ({ skill }: { skill: SkillBreakdown }) => {
       <span className={`w-10 flex-shrink-0 text-right text-xs font-bold ${scoreColor(pct)}`}>
         {pct}%
       </span>
-      <span className="w-20 flex-shrink-0 text-right text-xs text-muted-foreground">
-        {skill.earnedPoints}/{skill.totalPoints} pts
+      <span className="w-24 flex-shrink-0 text-right text-xs text-muted-foreground">
+        {formatNumber(skill.earnedPoints)}/{formatNumber(skill.totalPoints)} pts
       </span>
     </div>
   );
@@ -231,14 +262,43 @@ const SkillRow = ({ skill }: { skill: SkillBreakdown }) => {
 const RuleBasedCard = ({
   result,
   index,
+  taskTitle,
 }: {
   result: RuleBasedResult;
   index: number;
+  taskTitle?: string;
 }) => {
   const [open, setOpen] = useState(false);
   const earned = result.earnedPoints;
   const max = result.maxPoints;
   const pct = max > 0 ? Math.round((earned / max) * 100) : 0;
+
+  // Three-way status: Correct / Partial / Incorrect
+  const isCorrect = max > 0 && earned >= max;
+  const isPartial = earned > 0 && earned < max;
+
+  const statusBadge = isCorrect ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+      <CheckCircle2 size={11} />
+      Correct
+    </span>
+  ) : isPartial ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+      <Star size={11} />
+      Partial
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+      <XCircle size={11} />
+      Incorrect
+    </span>
+  );
+
+  const iconBg = isCorrect
+    ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+    : isPartial
+    ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+    : "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400";
 
   return (
     <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
@@ -248,33 +308,27 @@ const RuleBasedCard = ({
         className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-muted/40 transition-colors"
       >
         <span
-          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${
-            result.correct
-              ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-              : "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
-          }`}
+          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${iconBg}`}
         >
-          {result.correct ? (
+          {isCorrect ? (
             <CheckCircle2 size={15} />
+          ) : isPartial ? (
+            <Star size={15} />
           ) : (
             <XCircle size={15} />
           )}
         </span>
-        <span className="flex-1 text-sm font-semibold text-foreground">
-          Task {index + 1}
+        <span className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">
+          {result.taskTitle ?? taskTitle ?? `Task ${index + 1}`}
         </span>
-        <span
-          className={`text-sm font-bold ${scoreColor(pct)}`}
-        >
-          {earned}/{max} pts
+        <span className={`flex-shrink-0 text-sm font-bold ${scoreColor(pct)}`}>
+          {formatNumber(earned)}/{formatNumber(max)} pts
         </span>
-        <span className="text-xs text-muted-foreground ml-1">
-          {result.correct ? "Correct" : "Incorrect"}
-        </span>
+        <span className="flex-shrink-0 ml-1">{statusBadge}</span>
         {open ? (
-          <ChevronUp size={15} className="ml-2 flex-shrink-0 text-muted-foreground" />
+          <ChevronUp size={15} className="ml-1 flex-shrink-0 text-muted-foreground" />
         ) : (
-          <ChevronDown size={15} className="ml-2 flex-shrink-0 text-muted-foreground" />
+          <ChevronDown size={15} className="ml-1 flex-shrink-0 text-muted-foreground" />
         )}
       </button>
 
@@ -296,7 +350,7 @@ const RuleBasedCard = ({
                   key={skill}
                   className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
                 >
-                  {skill}: {pts} pts
+                  {skill}: {formatNumber(pts as number)} pts
                 </span>
               ))}
             </div>
@@ -311,28 +365,33 @@ const AIGradingCard = ({
   result,
   index,
   ruleBasedCount,
+  taskTitle,
 }: {
   result: AIGradingResult;
   index: number;
   ruleBasedCount: number;
+  taskTitle?: string;
 }) => {
   const [open, setOpen] = useState(false);
+  const displayTitle =
+    result.taskTitle ?? taskTitle ?? `Task ${ruleBasedCount + index + 1}`;
 
+  // ── Pending: AI not yet configured ─────────────────────────────────────────
   if (result.pending) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card px-5 py-4 flex items-center gap-3">
-        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-          <Bot size={14} />
+      <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-900/10 px-5 py-4 flex items-start gap-3">
+        <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+          <AlertCircle size={14} />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-foreground">
-            Task {ruleBasedCount + index + 1} — AI Graded
-          </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            AI grading not configured yet — this task has been noted for manual review.
+          <p className="text-sm font-semibold text-foreground">{displayTitle}</p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+            AI grading is not yet configured for this task. Your response has been recorded and will be reviewed.
           </p>
         </div>
-        <span className="text-xs text-muted-foreground italic">Pending</span>
+        <span className="flex-shrink-0 self-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          Pending
+        </span>
       </div>
     );
   }
@@ -341,6 +400,32 @@ const AIGradingCard = ({
   const max = result.totalMax;
   const pct = max > 0 ? Math.round((earned / max) * 100) : 0;
 
+  // ── Failed grading — neutral note, no error details ────────────────────────
+  if (result.error) {
+    return (
+      <div className="rounded-xl border border-border/70 bg-card px-5 py-4 flex items-start gap-3">
+        <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+          <Bot size={14} />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-foreground">{displayTitle}</p>
+            <span className="rounded-full border border-purple-200 bg-purple-50 px-2 py-px text-xs font-medium text-purple-600 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+              AI Graded
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            AI grading could not be completed for this response. Your answer has been recorded.
+          </p>
+        </div>
+        <span className="flex-shrink-0 self-center text-sm font-bold text-muted-foreground">
+          0/{formatNumber(max)} pts
+        </span>
+      </div>
+    );
+  }
+
+  // ── Normal graded result ───────────────────────────────────────────────────
   return (
     <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
       <button
@@ -351,14 +436,14 @@ const AIGradingCard = ({
         <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
           <Bot size={14} />
         </span>
-        <span className="flex-1 text-sm font-semibold text-foreground">
-          Task {ruleBasedCount + index + 1}
+        <span className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">
+          {displayTitle}
           <span className="ml-2 rounded-full border border-purple-200 bg-purple-50 px-2 py-px text-xs font-medium text-purple-600 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
             AI Graded
           </span>
         </span>
-        <span className={`text-sm font-bold ${scoreColor(pct)}`}>
-          {earned}/{max} pts
+        <span className={`flex-shrink-0 text-sm font-bold ${scoreColor(pct)}`}>
+          {formatNumber(earned)}/{formatNumber(max)} pts
         </span>
         {open ? (
           <ChevronUp size={15} className="ml-2 flex-shrink-0 text-muted-foreground" />
@@ -370,33 +455,59 @@ const AIGradingCard = ({
       {open && (
         <div className="border-t border-border/50 px-5 py-4 space-y-4">
           {result.overallFeedback && (
-            <p className="text-sm text-foreground/85 leading-relaxed">
-              {result.overallFeedback}
-            </p>
+            <div className="rounded-lg bg-purple-50 border border-purple-100 dark:bg-purple-900/15 dark:border-purple-800/40 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400 mb-1.5">
+                Overall Feedback
+              </p>
+              <p className="text-sm text-foreground/85 leading-relaxed">
+                {result.overallFeedback}
+              </p>
+            </div>
           )}
           {result.rubricScores && result.rubricScores.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Rubric Breakdown
               </p>
-              {result.rubricScores.map((r) => (
-                <div key={r.criterion} className="rounded-lg bg-muted/50 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground">
-                      {r.criterion}
-                    </span>
-                    <span className="text-xs font-bold text-primary">
-                      {r.earnedScore}/{r.maxScore}
-                    </span>
+              {result.rubricScores.map((r) => {
+                const rPct =
+                  r.maxScore > 0 ? (r.earnedScore / r.maxScore) * 100 : 0;
+                return (
+                  <div
+                    key={r.criterion}
+                    className="rounded-lg border border-border/50 bg-muted/30 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-xs font-semibold text-foreground leading-snug">
+                        {r.criterion}
+                      </span>
+                      <span
+                        className={`flex-shrink-0 text-xs font-bold ${scoreColor(rPct)}`}
+                      >
+                        {formatNumber(r.earnedScore)}/{formatNumber(r.maxScore)} pts
+                      </span>
+                    </div>
+                    {/* Mini progress bar */}
+                    <div className="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full ${scoreBarClass(rPct)}`}
+                        style={{ width: `${Math.min(100, rPct)}%` }}
+                      />
+                    </div>
+                    {r.feedback && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {r.feedback}
+                      </p>
+                    )}
                   </div>
-                  {r.feedback && (
-                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      {r.feedback}
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
+          )}
+          {!result.overallFeedback && result.rubricScores.length === 0 && (
+            <p className="text-sm text-muted-foreground italic">
+              No detailed feedback available for this task.
+            </p>
           )}
         </div>
       )}
@@ -452,6 +563,32 @@ const SimulationResultPage = () => {
   const [data, setData] = useState<DisplayData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Maps taskId → task title, populated by a secondary fetch of the simulation detail. */
+  const [taskTitleMap, setTaskTitleMap] = useState<Record<string, string>>({});
+
+  // Fetch simulation detail to build task title map once simInfo.slug is known
+  useEffect(() => {
+    const slug = data?.simInfo?.slug;
+    if (!slug) return;
+    let cancelled = false;
+    fetchSimulation(slug)
+      .then((detail) => {
+        if (cancelled) return;
+        const map: Record<string, string> = {};
+        detail.stages.forEach((stage) => {
+          stage.tasks.forEach((task) => {
+            map[task.id] = task.title;
+          });
+        });
+        setTaskTitleMap(map);
+      })
+      .catch(() => {
+        // Silently ignore — task title fallback ("Task N") is acceptable
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [data?.simInfo?.slug]);
 
   useEffect(() => {
     if (!attemptId) {
@@ -751,9 +888,9 @@ const SimulationResultPage = () => {
                     Points earned
                   </p>
                   <p className="text-2xl font-extrabold text-foreground">
-                    {earnedPoints}
+                    {formatNumber(earnedPoints)}
                     <span className="text-lg font-medium text-muted-foreground">
-                      /{totalPoints}
+                      /{formatNumber(totalPoints)}
                     </span>
                   </p>
                 </div>
@@ -857,8 +994,13 @@ const SimulationResultPage = () => {
         {sortedSkills.length > 0 && (
           <Section title="Skill Breakdown" icon={<Award size={17} />}>
             <div className="space-y-4">
-              {sortedSkills.map((skill) => (
-                <SkillRow key={skill.skill} skill={skill} />
+              {sortedSkills.map((skill, idx) => (
+                <SkillRow
+                  key={skill.skill}
+                  skill={skill}
+                  isStrongest={idx === 0 && sortedSkills.length > 1}
+                  isWeakest={idx === sortedSkills.length - 1 && sortedSkills.length > 1}
+                />
               ))}
             </div>
           </Section>
@@ -881,7 +1023,12 @@ const SimulationResultPage = () => {
           >
             <div className="space-y-3">
               {ruleBasedResults.map((r, i) => (
-                <RuleBasedCard key={r.taskId} result={r} index={i} />
+                <RuleBasedCard
+                  key={r.taskId}
+                  result={r}
+                  index={i}
+                  taskTitle={taskTitleMap[r.taskId]}
+                />
               ))}
               {aiGradingResults.map((r, i) => (
                 <AIGradingCard
@@ -889,6 +1036,7 @@ const SimulationResultPage = () => {
                   result={r}
                   index={i}
                   ruleBasedCount={ruleBasedResults.length}
+                  taskTitle={taskTitleMap[r.taskId]}
                 />
               ))}
             </div>

@@ -345,7 +345,6 @@ const SimulationPlayerPage = () => {
   const token = session?.token ?? null;
 
   const [simulation, setSimulation] = useState<SimulationDetail | null>(null);
-  const [attempt, setAttempt] = useState<SimulationAttempt | null>(null);
   const [flatTasks, setFlatTasks] = useState<FlatTask[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<DraftAnswers>({});
@@ -410,8 +409,6 @@ const SimulationPlayerPage = () => {
         }
 
         if (cancelled) return;
-
-        setAttempt(existingAttempt);
 
         // Seed answers: attempt answers > draft > defaults
         const draft = loadDraft(slug);

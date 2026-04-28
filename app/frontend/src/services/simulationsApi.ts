@@ -74,6 +74,8 @@ export interface AIRubricScore {
 
 export interface AIGradingResult {
   taskId: string;
+  /** Task title, if the backend populates it. */
+  taskTitle?: string;
   rubricScores: AIRubricScore[];
   totalEarned: number;
   totalMax: number;
@@ -86,6 +88,8 @@ export interface AIGradingResult {
 
 export interface RuleBasedResult {
   taskId: string;
+  /** Task title, if the backend populates it. */
+  taskTitle?: string;
   earnedPoints: number;
   maxPoints: number;
   correct: boolean;
