@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed:events": "ts-node src/seed/events.seed.ts",
-    "seed:recommendation-projects": "ts-node src/seed/seedRecommendationProjects.ts"
+    "seed:recommendation-projects": "ts-node src/seed/seedRecommendationProjects.ts",
+    "seed:simulations": "ts-node src/seed/simulations.seed.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
