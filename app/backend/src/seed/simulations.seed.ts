@@ -302,6 +302,307 @@ const simulations = [
       },
     ],
   },
+
+  // ── UI/UX Designer — Checkout Usability Review ────────────────────────────
+  {
+    title: "Checkout Usability Review",
+    slug: "ui-ux-designer-checkout-usability-review",
+    roleCategory: "UI/UX Designer",
+    difficulty: "Beginner",
+    estimatedMinutes: 20,
+    xp: 100,
+    passMark: 70,
+    status: "active",
+    isPublished: true,
+    overview:
+      "Step into the role of a junior UI/UX designer reviewing a checkout flow with a high abandonment rate. " +
+      "Analytics show users are dropping off at the delivery and payment steps. " +
+      "You will review the user journey, identify the key usability and accessibility issues, " +
+      "prioritise improvements, and communicate your recommendation to the product team.",
+    workplaceBrief:
+      "You work at Cartly, the same e-commerce startup as your engineering colleagues. " +
+      "The product team has flagged that checkout abandonment spiked to 68% last month — " +
+      "significantly above the industry average. Data shows most drop-offs happen on the " +
+      "delivery and payment steps. Your design lead has asked you to review the checkout flow, " +
+      "identify the main usability and accessibility problems, and present a clear recommendation " +
+      "before the next sprint planning session.",
+    skillsAssessed: [
+      "Usability Analysis",
+      "Accessibility",
+      "User Journey Mapping",
+      "Design Reasoning",
+      "Communication",
+    ],
+    tags: ["UX", "Usability", "Accessibility", "Checkout", "Design Review"],
+    stages: [
+      // ── Stage 1: Usability Brief ───────────────────────────────────────
+      {
+        id: "ux_checkout_s1",
+        title: "Usability Brief",
+        narrative:
+          "The product team has shared checkout funnel data showing a sharp drop-off at the " +
+          "delivery address and payment steps. Before making any design changes, you need to " +
+          "establish a clear review approach. Good UX work starts with understanding the problem, " +
+          "not with immediately applying solutions.",
+        order: 1,
+        tasks: [
+          {
+            id: "ux_checkout_t1",
+            type: "scenario_mcq",
+            title: "First Review Step",
+            prompt:
+              "Checkout abandonment has risen sharply. The product manager has asked you to " +
+              "review the flow and suggest improvements. What is the best first step?",
+            options: [
+              "Redesign the entire website immediately",
+              "Review the user journey, analytics, and checkout pain points before proposing changes",
+              "Change only the button colour",
+              "Remove the delivery step entirely",
+            ],
+            correctAnswer:
+              "Review the user journey, analytics, and checkout pain points before proposing changes",
+            points: 10,
+            skillWeights: {
+              "Usability Analysis": 0.5,
+              "User Journey Mapping": 0.3,
+              "Design Reasoning": 0.2,
+            },
+            explanation:
+              "A designer should always understand where and why users are dropping off before " +
+              "proposing changes. Jumping straight to redesigns or cosmetic fixes without evidence " +
+              "risks solving the wrong problem and wasting sprint capacity.",
+            aiGraded: false,
+          },
+        ],
+      },
+
+      // ── Stage 2: Evidence Review ───────────────────────────────────────
+      {
+        id: "ux_checkout_s2",
+        title: "Evidence Review",
+        narrative:
+          "You have access to several data sources. Choosing the right evidence is critical: " +
+          "collecting irrelevant data wastes time, while missing key signals leads to incomplete " +
+          "analysis. Select everything that will meaningfully inform your checkout review.",
+        order: 2,
+        tasks: [
+          {
+            id: "ux_checkout_t2",
+            type: "multi_select",
+            title: "Useful UX Evidence",
+            prompt:
+              "Which of the following would be most useful evidence when reviewing the " +
+              "checkout abandonment issue? Select all that apply.",
+            options: [
+              "Checkout funnel analytics showing where users drop off",
+              "User session recordings of checkout attempts",
+              "Error messages shown to users during checkout",
+              "Mobile checkout screenshots across device sizes",
+              "Server CPU temperature logs",
+              "Admin panel password policy document",
+              "Blog article word-count report",
+            ],
+            correctAnswers: [
+              "Checkout funnel analytics showing where users drop off",
+              "User session recordings of checkout attempts",
+              "Error messages shown to users during checkout",
+              "Mobile checkout screenshots across device sizes",
+            ],
+            points: 15,
+            skillWeights: {
+              "Usability Analysis": 0.4,
+              "User Journey Mapping": 0.3,
+              "Accessibility": 0.2,
+              "Design Reasoning": 0.1,
+            },
+            explanation:
+              "Funnel analytics reveal the exact drop-off steps; session recordings show real user " +
+              "behaviour; error messages highlight friction points; mobile screenshots expose " +
+              "responsive issues. Server metrics and content administration settings are irrelevant " +
+              "to a UX review of the checkout flow.",
+            aiGraded: false,
+          },
+        ],
+      },
+
+      // ── Stage 3: Interface Review ──────────────────────────────────────
+      {
+        id: "ux_checkout_s3",
+        title: "Interface Review",
+        narrative:
+          "You have reviewed the session recordings and analytics. Now you turn to the interface " +
+          "itself. The checkout screen has been flagged in the recordings — users hesitate, scroll " +
+          "back, and abandon at the payment step. Review the interface description below and " +
+          "identify the core usability issue.",
+        order: 3,
+        tasks: [
+          {
+            id: "ux_checkout_t3",
+            type: "ui_review",
+            title: "Identify the UX Issue",
+            context:
+              "Current checkout screen observations (from session review and accessibility audit):\n" +
+              "- Error messages are small (11px), light grey on white background — contrast ratio ~2.1:1 (WCAG AA requires 4.5:1)\n" +
+              "- The delivery cost is not shown until after the user completes the address form\n" +
+              "- The 'Continue to Payment' button is visually disabled with no tooltip or explanation\n" +
+              "- No inline field validation — users only see errors after attempting to submit\n" +
+              "- Mobile viewport: the payment button is partially hidden below the fold on small screens\n",
+            prompt:
+              "Based on the checkout screen observations above, what is the strongest usability issue " +
+              "causing users to abandon at the payment step?",
+            options: [
+              "The page lacks clear feedback and guidance when users cannot proceed, leaving them confused about why checkout is blocked",
+              "The MongoDB collection name used by the checkout API is too long",
+              "The API route should use a different port number",
+              "The homepage hero image file size is too large",
+            ],
+            correctAnswer:
+              "The page lacks clear feedback and guidance when users cannot proceed, leaving them confused about why checkout is blocked",
+            points: 20,
+            skillWeights: {
+              "Usability Analysis": 0.4,
+              "Accessibility": 0.3,
+              "Design Reasoning": 0.3,
+            },
+            explanation:
+              "The most impactful issue is the combination of invisible errors, a disabled button with no explanation, " +
+              "and no inline validation. Users who cannot see why they are blocked will abandon rather than " +
+              "troubleshoot. Fixing feedback clarity directly addresses the observed drop-off pattern.",
+            aiGraded: false,
+          },
+          {
+            id: "ux_checkout_t4",
+            type: "ordering",
+            title: "UX Improvement Order",
+            prompt:
+              "You are ready to act on your findings. Arrange the following UX review and improvement " +
+              "actions in the most effective order from first to last.",
+            options: [
+              "Review analytics and identify the highest-abandonment step in the checkout funnel",
+              "Inspect the checkout screen for usability and accessibility issues",
+              "Prioritise issues based on impact on task completion",
+              "Propose design improvements with clear rationale for each change",
+              "Validate the revised flow with users or usability checks",
+            ],
+            correctOrder: [
+              "Review analytics and identify the highest-abandonment step in the checkout funnel",
+              "Inspect the checkout screen for usability and accessibility issues",
+              "Prioritise issues based on impact on task completion",
+              "Propose design improvements with clear rationale for each change",
+              "Validate the revised flow with users or usability checks",
+            ],
+            points: 15,
+            skillWeights: {
+              "User Journey Mapping": 0.3,
+              "Usability Analysis": 0.3,
+              "Design Reasoning": 0.2,
+              "Communication": 0.2,
+            },
+            explanation:
+              "Effective UX improvement follows an evidence-first sequence: understand the data, " +
+              "audit the interface, prioritise by impact, propose changes with rationale, then " +
+              "validate. Skipping evidence gathering or validation risks building the wrong solution " +
+              "or missing new issues introduced by the changes.",
+            aiGraded: false,
+          },
+        ],
+      },
+
+      // ── Stage 4: Design Recommendation ────────────────────────────────
+      {
+        id: "ux_checkout_s4",
+        title: "Design Recommendation",
+        narrative:
+          "You have reviewed the evidence, identified the core issues, and mapped out an improvement " +
+          "plan. The product manager is ready for your recommendation. Write a concise, actionable " +
+          "summary that the team can take directly into sprint planning.",
+        order: 4,
+        tasks: [
+          {
+            id: "ux_checkout_t5",
+            type: "written_response",
+            title: "UX Recommendation",
+            prompt:
+              "Write a short recommendation (3–5 sentences) to the product team explaining: " +
+              "(1) the main checkout usability issue you identified, " +
+              "(2) your proposed improvement, and " +
+              "(3) how you would validate the change before releasing it.",
+            points: 10,
+            aiGraded: true,
+            modelAnswer:
+              "The primary usability issue is that users receive no clear guidance when checkout is " +
+              "blocked — the Continue button is disabled without explanation, error messages fail " +
+              "WCAG contrast requirements, and delivery costs are hidden until the address form is " +
+              "completed. I recommend three targeted improvements: replacing the disabled button with " +
+              "an enabled button that surfaces inline validation errors on tap; increasing error " +
+              "message contrast to meet WCAG AA (minimum 4.5:1); and displaying an estimated " +
+              "delivery cost range earlier in the flow so users are not surprised at the payment " +
+              "step. To validate the changes, I would run a moderated usability test with 5 " +
+              "participants on the revised prototype, then monitor checkout funnel completion rates " +
+              "for two weeks after the release.",
+            skillWeights: {
+              "Communication": 0.4,
+              "Usability Analysis": 0.3,
+              "Design Reasoning": 0.2,
+              "Accessibility": 0.1,
+            },
+            rubric: [
+              {
+                criterion: "Problem Understanding",
+                maxScore: 2,
+                description:
+                  "Candidate clearly identifies the core usability issue: lack of clear feedback " +
+                  "and guidance during checkout (disabled button without explanation, low-contrast " +
+                  "errors, hidden delivery cost). Vague or surface-level descriptions score lower.",
+                skillWeights: {
+                  "Usability Analysis": 0.6,
+                  "Design Reasoning": 0.4,
+                },
+              },
+              {
+                criterion: "Recommended UX Improvement",
+                maxScore: 3,
+                description:
+                  "Candidate proposes at least one concrete, actionable improvement that directly " +
+                  "addresses the identified issue — such as inline validation, accessible error " +
+                  "contrast, button state guidance, or earlier cost disclosure. Higher scores for " +
+                  "multiple specific improvements with clear reasoning.",
+                skillWeights: {
+                  "Design Reasoning": 0.5,
+                  "Usability Analysis": 0.3,
+                  "Accessibility": 0.2,
+                },
+              },
+              {
+                criterion: "Validation Approach",
+                maxScore: 3,
+                description:
+                  "Candidate explains how they would verify the improvement is effective: usability " +
+                  "testing, prototype review, A/B testing, funnel metric comparison, or WCAG audit. " +
+                  "Higher scores for specific, realistic methods over generic statements.",
+                skillWeights: {
+                  "Usability Analysis": 0.5,
+                  "User Journey Mapping": 0.3,
+                  "Design Reasoning": 0.2,
+                },
+              },
+              {
+                criterion: "Communication Clarity",
+                maxScore: 2,
+                description:
+                  "Recommendation is concise, non-technical enough for a product manager, " +
+                  "structured logically (problem → improvement → validation), and free from " +
+                  "jargon that would obscure the message.",
+                skillWeights: {
+                  "Communication": 1.0,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // ── Seed runner ───────────────────────────────────────────────────────────────
@@ -318,7 +619,7 @@ const seed = async () => {
       const result = await Simulation.findOneAndUpdate(
         { slug: data.slug },
         { $set: data },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
       );
 
       const action = result.isNew !== undefined ? "Inserted" : "Updated";
