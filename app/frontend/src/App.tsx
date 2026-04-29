@@ -42,6 +42,10 @@ import LinksStep from "./pages/onboarding/LinksStep";
 import AvailabilityStep from "./pages/onboarding/AvailabilityStep";
 import InterestsStep from "./pages/onboarding/InterestsStep";
 
+import InsightsDashboardPage from "./pages/insights/InsightsDashboardPage";
+import JobExplorerPage from "./pages/insights/JobExplorerPage";
+import JobDetailsPage from "./pages/insights/JobDetailsPage";
+
 const queryClient = new QueryClient();
 
 const ScrollToTop = () => {
@@ -99,6 +103,10 @@ const App = () => (
             <Route path="/onboarding/links" element={<LinksStep />} />
             <Route path="/onboarding/availability" element={<AvailabilityStep />} />
             <Route path="/onboarding/interests" element={<InterestsStep />} />
+
+            <Route path="/insights" element={<InsightsDashboardPage />} />
+            <Route path="/insights/jobs" element={<JobExplorerPage />} />
+            <Route path="/insights/jobs/:id" element={<JobDetailsPage />} />
 
 
             <Route path="*" element={<NotFound />} />
