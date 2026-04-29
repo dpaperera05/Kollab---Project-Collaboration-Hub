@@ -11,8 +11,8 @@ import { getSession, logout, type KollabUser } from "@/lib/authStore";
 
 const navLinks = [
   { label: "Projects", href: "/projects" },
-  { label: "People", href: "/people" },
   { label: "Mentors", href: "/mentors" },
+  { label: "Members", href: "/people" },
   { label: "Job Simulations", href: "/simulations" },
   { label: "Job Market", href: "/insights" },
   { label: "Events", href: "/events" },
