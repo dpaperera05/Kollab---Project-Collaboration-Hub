@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { getMockReply, getContextualGreeting } from "@/components/chatbot/mockReplies";
+import { getContextualGreeting } from "@/components/chatbot/mockReplies";
+import { chatWithAssistant } from "@/services/aiAssistantApi";
 
 export interface ChatMessage {
   id: string;
@@ -53,7 +54,7 @@ export const useChatbot = () => {
   }, [getWelcome]);
 
   const sendMessage = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || isTyping) return;
 
@@ -67,15 +68,32 @@ export const useChatbot = () => {
       setMessages((prev) => [...prev, userMsg]);
       setIsTyping(true);
 
-      const delay = 600 + Math.random() * 400;
+      // Build history: skip the very first assistant greeting, add new user message,
+      // then trim to the latest 10 to stay within the backend limit.
+      const historyMessages = [...messages, userMsg]
+        .filter((m, i) => !(i === 0 && m.role === "assistant"))
+        .slice(-10)
+        .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
-      setTimeout(() => {
-        const reply = getMockReply(trimmed);
+      try {
+        const reply = await chatWithAssistant(historyMessages);
         setMessages((prev) => [...prev, makeAssistantMessage(reply)]);
+      } catch (err) {
+        console.error(
+          "[useChatbot] AI request failed:",
+          err instanceof Error ? err.message : "unknown error"
+        );
+        setMessages((prev) => [
+          ...prev,
+          makeAssistantMessage(
+            "Sorry, I could not reach the AI assistant right now. Please try again in a moment."
+          ),
+        ]);
+      } finally {
         setIsTyping(false);
-      }, delay);
+      }
     },
-    [isTyping]
+    [isTyping, messages]
   );
 
   return {

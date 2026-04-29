@@ -4,11 +4,11 @@ export type QuickAction = {
 };
 
 export const QUICK_ACTIONS: QuickAction[] = [
-  { label: "🔍 Recommend projects", message: "Recommend projects for me" },
-  { label: "🎛️ Help with filters", message: "Help me choose filters" },
-  { label: "📁 Evidence portfolio", message: "Explain evidence-based portfolio" },
-  { label: "🌱 Beginner projects", message: "Find beginner-friendly projects" },
-  { label: "🧪 Job simulations", message: "How do job simulations work?" },
+  { label: "What is Kollab?", message: "What is Kollab?" },
+  { label: "Find projects", message: "How do I find projects?" },
+  { label: "Improve my portfolio", message: "How can I improve my portfolio?" },
+  { label: "Job simulations", message: "Explain job simulations" },
+  { label: "Job insights", message: "What are job market insights?" },
 ];
 
 interface MockReply {
@@ -109,29 +109,73 @@ export const getMockReply = (userMessage: string): string => {
 
 export const getContextualGreeting = (pathname: string): string => {
   if (pathname.startsWith("/projects/") && pathname !== "/projects/") {
-    return "Hey! 👀 Looks like you're viewing a project. I can help you decide if it's a good fit, explain the roles, or suggest similar projects. What would you like to know?";
+    return "Hey! Looks like you're viewing a project. I can help you decide if it's a good fit, explain the roles, or suggest similar ones. What would you like to know?";
   }
   if (pathname === "/projects") {
-    return "Welcome to the Projects page! 🗂️ I can help you find the right project using filters, suggest projects by skill level, or explain how the application process works. What are you looking for?";
+    return "Welcome to Projects. I can help you find the right project, explain filters, or walk you through the application process. What are you looking for?";
   }
-  return "Hi! I'm **Kollab Assistant**. I can help you find projects, recommend filters, and answer questions about Kollab. What would you like to explore?";
+  if (pathname.startsWith("/portfolio") || pathname.startsWith("/profile")) {
+    return "Hi! I can help you strengthen your portfolio, add skill evidence, or improve your career readiness score. What would you like to work on?";
+  }
+  if (pathname.startsWith("/mentors")) {
+    return "Hi! I can help you find the right mentor, prepare for a session, or understand how mentorship works on Kollab. What do you need?";
+  }
+  if (pathname.startsWith("/simulations")) {
+    return "Hi! I can explain how job simulations work, help you understand your feedback, or guide you on turning results into portfolio evidence. What would you like to know?";
+  }
+  if (pathname.startsWith("/insights")) {
+    return "Hi! I can explain the job market data on this page, highlight trending skills, or help you apply these insights to your career plan. What are you curious about?";
+  }
+  return "Hi! I'm **Kollab Assistant**. I can help you find projects, build your portfolio, explore job simulations, connect with mentors, and more. What would you like to explore?";
 };
 
 export const getContextualQuickActions = (pathname: string): QuickAction[] => {
   if (pathname.startsWith("/projects/") && pathname !== "/projects/") {
     return [
-      { label: "📋 Explain this project", message: "Tell me about this project" },
-      { label: "🤝 How to apply", message: "How do I apply to a project?" },
-      { label: "🔗 Similar projects", message: "Recommend projects for me" },
-      { label: "💬 Message owner", message: "How do I contact the project owner?" },
+      { label: "Recommend projects", message: "Recommend projects for me" },
+      { label: "Help with filters", message: "Help me choose filters" },
+      { label: "How to apply", message: "How do I apply to a project?" },
+      { label: "Find teammates", message: "How do I find teammates on Kollab?" },
     ];
   }
   if (pathname === "/projects") {
     return [
-      { label: "🎛️ Help with filters", message: "Help me choose filters" },
-      { label: "🌱 Beginner projects", message: "Find beginner-friendly projects" },
-      { label: "💰 Paid projects", message: "Show me paid projects" },
-      { label: "🤖 AI & ML projects", message: "Show me AI and ML projects" },
+      { label: "Recommend projects", message: "Recommend projects for me" },
+      { label: "Help with filters", message: "Help me choose filters" },
+      { label: "How to apply", message: "How do I apply to a project?" },
+      { label: "Find teammates", message: "How do I find teammates on Kollab?" },
+    ];
+  }
+  if (pathname.startsWith("/portfolio") || pathname.startsWith("/profile")) {
+    return [
+      { label: "Improve my portfolio", message: "How can I improve my portfolio?" },
+      { label: "Add skill evidence", message: "How do I add skill evidence to my portfolio?" },
+      { label: "Readiness score tips", message: "How do I improve my readiness score?" },
+      { label: "Export resume", message: "Can I export my portfolio as a resume?" },
+    ];
+  }
+  if (pathname.startsWith("/mentors")) {
+    return [
+      { label: "Find a mentor", message: "How do I find the right mentor?" },
+      { label: "Book mentorship", message: "How do I book a mentor session?" },
+      { label: "Prepare for session", message: "How should I prepare for a mentor session?" },
+      { label: "Mentor sign-offs", message: "What are mentor sign-offs?" },
+    ];
+  }
+  if (pathname.startsWith("/simulations")) {
+    return [
+      { label: "How simulations work", message: "How do job simulations work?" },
+      { label: "Improve my score", message: "How can I improve my simulation score?" },
+      { label: "Explain feedback", message: "How do I read my simulation feedback?" },
+      { label: "Portfolio evidence", message: "How do I add simulation results to my portfolio?" },
+    ];
+  }
+  if (pathname.startsWith("/insights")) {
+    return [
+      { label: "Explain job insights", message: "What are job market insights?" },
+      { label: "Trending skills", message: "What skills are trending right now?" },
+      { label: "Role categories", message: "What role categories are available in job insights?" },
+      { label: "Use this data", message: "How do I use job market data to plan my career?" },
     ];
   }
   return QUICK_ACTIONS;
