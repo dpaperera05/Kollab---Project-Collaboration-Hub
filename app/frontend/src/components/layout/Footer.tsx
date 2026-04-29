@@ -42,14 +42,14 @@ const FooterLinkGroup = ({
 
 
 }: {title: string;links: {label: string;href: string;}[];}) =>
-<div className="space-y-4">
-    <h3 className="text-sm font-bold text-foreground tracking-wide">{title}</h3>
-    <ul className="space-y-2.5">
+<div className="space-y-2">
+    <h3 className="text-sm font-bold text-black dark:text-white tracking-wide">{title}</h3>
+    <ul className="space-y-1.5">
       {links.map(({ label, href }) =>
     <li key={label}>
           <Link
         to={href}
-        className="text-sm text-muted-foreground hover:text-primary transition-colors duration-150">
+        className="text-sm text-black/70 hover:text-black dark:text-white/70 dark:hover:text-white transition-colors duration-150">
 
             {label}
           </Link>
@@ -72,16 +72,16 @@ const Footer = () => {
   };
 
   return (
-    <footer className="border-t border-border bg-muted/20">
+    <footer className="border-t border-border bg-[#FBFAFF] dark:bg-black">
       <Container>
         {/* Main grid */}
-        <div className="py-14 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1.5fr] lg:gap-8">
+        <div className="py-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1.5fr] lg:gap-5">
 
           {/* Col 1 — Brand */}
-          <div className="space-y-5 sm:col-span-2 lg:col-span-1">
-            <KollabLogo size={32} textSize="text-xl" />
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-              Kollab is a collaboration platform where students discover projects, find teammates, learn with mentors, and build proof of skills.
+          <div className="space-y-3 sm:col-span-2 lg:col-span-1">
+            <KollabLogo size={34} textSize="text-3xl" />
+            <p className="text-sm text-black/70 dark:text-white/70 leading-relaxed max-w-xs">
+              Kollab is a collaboration platform where users discover projects, find teammates, learn with mentors, and build proof of skills.
             </p>
             
 
@@ -110,9 +110,9 @@ const Footer = () => {
           <FooterLinkGroup title="Help & Support" links={helpLinks} />
 
           {/* Col 5 — Stay in the loop */}
-          <div className="space-y-5">
-            <h3 className="text-sm font-bold text-foreground tracking-wide">Stay in the Loop</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-black dark:text-white tracking-wide">Stay in the Loop</h3>
+            <p className="text-sm text-black/70 dark:text-white/70 leading-relaxed">
               Get updates on new projects, features, and opportunities.
             </p>
             <form onSubmit={handleSubscribe} className="space-y-2">
@@ -146,7 +146,7 @@ const Footer = () => {
                 key={label}
                 href={href}
                 aria-label={label}
-                className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors duration-150">
+                className="p-2 rounded-lg text-black/70 hover:text-black hover:bg-black/10 dark:text-white/70 dark:hover:text-white dark:hover:bg-white/10 transition-colors duration-150">
 
                   <Icon size={16} />
                 </a>
@@ -156,13 +156,13 @@ const Footer = () => {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-border py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="border-t border-black/15 dark:border-white/15 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-black/60 dark:text-white/60">
           <span>© 2026 Kollab. All rights reserved.</span>
           <div className="flex items-center gap-5">
-            <Link to="#" className="hover:text-primary transition-colors duration-150">
+            <Link to="#" className="hover:text-black dark:hover:text-white transition-colors duration-150">
               Privacy Policy
             </Link>
-            <Link to="#" className="hover:text-primary transition-colors duration-150">
+            <Link to="#" className="hover:text-black dark:hover:text-white transition-colors duration-150">
               Terms of Service
             </Link>
           </div>
