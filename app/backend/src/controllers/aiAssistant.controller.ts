@@ -1,14 +1,75 @@
 import { Response } from "express";
 import type { AuthRequest } from "../middleware/auth.middleware";
-import { getAssistantReply } from "../services/aiAssistant.service";
-import type { AssistantMessage } from "../services/aiAssistant.service";
+import {
+  getAssistantReply,
+  fetchTopProjectsForUser,
+} from "../services/aiAssistant.service";
+import type { AssistantMessage, ProjectSummary } from "../services/aiAssistant.service";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const MAX_HISTORY_MESSAGES = 10;
 const MAX_MESSAGE_CONTENT_LENGTH = 2000;
 const VALID_ROLES = new Set(["user", "assistant"]);
+// ── Intent detection & context building ──────────────────────────────────────
 
+const RECOMMENDATION_PATTERNS = [
+  /recommend.*project/i,
+  /suggest.*project/i,
+  /suitable.*project/i,
+  /project.*to.*(join|work)/i,
+  /find me a project/i,
+  /which project/i,
+  /best project/i,
+  /projects? for me/i,
+];
+
+const isRecommendationIntent = (text: string): boolean =>
+  RECOMMENDATION_PATTERNS.some((re) => re.test(text));
+
+const buildProjectContext = (projects: ProjectSummary[]): string => {
+  const header =
+    `PROJECT_RECOMMENDATION_CONTEXT:\n` +
+    `The logged-in user asked for project recommendations. Use only these real projects from the database:\n\n`;
+
+  if (projects.length === 0) {
+    return (
+      header +
+      `(No open projects with a positive match score are available right now.)\n\n` +
+      `Instruction:\n` +
+      `Tell the user there are no strong matches at the moment. ` +
+      `Suggest they complete or update their profile with more skills and interests, ` +
+      `or browse all open projects directly on the Projects page.`
+    );
+  }
+
+  const list = projects
+    .map((p, i) => {
+      const roles =
+        p.openRoles.map((r) => `${r.title} (${r.level})`).join(", ") || "N/A";
+      const tech = p.technologies.join(", ") || "N/A";
+      const skills = p.matchedSkills.join(", ") || "None";
+      const reasons = p.recommendationReasons.join("; ") || "General match";
+      return (
+        `${i + 1}. ${p.title}\n` +
+        `   Match: ${p.matchPercentage}%\n` +
+        `   Domain: ${p.domain}\n` +
+        `   Difficulty: ${p.difficulty}\n` +
+        `   Technologies: ${tech}\n` +
+        `   Open roles: ${roles}\n` +
+        `   Matched skills: ${skills}\n` +
+        `   Reasons: ${reasons}`
+      );
+    })
+    .join("\n\n");
+
+  return (
+    header +
+    list +
+    `\n\nInstruction:\n` +
+    `Recommend the strongest 1–3 options. Do not invent project names. Use only the projects listed above.`
+  );
+};
 // ── Controller ────────────────────────────────────────────────────────────────
 
 export const chatWithAssistant = async (
@@ -73,8 +134,18 @@ export const chatWithAssistant = async (
       content: msg.content.trim(),
     }));
 
+  // Detect project recommendation intent on the latest user message
+  const lastUserMessage =
+    trimmedMessages.filter((m) => m.role === "user").at(-1)?.content ?? "";
+
+  let context: string | undefined;
+  if (isRecommendationIntent(lastUserMessage) && req.userId) {
+    const projects = await fetchTopProjectsForUser(req.userId, 4);
+    context = buildProjectContext(projects);
+  }
+
   try {
-    const { reply } = await getAssistantReply(trimmedMessages);
+    const { reply } = await getAssistantReply(trimmedMessages, context);
     res.json({ success: true, data: { reply } });
   } catch (err) {
     console.error(
