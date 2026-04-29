@@ -79,16 +79,16 @@ export const useChatbot = () => {
         const reply = await chatWithAssistant(historyMessages);
         setMessages((prev) => [...prev, makeAssistantMessage(reply)]);
       } catch (err) {
-        const status = (err as { status?: number }).status;
-        const fallback =
-          status === 401
-            ? "Please log in to use the Kollab AI Assistant. Once you are logged in, I can help you with projects, portfolios, mentorship, job simulations, and job market insights."
-            : "Sorry, I could not reach the AI assistant right now. Please try again in a moment.";
         console.error(
           "[useChatbot] AI request failed:",
           err instanceof Error ? err.message : "unknown error"
         );
-        setMessages((prev) => [...prev, makeAssistantMessage(fallback)]);
+        setMessages((prev) => [
+          ...prev,
+          makeAssistantMessage(
+            "Sorry, I could not reach the AI assistant right now. Please try again in a moment."
+          ),
+        ]);
       } finally {
         setIsTyping(false);
       }
