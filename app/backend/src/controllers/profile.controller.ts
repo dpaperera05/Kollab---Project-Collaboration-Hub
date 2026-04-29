@@ -11,6 +11,10 @@ import { VerificationToken } from "../models/verificationToken.model";
 import { toUserResponse } from "../utils/userResponse";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { recordActivity } from "../services/activity.service";
+import {
+  shouldRegenerateUserRecommendationEmbedding,
+  triggerUserRecommendationEmbedding,
+} from "../services/embeddingFreshness.service";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -224,6 +228,15 @@ export const updateProfile = async (req: Request, res: Response) => {
     ? (user.profile as any).toObject()
     : { ...(user.profile || {}) };
 
+  // Snapshot recommendation-relevant fields before mutation
+  const beforeEmbedSnapshot = {
+    skills: profile.skills,
+    preferredRoles: profile.preferredRoles,
+    domainInterests: profile.domainInterests,
+    techStack: profile.techStack,
+    expertiseSkills: profile.expertiseSkills,
+  };
+
   const cleanedProfile = {
     ...profile,
     name: typeof name === "string" ? name.trim() : profile.name,
@@ -269,6 +282,17 @@ export const updateProfile = async (req: Request, res: Response) => {
     type: "profile_updated",
     description: "Updated profile",
   });
+  // Regenerate user recommendation embedding if relevant profile fields changed
+  const afterEmbedSnapshot = {
+    skills: cleanedProfile.skills,
+    preferredRoles: cleanedProfile.preferredRoles,
+    domainInterests: cleanedProfile.domainInterests,
+    techStack: cleanedProfile.techStack,
+    expertiseSkills: cleanedProfile.expertiseSkills,
+  };
+  if (shouldRegenerateUserRecommendationEmbedding(beforeEmbedSnapshot, afterEmbedSnapshot)) {
+    triggerUserRecommendationEmbedding(userId, "profile_updated");
+  }
   return res.json({ success: true, data: { user: toUserResponse(user) } });
 };
 

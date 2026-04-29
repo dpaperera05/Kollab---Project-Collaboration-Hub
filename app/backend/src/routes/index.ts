@@ -13,6 +13,7 @@ import newsletterRoutes from "./newsletter.routes";
 import workspaceRoutes from "./workspace.routes";
 import activityRoutes from "./activity.routes";
 import jobMarketRoutes from "./jobMarket.routes";
+import recommendationRoutes from "./recommendation.routes";
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use("/chats", chatRoutes);
 router.use("/workspace", workspaceRoutes);
 router.use("/activities", activityRoutes);
 router.use("/job-market", jobMarketRoutes);
+router.use("/recommendations", recommendationRoutes);
 
 export default router;

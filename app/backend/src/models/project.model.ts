@@ -52,6 +52,13 @@ export interface IProject extends Document {
   members: { userId: string; role: string; status: ProjectStatus }[];
   createdAt: Date;
   updatedAt: Date;
+  // ── Embedding fields (technical backend only — never exposed in public API) ──
+  // If the embedding model changes, all stored embeddings must be regenerated
+  // because vector dimensions and semantic space will differ between models.
+  recommendationEmbedding?: number[];
+  recommendationEmbeddingText?: string;
+  recommendationEmbeddingModel?: string;
+  recommendationEmbeddingUpdatedAt?: Date;
 }
 
 const roleSchema = new Schema<IProjectRole>(
@@ -116,6 +123,14 @@ const projectSchema = new Schema<IProject>(
         status: { type: String, enum: ["Open", "Ongoing", "Filled", "Finished"] },
       },
     ],
+    // ── Embedding fields ────────────────────────────────────────────────────
+    // Never returned in public API responses — excluded in controllers via select().
+    // If the embedding model changes, all stored embeddings must be regenerated
+    // because vector dimensions and semantic space will differ between models.
+    recommendationEmbedding: { type: [Number], select: false },
+    recommendationEmbeddingText: { type: String, trim: true, select: false },
+    recommendationEmbeddingModel: { type: String, trim: true, select: false },
+    recommendationEmbeddingUpdatedAt: { type: Date, select: false },
   },
   { timestamps: true }
 );

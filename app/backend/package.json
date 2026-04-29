@@ -6,7 +6,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "seed:events": "ts-node src/seed/events.seed.ts"
+    "seed:events": "ts-node src/seed/events.seed.ts",
+    "seed:recommendation-projects": "ts-node src/seed/seedRecommendationProjects.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
