@@ -7,24 +7,26 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed:events": "ts-node src/seed/events.seed.ts",
-    "seed:recommendation-projects": "ts-node src/seed/seedRecommendationProjects.ts"
+    "seed:recommendation-projects": "ts-node src/seed/seedRecommendationProjects.ts",
+    "seed:simulations": "ts-node src/seed/simulations.seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.744.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "@aws-sdk/client-s3": "^3.744.0",
     "form-data": "^4.0.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.1",
-    "nodemailer": "^8.0.3"
+    "nodemailer": "^8.0.3",
+    "openai": "^6.34.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
-    "@types/form-data": "^2.5.0",
     "@types/express": "^5.0.6",
+    "@types/form-data": "^2.5.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
     "@types/nodemailer": "^7.0.11",
