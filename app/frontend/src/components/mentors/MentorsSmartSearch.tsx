@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 interface MentorsSmartSearchProps {
   value: string;
   onChange: (val: string) => void;
+  onSearch: (val: string) => void;
 }
 
 const suggestions = [
@@ -14,8 +15,20 @@ const suggestions = [
   "DevOps mentor for cloud architecture",
 ];
 
-const MentorsSmartSearch = ({ value, onChange }: MentorsSmartSearchProps) => {
+const MentorsSmartSearch = ({ value, onChange, onSearch }: MentorsSmartSearchProps) => {
   const [focused, setFocused] = useState(false);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onSearch(value);
+    }
+  };
+
+  const handleClear = () => {
+    onChange("");
+    onSearch("");
+  };
 
   return (
     <div className="relative w-full">
@@ -35,6 +48,7 @@ const MentorsSmartSearch = ({ value, onChange }: MentorsSmartSearchProps) => {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Try: 'React mentor for portfolio projects'"
@@ -43,14 +57,19 @@ const MentorsSmartSearch = ({ value, onChange }: MentorsSmartSearchProps) => {
 
         {value && (
           <button
-            onClick={() => onChange("")}
+            type="button"
+            onClick={handleClear}
             className="flex-shrink-0 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           >
             <X size={14} />
           </button>
         )}
 
-        <button className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
+        <button
+          type="button"
+          onClick={() => onSearch(value)}
+          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+        >
           <Search size={13} />
           Search
         </button>
@@ -64,7 +83,8 @@ const MentorsSmartSearch = ({ value, onChange }: MentorsSmartSearchProps) => {
           {suggestions.map((s) => (
             <button
               key={s}
-              onMouseDown={() => onChange(s)}
+              type="button"
+              onMouseDown={() => { onChange(s); onSearch(s); }}
               className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left text-foreground hover:bg-accent transition-colors"
             >
               <Sparkles size={13} className="text-primary flex-shrink-0" />

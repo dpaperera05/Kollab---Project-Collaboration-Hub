@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 interface PeopleSmartSearchProps {
   value: string;
   onChange: (val: string) => void;
+  onSearch: (val: string) => void;
 }
 
 const suggestions = [
@@ -14,8 +15,15 @@ const suggestions = [
   "Data scientists with Python and ML",
 ];
 
-const PeopleSmartSearch = ({ value, onChange }: PeopleSmartSearchProps) => {
+const PeopleSmartSearch = ({ value, onChange, onSearch }: PeopleSmartSearchProps) => {
   const [focused, setFocused] = useState(false);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onSearch(value);
+    }
+  };
 
   return (
     <div className="relative w-full">
@@ -35,6 +43,7 @@ const PeopleSmartSearch = ({ value, onChange }: PeopleSmartSearchProps) => {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Try: 'Frontend React builders interested in AI'"
@@ -43,6 +52,7 @@ const PeopleSmartSearch = ({ value, onChange }: PeopleSmartSearchProps) => {
 
         {value && (
           <button
+            type="button"
             onClick={() => onChange("")}
             className="flex-shrink-0 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -50,7 +60,11 @@ const PeopleSmartSearch = ({ value, onChange }: PeopleSmartSearchProps) => {
           </button>
         )}
 
-        <button className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors">
+        <button
+          type="button"
+          onClick={() => onSearch(value)}
+          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+        >
           <Search size={13} />
           Search
         </button>
@@ -64,7 +78,8 @@ const PeopleSmartSearch = ({ value, onChange }: PeopleSmartSearchProps) => {
           {suggestions.map((s) => (
             <button
               key={s}
-              onMouseDown={() => onChange(s)}
+              type="button"
+              onMouseDown={() => { onChange(s); onSearch(s); }}
               className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left text-foreground hover:bg-accent transition-colors"
             >
               <Sparkles size={13} className="text-primary flex-shrink-0" />

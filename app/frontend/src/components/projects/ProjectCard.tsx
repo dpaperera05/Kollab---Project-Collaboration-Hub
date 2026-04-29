@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bookmark, BookmarkCheck, Calendar, ChevronRight, Clock, DollarSign, GraduationCap, Star } from "lucide-react";
+import { Bookmark, BookmarkCheck, Calendar, ChevronRight, Clock, DollarSign, GraduationCap, Sparkles, Star } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -25,6 +25,10 @@ export type ProjectCardProject = {
   timeCommitment?: string;
   location?: string;
   roles: Array<{ title: string; status?: "Open" | "Filled"; filled?: number; total?: number; seats?: number }>;
+  /** AI Smart Search relevance score (0–100). Only present when smart search is active. */
+  smartScore?: number;
+  /** Short user-friendly reasons for this result. Only present when smart search is active. */
+  searchReasons?: string[];
 };
 
 const DIFFICULTY_CONFIG = {
@@ -144,6 +148,19 @@ const ProjectCard = ({ project, bookmarked = false, onToggleBookmark }: ProjectC
       <div className="px-4 pt-2">
         <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{project.summary}</p>
       </div>
+
+      {/* Smart Search relevance badge — only shown when smart search is active */}
+      {project.smartScore !== undefined && (
+        <div className="px-4 pt-2 flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold">
+            <Sparkles size={10} />
+            {project.smartScore}% Relevant
+          </span>
+          {project.searchReasons?.[0] && (
+            <span className="text-[11px] text-muted-foreground truncate">{project.searchReasons[0]}</span>
+          )}
+        </div>
+      )}
 
       <div className="px-4 pt-2 flex flex-wrap gap-x-3 gap-y-1.5">
         <MetaItem icon={<Clock size={12} />} label={timeLabel} />

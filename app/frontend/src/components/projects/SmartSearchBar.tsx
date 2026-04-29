@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 interface SmartSearchBarProps {
   value: string;
   onChange: (val: string) => void;
+  /** Called when the user explicitly presses Search or hits Enter. Falls back to onChange if omitted. */
+  onSearch?: (val: string) => void;
 }
 
 const suggestions = [
@@ -14,8 +16,17 @@ const suggestions = [
   "Open Data Science project with Python",
 ];
 
-const SmartSearchBar = ({ value, onChange }: SmartSearchBarProps) => {
+const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
   const [focused, setFocused] = useState(false);
+
+  const triggerSearch = () => {
+    if (onSearch) onSearch(value);
+    setFocused(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") triggerSearch();
+  };
 
   return (
     <div className="relative w-full">
@@ -37,12 +48,14 @@ const SmartSearchBar = ({ value, onChange }: SmartSearchBarProps) => {
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
+          onKeyDown={handleKeyDown}
           placeholder="Try: 'Beginner AI project with React'"
           className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
         />
 
         {value && (
           <button
+            type="button"
             onClick={() => onChange("")}
             className="flex-shrink-0 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -51,6 +64,8 @@ const SmartSearchBar = ({ value, onChange }: SmartSearchBarProps) => {
         )}
 
         <button
+          type="button"
+          onClick={triggerSearch}
           className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
         >
           <Search size={13} />
@@ -67,7 +82,8 @@ const SmartSearchBar = ({ value, onChange }: SmartSearchBarProps) => {
           {suggestions.map((s) => (
             <button
               key={s}
-              onMouseDown={() => onChange(s)}
+              type="button"
+              onMouseDown={() => { onChange(s); if (onSearch) onSearch(s); }}
               className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left text-foreground hover:bg-accent transition-colors"
             >
               <Sparkles size={13} className="text-primary flex-shrink-0" />

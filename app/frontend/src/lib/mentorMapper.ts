@@ -6,7 +6,12 @@ export const formatSlot = (slot: { date: string; startTime: string; endTime: str
   return `${dateStr} · ${slot.startTime} - ${slot.endTime}${slot.timezone ? ` (${slot.timezone})` : ""}`;
 };
 
-export const mapUserToMentor = (user: KollabUser): Mentor => {
+/**
+ * Maps a KollabUser (from the normal listing or smart search endpoint) to a Mentor.
+ * Smart search results extend KollabUser with smartScore and searchReasons at the
+ * top level — these are passed through when present.
+ */
+export const mapUserToMentor = (user: KollabUser & { smartScore?: number; searchReasons?: string[] }): Mentor => {
   const profile = user.profile || {};
   const availabilitySlots = (profile as any).availabilitySlots as Mentor["availabilitySlots"];
   const avatarName = profile.name || user.name || "M";
@@ -27,5 +32,7 @@ export const mapUserToMentor = (user: KollabUser): Mentor => {
     availabilitySlots: availabilitySlots || [],
     bio: profile.bio || "This mentor hasn't added a bio yet.",
     reviews: [],
+    smartScore: user.smartScore,
+    searchReasons: user.searchReasons,
   };
 };

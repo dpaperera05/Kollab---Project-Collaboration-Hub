@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -35,6 +35,7 @@ type ActivityApiItem = {
 
 const PersonProfilePage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [person, setPerson] = useState<PersonProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,13 +107,14 @@ const PersonProfilePage = () => {
         <div className="relative border-b border-border bg-card/50 overflow-hidden">
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,hsl(270_80%_60%/0.06),transparent)] dark:bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,hsl(270_80%_60%/0.12),transparent)]" />
           <Container className="py-4">
-            <Link
-              to="/people"
+            <button
+              type="button"
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/people")}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
             >
               <ArrowLeft size={14} />
               Back to People
-            </Link>
+            </button>
           </Container>
         </div>
 

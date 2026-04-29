@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Briefcase, Layers, ChevronRight } from "lucide-react";
+import { Briefcase, Layers, ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface PeoplePerson {
@@ -12,6 +12,8 @@ export interface PeoplePerson {
   techStack: string[];
   domainInterests: string[];
   stats?: { projectsCount?: number; showcasesCount?: number };
+  smartScore?: number;
+  searchReasons?: string[];
 }
 
 interface PeopleCardProps {
@@ -46,6 +48,13 @@ const PeopleCard = ({ person }: PeopleCardProps) => {
             {person.bio}
           </p>
         </div>
+        {/* Smart search relevance badge */}
+        {person.smartScore !== undefined && (
+          <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+            <Sparkles size={9} />
+            {person.smartScore}%
+          </span>
+        )}
       </div>
 
       {/* Role chips */}
@@ -68,6 +77,13 @@ const PeopleCard = ({ person }: PeopleCardProps) => {
           </span>
         ))}
       </div>
+
+      {/* Smart search: first reason */}
+      {person.searchReasons && person.searchReasons.length > 0 && (
+        <p className="px-5 pt-2 text-[11px] text-muted-foreground italic truncate">
+          {person.searchReasons[0]}
+        </p>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

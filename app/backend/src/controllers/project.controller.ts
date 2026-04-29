@@ -7,6 +7,10 @@ import {
   shouldRegenerateProjectEmbedding,
   triggerProjectEmbedding,
 } from "../services/embeddingFreshness.service";
+import {
+  smartSearchProjects,
+  type RawProjectDoc,
+} from "../services/smartSearch.service";
 
 const ensureStringArray = (val: unknown): string[] => {
   if (!Array.isArray(val)) return [];
@@ -139,6 +143,126 @@ export const listPublicProjects = async (req: Request, res: Response) => {
   const enriched = await enrichProjectsWithOwner(projects);
 
   return res.json({ success: true, data: { projects: enriched, total, page, pageSize } });
+};
+
+// ── AI Smart Search ────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/projects/public/smart-search
+ *
+ * Semantic + keyword hybrid search over open (or filtered) projects.
+ *
+ * Requires: q (non-empty)
+ * Optional: page, pageSize, domain, difficulty, duration, status, technologies,
+ *           tags, roleType, sortBy, debug (dev-only)
+ *
+ * Response shape is compatible with ProjectsPage's BackendProject + adds
+ * smartScore and searchReasons fields. Raw embeddings are never returned.
+ */
+export const smartSearchPublicProjects = async (req: Request, res: Response) => {
+  const { q, domain, technologies, difficulty, duration, status, tags, roleType, sortBy } = req.query;
+
+  // ── Validate query ─────────────────────────────────────────────────────────
+  if (typeof q !== "string" || !q.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: "Search query is required for smart search",
+    });
+  }
+
+  const page = Math.max(parseInt(String(req.query.page || "1"), 10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize || "9"), 10) || 9, 1), 50);
+  const isDebug = process.env.NODE_ENV !== "production" && req.query.debug === "true";
+
+  // ── Build hard filters (same logic as listPublicProjects) ──────────────────
+  const filter: Record<string, unknown> = {};
+
+  // Default to Open projects when no status filter is supplied
+  if (typeof status === "string" && status.trim() && status !== "All") {
+    filter.status = status.trim();
+  } else if (!status || status === "All") {
+    filter.status = "Open";
+  }
+
+  if (typeof domain === "string" && domain.trim() && domain !== "All") {
+    filter.domain = domain.trim();
+  }
+  if (typeof difficulty === "string" && difficulty.trim() && difficulty !== "All") {
+    filter.difficulty = difficulty.trim();
+  }
+  if (typeof duration === "string" && duration.trim() && duration !== "All") {
+    filter.duration = duration.trim();
+  }
+  if (typeof technologies === "string" && technologies.trim()) {
+    const techList = technologies.split(",").map((t) => t.trim()).filter(Boolean);
+    if (techList.length > 0) filter.technologies = { $all: techList };
+  }
+  if (typeof tags === "string" && tags.trim()) {
+    const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+    if (tagList.length > 0) filter.tags = { $in: tagList };
+  }
+  if (typeof roleType === "string" && roleType.trim() && roleType !== "All") {
+    filter["roles.title"] = { $regex: new RegExp(roleType.trim(), "i") };
+  }
+
+  try {
+    // ── Fetch projects with embeddings ───────────────────────────────────────
+    // recommendationEmbedding has select:false so we must opt-in explicitly.
+    const rawProjects = await Project.find(filter)
+      .select("+recommendationEmbedding")
+      .lean();
+
+    // ── Owner enrichment ─────────────────────────────────────────────────────
+    const enriched = await enrichProjectsWithOwner(rawProjects) as RawProjectDoc[];
+
+    // ── Score + sort + paginate ──────────────────────────────────────────────
+    const result = await smartSearchProjects(
+      q.trim(),
+      enriched,
+      { page, pageSize, sortBy: typeof sortBy === "string" ? sortBy : undefined, debug: isDebug },
+    );
+
+    // ── Strip internal _scoring unless debug mode ────────────────────────────
+    const projects = result.projects.map(({ _scoring, ...pub }) => {
+      if (isDebug && _scoring) {
+        return {
+          ...pub,
+          _debug: {
+            smartScore:          pub.smartScore,
+            semanticScore:       _scoring.semanticScore,
+            keywordScore:        _scoring.keywordScore,
+            finalSmartScore:     _scoring.finalSmartScore,
+            cosineSimilarity:    _scoring.cosineSimilarity !== null
+                                   ? Math.round(_scoring.cosineSimilarity * 1000) / 1000
+                                   : null,
+            hasProjectEmbedding: _scoring.hasProjectEmbedding,
+            passedThreshold:     _scoring.passedThreshold,
+            thresholdReason:     _scoring.thresholdReason,
+            searchReasons:       pub.searchReasons,
+          },
+        };
+      }
+      return pub;
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        mode: result.mode,
+        query: result.query,
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
+        totalPages: result.totalPages,
+        projects,
+        ...(result.message ? { message: result.message } : {}),
+        ...(isDebug && result.debugSummary ? { debugSummary: result.debugSummary } : {}),
+      },
+    });
+  } catch (err) {
+    console.error("[smartSearch] Unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Smart search failed" });
+  }
 };
 
 export const getPublicProjectById = async (req: Request, res: Response) => {

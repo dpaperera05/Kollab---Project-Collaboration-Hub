@@ -15,6 +15,14 @@ import {
   shouldRegenerateUserRecommendationEmbedding,
   triggerUserRecommendationEmbedding,
 } from "../services/embeddingFreshness.service";
+import {
+  smartSearchMentors,
+  type RawMentorDoc,
+} from "../services/mentorSmartSearch.service";
+import {
+  smartSearchMembers,
+  type RawMemberDoc,
+} from "../services/memberSmartSearch.service";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -81,6 +89,233 @@ export const listPublicMentors = async (_req: Request, res: Response) => {
   const users = await User.find({ userType: "mentor", isProfilePublic: { $ne: false } });
   const payload = users.map((u) => toUserResponse(u));
   return res.json({ success: true, data: { users: payload } });
+};
+
+export const smartSearchMentorsHandler = async (req: Request, res: Response) => {
+  const { q, expertise, domain, languages, rate, sortBy } = req.query;
+  const page     = Math.max(parseInt(String(req.query.page     ?? "1"),  10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "9"),  10) || 9, 1), 50);
+  const isDebug  = process.env.NODE_ENV !== "production" && req.query.debug === "true";
+
+  // ── q is required ────────────────────────────────────────────────────────────
+  if (!q || typeof q !== "string" || !q.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: "Search query is required for mentor smart search",
+    });
+  }
+
+  // ── Build hard filter ────────────────────────────────────────────────────────
+  const filter: Record<string, unknown> = {
+    userType: "mentor",
+    isProfilePublic: { $ne: false },
+  };
+
+  // expertise: match profile.expertiseSkills OR profile.skills
+  if (typeof expertise === "string" && expertise.trim()) {
+    const expertiseList = expertise.split(",").map((e) => e.trim()).filter(Boolean);
+    if (expertiseList.length > 0) {
+      filter.$or = [
+        { "profile.expertiseSkills": { $in: expertiseList } },
+        { "profile.skills":          { $in: expertiseList } },
+      ];
+    }
+  }
+
+  // domain: case-insensitive substring match in profile.domainInterests
+  if (typeof domain === "string" && domain.trim() && domain !== "All") {
+    filter["profile.domainInterests"] = { $regex: new RegExp(domain.trim(), "i") };
+  }
+
+  // languages: profile.languages must include all requested
+  if (typeof languages === "string" && languages.trim()) {
+    const langList = languages.split(",").map((l) => l.trim()).filter(Boolean);
+    if (langList.length > 0) {
+      filter["profile.languages"] = { $in: langList };
+    }
+  }
+
+  // rate: "Free" → rateType "free", "Paid" → rateType "paid"
+  if (typeof rate === "string" && rate.trim() && rate !== "All") {
+    if (rate === "Free")  filter["profile.rateType"] = "free";
+    if (rate === "Paid")  filter["profile.rateType"] = "paid";
+  }
+
+  try {
+    // ── Fetch mentors with embeddings ────────────────────────────────────────
+    // profile.recommendationEmbedding has select:false so we must opt-in.
+    const rawMentors = await User.find(filter)
+      .select("+profile.recommendationEmbedding")
+      .lean() as RawMentorDoc[];
+
+    // ── Score + sort + paginate ──────────────────────────────────────────────
+    const result = await smartSearchMentors(
+      q.trim(),
+      rawMentors,
+      {
+        page,
+        pageSize,
+        sortBy: typeof sortBy === "string" ? sortBy : undefined,
+        debug: isDebug,
+      },
+    );
+
+    // ── Strip internal _scoring; attach _debug when requested ───────────────
+    const mentors = result.mentors.map(({ _scoring, ...pub }) => {
+      if (isDebug && _scoring) {
+        return {
+          ...pub,
+          _debug: {
+            smartScore:         pub.smartScore,
+            semanticScore:      _scoring.semanticScore,
+            keywordScore:       _scoring.keywordScore,
+            finalSmartScore:    _scoring.finalSmartScore,
+            cosineSimilarity:   _scoring.cosineSimilarity !== null
+                                  ? Math.round(_scoring.cosineSimilarity * 1000) / 1000
+                                  : null,
+            hasMentorEmbedding: _scoring.hasMentorEmbedding,
+            passedThreshold:    _scoring.passedThreshold,
+            thresholdReason:    _scoring.thresholdReason,
+            searchReasons:      pub.searchReasons,
+          },
+        };
+      }
+      return pub;
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        mode:       result.mode,
+        query:      result.query,
+        page:       result.page,
+        pageSize:   result.pageSize,
+        total:      result.total,
+        totalPages: result.totalPages,
+        users:      mentors,   // key is "users" to stay compatible with the existing frontend mapper
+        ...(result.message    ? { message:      result.message      } : {}),
+        ...(isDebug && result.debugSummary ? { debugSummary: result.debugSummary } : {}),
+      },
+    });
+  } catch (err) {
+    console.error("[mentorSmartSearch] Unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Mentor smart search failed" });
+  }
+};
+
+export const smartSearchMembersHandler = async (req: Request, res: Response) => {
+  const { q, preferredRoles, skills, techStack, domainInterests, sortBy } = req.query;
+  const page     = Math.max(parseInt(String(req.query.page     ?? "1"),  10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? "9"),  10) || 9, 1), 50);
+  const isDebug  = process.env.NODE_ENV !== "production" && req.query.debug === "true";
+
+  // ── q is required ────────────────────────────────────────────────────────────
+  if (!q || typeof q !== "string" || !q.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: "Search query is required for member smart search",
+    });
+  }
+
+  // ── Build hard filter ────────────────────────────────────────────────────────
+  const filter: Record<string, unknown> = {
+    userType: "member",
+    isProfilePublic: { $ne: false },
+  };
+
+  // preferredRoles: profile.preferredRoles must include all requested
+  if (typeof preferredRoles === "string" && preferredRoles.trim()) {
+    const roleList = preferredRoles.split(",").map((r) => r.trim()).filter(Boolean);
+    if (roleList.length > 0) {
+      filter["profile.preferredRoles"] = { $in: roleList };
+    }
+  }
+
+  // skills: profile.skills must include at least one
+  if (typeof skills === "string" && skills.trim()) {
+    const skillList = skills.split(",").map((s) => s.trim()).filter(Boolean);
+    if (skillList.length > 0) {
+      filter["profile.skills"] = { $in: skillList };
+    }
+  }
+
+  // techStack: profile.techStack must include at least one
+  if (typeof techStack === "string" && techStack.trim()) {
+    const techList = techStack.split(",").map((t) => t.trim()).filter(Boolean);
+    if (techList.length > 0) {
+      filter["profile.techStack"] = { $in: techList };
+    }
+  }
+
+  // domainInterests: profile.domainInterests must include at least one
+  if (typeof domainInterests === "string" && domainInterests.trim()) {
+    const domainList = domainInterests.split(",").map((d) => d.trim()).filter(Boolean);
+    if (domainList.length > 0) {
+      filter["profile.domainInterests"] = { $in: domainList };
+    }
+  }
+
+  try {
+    // ── Fetch members with embeddings ────────────────────────────────────────
+    // profile.recommendationEmbedding has select:false so we must opt-in.
+    const rawMembers = await User.find(filter)
+      .select("+profile.recommendationEmbedding")
+      .lean() as RawMemberDoc[];
+
+    // ── Score + sort + paginate ──────────────────────────────────────────────
+    const result = await smartSearchMembers(
+      q.trim(),
+      rawMembers,
+      {
+        page,
+        pageSize,
+        sortBy: typeof sortBy === "string" ? sortBy : undefined,
+        debug: isDebug,
+      },
+    );
+
+    // ── Strip internal _scoring; attach _debug when requested ───────────────
+    const members = result.members.map(({ _scoring, ...pub }) => {
+      if (isDebug && _scoring) {
+        return {
+          ...pub,
+          _debug: {
+            smartScore:          pub.smartScore,
+            semanticScore:       _scoring.semanticScore,
+            keywordScore:        _scoring.keywordScore,
+            finalSmartScore:     _scoring.finalSmartScore,
+            cosineSimilarity:    _scoring.cosineSimilarity !== null
+                                   ? Math.round(_scoring.cosineSimilarity * 1000) / 1000
+                                   : null,
+            hasMemberEmbedding:  _scoring.hasMemberEmbedding,
+            passedThreshold:     _scoring.passedThreshold,
+            thresholdReason:     _scoring.thresholdReason,
+            searchReasons:       pub.searchReasons,
+          },
+        };
+      }
+      return pub;
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        mode:       result.mode,
+        query:      result.query,
+        page:       result.page,
+        pageSize:   result.pageSize,
+        total:      result.total,
+        totalPages: result.totalPages,
+        users:      members,   // key is "users" to stay compatible with the existing frontend mapper
+        ...(result.message       ? { message:      result.message      } : {}),
+        ...(isDebug && result.debugSummary    ? { debugSummary:    result.debugSummary    } : {}),
+        ...(isDebug && result.debugCandidates ? { debugCandidates: result.debugCandidates } : {}),
+      },
+    });
+  } catch (err) {
+    console.error("[memberSmartSearch] Unexpected error:", err);
+    return res.status(500).json({ success: false, message: "Member smart search failed" });
+  }
 };
 
 export const getMemberProfile = async (req: Request, res: Response) => {

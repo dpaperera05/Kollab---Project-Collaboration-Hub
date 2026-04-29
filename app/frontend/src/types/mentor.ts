@@ -23,4 +23,8 @@ export interface Mentor {
   availabilitySlots?: Array<{ date: string; startTime: string; endTime: string; timezone?: string; note?: string }>;
   bio: string;
   reviews: MentorReview[];
+  /** 0–100 relevance score returned by smart search — absent in normal listing */
+  smartScore?: number;
+  /** Short explanations of why this mentor matched — absent in normal listing */
+  searchReasons?: string[];
 }
