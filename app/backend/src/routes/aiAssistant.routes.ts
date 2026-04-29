@@ -1,10 +1,11 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth.middleware";
+import { optionalAuth } from "../middleware/auth.middleware";
 import { chatWithAssistant } from "../controllers/aiAssistant.controller";
 
 const router = Router();
 
 // POST /api/ai-assistant/chat
-router.post("/chat", authenticate, chatWithAssistant);
+// optionalAuth: guests may use the assistant; req.userId is set for logged-in users.
+router.post("/chat", optionalAuth, chatWithAssistant);
 
 export default router;

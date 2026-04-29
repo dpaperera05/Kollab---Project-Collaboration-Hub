@@ -15,12 +15,8 @@ export const chatWithAssistant = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
-  // Auth guard — authenticate middleware sets userId; double-check here
-  if (!req.userId) {
-    res.status(401).json({ success: false, message: "Unauthorized" });
-    return;
-  }
-
+  // req.userId is set by optionalAuth when a valid JWT is present;
+  // it is undefined for guests, which is allowed.
   const { messages } = req.body ?? {};
 
   // Validate: messages must be a non-empty array
