@@ -14,9 +14,9 @@ const navLinks = [
   { label: "People", href: "/people" },
   { label: "Mentors", href: "/mentors" },
   { label: "Job Simulations", href: "/simulations" },
+  { label: "Job Market", href: "/insights" },
   { label: "Events", href: "/events" },
   { label: "Blogs", href: "/blogs" },
-  { label: "Insights", href: "/insights" },
 ];
 
 const Navbar = () => {
