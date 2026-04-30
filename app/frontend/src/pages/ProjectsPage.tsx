@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, FolderOpen, Plus, Sparkles } from "lucide-react";
+import { FolderOpen, Plus, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
@@ -103,59 +103,124 @@ const ProjectsSkeleton = () => (
   </>
 );
 
-const StatPill = ({ value, label }: { value: string; label: string }) => (
-  <span className="flex items-center gap-1.5 text-sm">
-    <span className="font-bold text-foreground">{value}</span>
-    <span className="text-muted-foreground">{label}</span>
-  </span>
-);
+const ProjectsHero = ({
+  inputValue,
+  onInputChange,
+  onSearch,
+  onPostProject,
+}: {
+  inputValue: string;
+  onInputChange: (v: string) => void;
+  onSearch: (v: string) => void;
+  onPostProject: () => void;
+}) => (
+  <section className="relative border-b border-border bg-card overflow-hidden">
+    {/* ── Decorative background layer ──────────────────────────────── */}
+    <div className="absolute inset-0 pointer-events-none select-none z-0" aria-hidden="true">
+      {/* Soft central violet glow */}
+      <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[640px] h-[320px] rounded-full bg-violet-500/10 blur-[90px]" />
+      {/* Faint dot grid */}
+      <div
+        className="absolute inset-0 opacity-[0.04]"
+        style={{ backgroundImage: "radial-gradient(circle, #7c3aed 1px, transparent 1px)", backgroundSize: "28px 28px" }}
+      />
 
-const HeroPreview = () => (
-  <div className="relative w-[340px] h-[260px]">
-    {/* Main card */}
-    <div className="absolute inset-0 rounded-2xl border border-border bg-card shadow-[0_8px_40px_hsl(var(--primary)/0.10)] overflow-hidden">
-      <div className="h-20 bg-gradient-to-br from-violet-500/80 to-pink-500/80 flex items-end px-4 pb-2">
-        <span className="text-white text-[10px] font-bold uppercase tracking-widest opacity-80">AI &amp; Machine Learning</span>
+      {/* Left: large blurred orb */}
+      <div className="hidden md:block absolute -left-10 top-1/2 -translate-y-1/2 w-52 h-52 rounded-full bg-gradient-to-br from-violet-400/25 to-purple-600/10 blur-3xl" />
+      {/* Left: small accent orb */}
+      <div className="hidden md:block absolute left-[9%] top-[18%] w-10 h-10 rounded-full bg-violet-300/30 blur-lg" />
+      {/* Left: rotating geometric cube */}
+      <div className="hidden md:block absolute left-[11%] top-[28%] w-8 h-8 rounded-xl border border-violet-300/50 dark:border-violet-500/20 bg-gradient-to-br from-violet-100/80 to-violet-200/30 dark:from-violet-900/20 dark:to-transparent rotate-[18deg] shadow-sm" />
+      {/* Left: glass code bracket card */}
+      <div className="hidden lg:block absolute left-[4%] top-[30%] w-32 rounded-2xl border border-violet-200/60 dark:border-violet-500/20 bg-white/75 dark:bg-white/5 backdrop-blur-sm shadow-[0_2px_12px_rgba(124,58,237,0.08)] p-3.5">
+        <div className="font-mono text-[11px] leading-relaxed">
+          <span className="text-violet-500">{"<"}</span>
+          <span className="text-pink-500 font-semibold">Project</span>
+          <span className="text-violet-400">{" />"}</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="text-[10px] text-muted-foreground">Kollab</span>
+        </div>
       </div>
-      <div className="px-4 py-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-foreground">AI-Powered Resume Builder</span>
-          <span className="px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[9px] font-bold">94% match</span>
-        </div>
-        <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
-          Build an intelligent resume optimization tool using NLP and transformer models.
-        </p>
-        <div className="flex gap-1 pt-0.5">
-          {["Python", "PyTorch", "React"].map(t => (
-            <span key={t} className="px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[9px] font-medium">{t}</span>
-          ))}
-        </div>
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="text-[10px] text-muted-foreground">2 open roles</span>
+      {/* Left: tiny dot */}
+      <div className="hidden md:block absolute left-[6%] bottom-[28%] w-3 h-3 rounded-full bg-violet-400/40" />
+      {/* Left: small square accent */}
+      <div className="hidden md:block absolute left-[15%] bottom-[22%] w-4 h-4 rounded-md border border-pink-300/40 dark:border-pink-500/20 bg-pink-100/60 dark:bg-transparent rotate-[-10deg]" />
+
+      {/* Right: large blurred orb */}
+      <div className="hidden md:block absolute -right-10 top-1/2 -translate-y-1/2 w-52 h-52 rounded-full bg-gradient-to-bl from-fuchsia-400/20 to-violet-500/10 blur-3xl" />
+      {/* Right: accent orb */}
+      <div className="hidden md:block absolute right-[8%] top-[20%] w-9 h-9 rounded-full bg-pink-300/30 blur-lg" />
+      {/* Right: glass checkmark card */}
+      <div className="hidden lg:block absolute right-[4%] top-[26%] w-36 rounded-2xl border border-emerald-200/60 dark:border-emerald-500/20 bg-white/75 dark:bg-white/5 backdrop-blur-sm shadow-[0_2px_12px_rgba(16,185,129,0.07)] p-3.5">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M2 5.2L4 7L8 3" stroke="#10b981" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
-          <span className="text-[10px] font-semibold text-primary">View project →</span>
+          <span className="text-[11px] font-semibold text-foreground">Team match</span>
+        </div>
+        <div className="mt-1.5 text-[10px] text-muted-foreground">3 roles open</div>
+      </div>
+      {/* Right: dark mini code panel */}
+      <div className="hidden lg:block absolute right-[3%] bottom-[16%] w-36 rounded-xl border border-zinc-700/60 bg-zinc-900 shadow-[0_4px_20px_rgba(0,0,0,0.25)] p-3">
+        <div className="font-mono text-[9px] leading-[1.8]">
+          <div>
+            <span className="text-blue-400">const </span>
+            <span className="text-white">idea</span>
+            <span className="text-zinc-500"> = </span>
+            <span className="text-amber-300">"yours"</span>
+          </div>
+          <div>
+            <span className="text-blue-400">const </span>
+            <span className="text-white">team</span>
+            <span className="text-zinc-500"> = </span>
+            <span className="text-emerald-400">kollab()</span>
+          </div>
+          <div>
+            <span className="text-pink-400">launch</span>
+            <span className="text-zinc-500">(idea, team)</span>
+          </div>
         </div>
       </div>
+      {/* Right: small rotating cube */}
+      <div className="hidden md:block absolute right-[12%] top-[24%] w-7 h-7 rounded-lg border border-pink-300/40 dark:border-pink-500/20 bg-gradient-to-br from-pink-100/60 to-violet-100/40 dark:from-transparent dark:to-transparent rotate-[-14deg] shadow-sm" />
+      {/* Right: tiny dot */}
+      <div className="hidden md:block absolute right-[17%] bottom-[26%] w-3 h-3 rounded-full bg-fuchsia-400/40" />
     </div>
-    {/* Peek card 1 */}
-    <div className="absolute -bottom-3 -right-4 w-44 rounded-xl border border-border bg-card shadow-md p-3 space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-foreground truncate">ML Research Platform</span>
-        <span className="text-[9px] font-bold text-primary">87%</span>
+
+    {/* ── Hero content ─────────────────────────────────────────────── */}
+    <Container className="relative z-10 py-12 lg:py-16 xl:py-20">
+      <div className="flex flex-col items-center text-center gap-6 mx-auto max-w-[42rem]">
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.1]">
+          <span className="text-foreground">Turn your idea into a </span>
+          <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+            startup
+          </span>
+        </h1>
+
+        <div className="w-full">
+          <SmartSearchBar
+            value={inputValue}
+            onChange={onInputChange}
+            onSearch={onSearch}
+            placeholder="Search by idea, skill, tech stack, or role..."
+            large
+          />
+        </div>
+
+        <button
+          onClick={onPostProject}
+          className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_4px_18px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_26px_rgba(124,58,237,0.45)] hover:from-violet-500 hover:to-purple-500 transition-all duration-200"
+        >
+          <Plus size={15} />
+          Post a project
+        </button>
       </div>
-      <p className="text-[9px] text-muted-foreground line-clamp-1">Scalable ML experiment tracking</p>
-    </div>
-    {/* Peek card 2 */}
-    <div className="absolute -top-3 -right-5 w-40 rounded-xl border border-border bg-card shadow-md p-3 space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-foreground truncate">Robotics Nav System</span>
-        <span className="text-[9px] font-bold text-primary">81%</span>
-      </div>
-      <p className="text-[9px] text-muted-foreground line-clamp-1">Autonomous robot navigation</p>
-    </div>
-  </div>
+    </Container>
+  </section>
 );
 
 const EmptyState = ({ onClear, isSearch }: { onClear: () => void; isSearch?: boolean }) => (
@@ -498,60 +563,13 @@ const ProjectsPage = () => {
 
       <main className="flex-1 pt-20">
                 {/* Hero — two-column on desktop */}
-        <section className="border-b border-border bg-card">
-          <Container className="py-10 lg:py-14">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-14">
-              {/* Left: copy + search + CTAs + stats */}
-              <div className="flex-1 min-w-0 space-y-5">
-                <div className="space-y-3">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
-                    <Sparkles size={12} /> Project marketplace
-                  </span>
-                  <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-[1.15]">
-                    Discover technical{" "}
-                    <span className="gradient-text">projects</span>
-                  </h1>
-                  <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                    Find real-world student projects, join expert teams, and build your portfolio with meaningful work.
-                  </p>
-                </div>
-
-                <SmartSearchBar value={inputValue} onChange={handleInputChange} onSearch={handleSearch} />
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={handleAddProject}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
-                  >
-                    <Plus size={14} />
-                    Post a project
-                  </button>
-                  <a
-                    href="#recommended"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
-                  >
-                    Browse all
-                    <ArrowRight size={13} />
-                  </a>
-                </div>
-
-                <div className="flex items-center gap-4 flex-wrap pt-1">
-                  <StatPill value={totalCount > 0 ? `${totalCount}+` : "—"} label="open projects" />
-                  <span className="text-muted-foreground/30 text-xs">·</span>
-                  <StatPill value={recData.projects.length > 0 ? `${recData.projects.length}` : "—"} label="matches for you" />
-                  <span className="text-muted-foreground/30 text-xs">·</span>
-                  <StatPill value="100%" label="free to join" />
-                </div>
-              </div>
-
-              {/* Right: decorative hero preview — desktop only */}
-              <div className="hidden lg:flex flex-shrink-0 items-center justify-center">
-                <HeroPreview />
-              </div>
-            </div>
-          </Container>
-        </section>
-
+        
+        <ProjectsHero
+          inputValue={inputValue}
+          onInputChange={handleInputChange}
+          onSearch={handleSearch}
+          onPostProject={handleAddProject}
+        />
         <div id="recommended">
         <Container className="py-8 space-y-6">
           {/* AI Recommended Carousel */}

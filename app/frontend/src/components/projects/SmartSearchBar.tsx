@@ -7,6 +7,10 @@ interface SmartSearchBarProps {
   onChange: (val: string) => void;
   /** Called when the user explicitly presses Search or hits Enter. Falls back to onChange if omitted. */
   onSearch?: (val: string) => void;
+  /** Override the input placeholder text. */
+  placeholder?: string;
+  /** Taller variant (h-12) for hero sections. Defaults to false (h-11). */
+  large?: boolean;
 }
 
 const suggestions = [
@@ -16,7 +20,13 @@ const suggestions = [
   "Open Data Science project with Python",
 ];
 
-const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
+const SmartSearchBar = ({
+  value,
+  onChange,
+  onSearch,
+  placeholder = "Search by skill, role, domain, or project idea\u2026",
+  large = false,
+}: SmartSearchBarProps) => {
   const [focused, setFocused] = useState(false);
 
   const triggerSearch = () => {
@@ -52,8 +62,11 @@ const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           onKeyDown={handleKeyDown}
-          placeholder="Search by skill, role, domain, or project idea…"
-          className="flex-1 min-w-0 bg-transparent h-11 px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+          placeholder={placeholder}
+          className={cn(
+            "flex-1 min-w-0 bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none",
+            large ? "h-12" : "h-11"
+          )}
         />
 
         {value && (
@@ -70,7 +83,10 @@ const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
         <button
           type="button"
           onClick={triggerSearch}
-          className="flex-shrink-0 flex items-center gap-1.5 px-4 h-11 bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors border-l border-primary/30 whitespace-nowrap"
+          className={cn(
+            "flex-shrink-0 flex items-center gap-1.5 px-4 bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors border-l border-primary/30 whitespace-nowrap",
+            large ? "h-12" : "h-11"
+          )}
         >
           <Sparkles size={12} />
           <span className="hidden sm:inline">AI Search</span>
