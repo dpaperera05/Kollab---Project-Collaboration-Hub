@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { FolderOpen, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, FolderOpen, Plus, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/ui/Container";
@@ -9,7 +9,6 @@ import ProjectFilters, { type FilterState } from "@/components/projects/ProjectF
 import ProjectCard, { type ProjectCardProject } from "@/components/projects/ProjectCard";
 import RecommendedCarousel from "@/components/projects/RecommendedCarousel";
 import PaginationBar from "@/components/projects/PaginationBar";
-import ProjectsHeroIllustration from "@/components/projects/ProjectsHeroIllustration";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
 import { getSession } from "@/lib/authStore";
@@ -82,31 +81,86 @@ type RecommendationApiResponse = {
 const ProjectsSkeleton = () => (
   <>
     {Array.from({ length: 6 }).map((_, i) => (
-      <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-4">
-        <div className="flex items-center gap-3">
-          <Skeleton className="w-9 h-9 rounded-full" />
-          <div className="space-y-1.5">
+      <div key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+        <Skeleton className="w-full h-28" />
+        <div className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Skeleton className="w-6 h-6 rounded-full" />
             <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-2.5 w-16" />
           </div>
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-4/5" />
+          <div className="flex gap-1.5">
+            <Skeleton className="h-5 w-14 rounded-md" />
+            <Skeleton className="h-5 w-14 rounded-md" />
+            <Skeleton className="h-5 w-14 rounded-md" />
+          </div>
+          <Skeleton className="h-8 w-full rounded-lg mt-1" />
         </div>
-        <Skeleton className="h-5 w-3/4" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-5/6" />
-        <div className="flex gap-2">
-          <Skeleton className="h-6 w-16 rounded-full" />
-          <Skeleton className="h-6 w-16 rounded-full" />
-          <Skeleton className="h-6 w-16 rounded-full" />
-        </div>
-        <Skeleton className="h-9 w-full rounded-lg" />
       </div>
     ))}
   </>
 );
 
+const StatPill = ({ value, label }: { value: string; label: string }) => (
+  <span className="flex items-center gap-1.5 text-sm">
+    <span className="font-bold text-foreground">{value}</span>
+    <span className="text-muted-foreground">{label}</span>
+  </span>
+);
+
+const HeroPreview = () => (
+  <div className="relative w-[340px] h-[260px]">
+    {/* Main card */}
+    <div className="absolute inset-0 rounded-2xl border border-border bg-card shadow-[0_8px_40px_hsl(var(--primary)/0.10)] overflow-hidden">
+      <div className="h-20 bg-gradient-to-br from-violet-500/80 to-pink-500/80 flex items-end px-4 pb-2">
+        <span className="text-white text-[10px] font-bold uppercase tracking-widest opacity-80">AI &amp; Machine Learning</span>
+      </div>
+      <div className="px-4 py-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-foreground">AI-Powered Resume Builder</span>
+          <span className="px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[9px] font-bold">94% match</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
+          Build an intelligent resume optimization tool using NLP and transformer models.
+        </p>
+        <div className="flex gap-1 pt-0.5">
+          {["Python", "PyTorch", "React"].map(t => (
+            <span key={t} className="px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[9px] font-medium">{t}</span>
+          ))}
+        </div>
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-[10px] text-muted-foreground">2 open roles</span>
+          </div>
+          <span className="text-[10px] font-semibold text-primary">View project →</span>
+        </div>
+      </div>
+    </div>
+    {/* Peek card 1 */}
+    <div className="absolute -bottom-3 -right-4 w-44 rounded-xl border border-border bg-card shadow-md p-3 space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold text-foreground truncate">ML Research Platform</span>
+        <span className="text-[9px] font-bold text-primary">87%</span>
+      </div>
+      <p className="text-[9px] text-muted-foreground line-clamp-1">Scalable ML experiment tracking</p>
+    </div>
+    {/* Peek card 2 */}
+    <div className="absolute -top-3 -right-5 w-40 rounded-xl border border-border bg-card shadow-md p-3 space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold text-foreground truncate">Robotics Nav System</span>
+        <span className="text-[9px] font-bold text-primary">81%</span>
+      </div>
+      <p className="text-[9px] text-muted-foreground line-clamp-1">Autonomous robot navigation</p>
+    </div>
+  </div>
+);
+
 const EmptyState = ({ onClear, isSearch }: { onClear: () => void; isSearch?: boolean }) => (
   <div className="col-span-full flex flex-col items-center justify-center py-24 text-center gap-5">
-    <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10">
+    <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-primary/10">
       <FolderOpen size={28} className="text-primary" />
     </div>
     <div className="space-y-2">
@@ -443,41 +497,63 @@ const ProjectsPage = () => {
       <Navbar />
 
       <main className="flex-1 pt-20">
-        {/* Page header â€” two-column on desktop */}
-        <div className="border-b border-border bg-card/50 overflow-hidden">
-          <Container className="py-6 lg:py-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-8">
-              {/* Left: title + subtitle + search + CTA */}
-              <div className="flex-1 min-w-0 space-y-3.5">
-                <div className="space-y-1">
-                  <h1 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-                    Browse <span className="gradient-text">Projects</span>
+                {/* Hero — two-column on desktop */}
+        <section className="border-b border-border bg-card">
+          <Container className="py-10 lg:py-14">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-14">
+              {/* Left: copy + search + CTAs + stats */}
+              <div className="flex-1 min-w-0 space-y-5">
+                <div className="space-y-3">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
+                    <Sparkles size={12} /> Project marketplace
+                  </span>
+                  <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-[1.15]">
+                    Discover technical{" "}
+                    <span className="gradient-text">projects</span>
                   </h1>
-                  <p className="text-sm text-muted-foreground">
-                    Discover real projects, teams, and roles. Find your next collaboration.
+                  <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+                    Find real-world student projects, join expert teams, and build your portfolio with meaningful work.
                   </p>
                 </div>
 
                 <SmartSearchBar value={inputValue} onChange={handleInputChange} onSearch={handleSearch} />
 
-                <button
-                  onClick={handleAddProject}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 hover:-translate-y-0.5 transition-all duration-200 shadow-brand-sm hover:shadow-brand"
-                >
-                  <Plus size={16} />
-                  Add New Project
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={handleAddProject}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus size={14} />
+                    Post a project
+                  </button>
+                  <a
+                    href="#recommended"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
+                  >
+                    Browse all
+                    <ArrowRight size={13} />
+                  </a>
+                </div>
+
+                <div className="flex items-center gap-4 flex-wrap pt-1">
+                  <StatPill value={totalCount > 0 ? `${totalCount}+` : "—"} label="open projects" />
+                  <span className="text-muted-foreground/30 text-xs">·</span>
+                  <StatPill value={recData.projects.length > 0 ? `${recData.projects.length}` : "—"} label="matches for you" />
+                  <span className="text-muted-foreground/30 text-xs">·</span>
+                  <StatPill value="100%" label="free to join" />
+                </div>
               </div>
 
-              {/* Right: illustration â€” hidden on mobile, visible md+ */}
-              <div className="hidden md:flex flex-shrink-0 items-center justify-center lg:w-[400px] xl:w-[460px]">
-                <ProjectsHeroIllustration className="w-full" />
+              {/* Right: decorative hero preview — desktop only */}
+              <div className="hidden lg:flex flex-shrink-0 items-center justify-center">
+                <HeroPreview />
               </div>
             </div>
           </Container>
-        </div>
+        </section>
 
-        <Container className="py-8 space-y-8">
+        <div id="recommended">
+        <Container className="py-8 space-y-6">
           {/* AI Recommended Carousel */}
           <div className="rounded-xl border border-border bg-card/50 p-5">
             <RecommendedCarousel
@@ -490,7 +566,7 @@ const ProjectsPage = () => {
           </div>
 
           {/* Filters */}
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-xl border border-border bg-card p-3.5">
             <ProjectFilters filters={filters} onChange={handleFilterChange} onClear={handleClear} />
           </div>
 
@@ -516,7 +592,7 @@ const ProjectsPage = () => {
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading ? (
               <ProjectsSkeleton />
             ) : projects.length === 0 ? (
@@ -550,6 +626,7 @@ const ProjectsPage = () => {
             />
           )}
         </Container>
+        </div>
       </main>
 
       <Footer />

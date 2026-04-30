@@ -40,9 +40,9 @@ const PaginationBar = ({
   };
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 pt-2">
       <p className="text-xs text-muted-foreground">
-        Showing page {currentPage} of {totalPages} ({totalItems} projects)
+        Page {currentPage} of {totalPages} &middot; {totalItems} projects
       </p>
       <Pagination>
         <PaginationContent>

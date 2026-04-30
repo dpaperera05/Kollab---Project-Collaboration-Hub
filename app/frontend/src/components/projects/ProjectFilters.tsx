@@ -136,9 +136,11 @@ const SelectFilter = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
-        "appearance-none h-9 pl-3 pr-8 text-xs font-medium rounded-lg border bg-card text-foreground cursor-pointer",
-        "hover:border-primary/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors",
-        value && value !== "All" ? "border-primary bg-primary/5 text-primary" : "border-border"
+        "appearance-none h-8 pl-3 pr-7 text-xs font-medium rounded-md border bg-card text-foreground cursor-pointer transition-colors",
+        "focus:outline-none focus:ring-2 focus:ring-primary/20",
+        value && value !== "All"
+          ? "border-primary/50 bg-primary/5 text-primary hover:border-primary"
+          : "border-border hover:border-zinc-300 dark:hover:border-zinc-600"
       )}
     >
       {options.map((o) => (
@@ -147,7 +149,7 @@ const SelectFilter = ({
         </option>
       ))}
     </select>
-    <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+    <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
   </div>
 );
 
@@ -240,6 +242,8 @@ const FiltersContent = ({
   onChange,
   onClear,
 }: ProjectFiltersProps) => {
+  const [showAllTags, setShowAllTags] = useState(false);
+
   const activeCount =
     (filters.domain !== "All" ? 1 : 0) +
     filters.technologies.length +
@@ -249,8 +253,11 @@ const FiltersContent = ({
     (filters.status !== "All" ? 1 : 0) +
     filters.tags.length;
 
+  const TAGS_PREVIEW = 8;
+  const visibleTags = showAllTags ? POPULAR_TAGS : POPULAR_TAGS.slice(0, TAGS_PREVIEW);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-2">
         <SelectFilter
@@ -297,19 +304,19 @@ const FiltersContent = ({
           {activeCount > 0 && (
             <button
               onClick={onClear}
-              className="flex items-center gap-1 h-9 px-3 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg hover:border-border/80 transition-colors"
+              className="flex items-center gap-1 h-8 px-3 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors bg-card"
             >
-              <X size={12} />
-              Clear ({activeCount})
+              <X size={11} />
+              Reset ({activeCount})
             </button>
           )}
         </div>
       </div>
 
       {/* Popular tags row */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground font-medium">Tags:</span>
-        {POPULAR_TAGS.map((tag) => (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wide mr-1">Tags</span>
+        {visibleTags.map((tag) => (
           <button
             key={tag}
             onClick={() => {
@@ -321,15 +328,31 @@ const FiltersContent = ({
               });
             }}
             className={cn(
-              "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors",
+              "px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors",
               filters.tags.includes(tag)
                 ? "bg-primary text-primary-foreground border-primary"
-                : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground bg-card"
             )}
           >
             #{tag}
           </button>
         ))}
+        {!showAllTags && POPULAR_TAGS.length > TAGS_PREVIEW && (
+          <button
+            onClick={() => setShowAllTags(true)}
+            className="text-[11px] font-medium text-primary hover:text-primary/80 transition-colors px-1"
+          >
+            +{POPULAR_TAGS.length - TAGS_PREVIEW} more
+          </button>
+        )}
+        {showAllTags && (
+          <button
+            onClick={() => setShowAllTags(false)}
+            className="text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors px-1"
+          >
+            Show less
+          </button>
+        )}
       </div>
 
       {/* Active filter chips */}
@@ -363,10 +386,14 @@ const FiltersContent = ({
 };
 
 const ActiveChip = ({ label, onRemove }: { label: string; onRemove: () => void }) => (
-  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+  <span className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-medium border border-primary/20">
     {label}
-    <button onClick={onRemove} className="hover:text-primary/60 transition-colors">
-      <X size={11} />
+    <button
+      onClick={onRemove}
+      className="flex items-center justify-center w-3.5 h-3.5 rounded hover:bg-primary/20 transition-colors"
+      aria-label={`Remove ${label} filter`}
+    >
+      <X size={10} />
     </button>
   </span>
 );
@@ -384,7 +411,7 @@ const ProjectFilters = (props: ProjectFiltersProps) => {
         <div className="flex items-center justify-between">
           <Sheet>
             <SheetTrigger asChild>
-              <button className="flex items-center gap-2 h-9 px-4 text-sm font-medium rounded-lg border border-border bg-card hover:border-primary/50 transition-colors">
+              <button className="flex items-center gap-2 h-9 px-4 text-sm font-semibold rounded-lg border border-border bg-card hover:border-primary/40 hover:text-primary transition-colors">
                 <SlidersHorizontal size={15} className="text-primary" />
                 Filters
                 {(props.filters.domain !== "All" ||

@@ -32,14 +32,17 @@ const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
     <div className="relative w-full">
       <div
         className={cn(
-          "flex items-center gap-3 w-full rounded-xl border bg-card px-4 py-3 transition-all duration-200",
+          "flex items-center w-full rounded-lg border bg-card overflow-hidden transition-all duration-150",
           focused
-            ? "border-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.15)] ring-0"
-            : "border-border shadow-sm hover:border-primary/40"
+            ? "border-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.12)]"
+            : "border-border shadow-sm hover:border-zinc-300 dark:hover:border-zinc-600"
         )}
       >
-        <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-          <Sparkles size={16} className="text-primary" />
+        <span className="flex-shrink-0 pl-3.5">
+          <Search
+            size={16}
+            className={cn("transition-colors", focused ? "text-primary" : "text-muted-foreground")}
+          />
         </span>
 
         <input
@@ -49,15 +52,16 @@ const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           onKeyDown={handleKeyDown}
-          placeholder="Try: 'Beginner AI project with React'"
-          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+          placeholder="Search by skill, role, domain, or project idea…"
+          className="flex-1 min-w-0 bg-transparent h-11 px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
         />
 
         {value && (
           <button
             type="button"
             onClick={() => onChange("")}
-            className="flex-shrink-0 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            className="flex-shrink-0 p-1 mr-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Clear search"
           >
             <X size={14} />
           </button>
@@ -66,17 +70,18 @@ const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
         <button
           type="button"
           onClick={triggerSearch}
-          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+          className="flex-shrink-0 flex items-center gap-1.5 px-4 h-11 bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors border-l border-primary/30 whitespace-nowrap"
         >
-          <Search size={13} />
-          Search
+          <Sparkles size={12} />
+          <span className="hidden sm:inline">AI Search</span>
+          <span className="sm:hidden">Go</span>
         </button>
       </div>
 
       {/* Suggestion dropdown */}
       {focused && !value && (
-        <div className="absolute top-full mt-2 left-0 right-0 z-30 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
-          <p className="px-4 pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="absolute top-full mt-1.5 left-0 right-0 z-30 rounded-lg border border-border bg-card shadow-md overflow-hidden">
+          <p className="px-3.5 pt-2.5 pb-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Try searching for
           </p>
           {suggestions.map((s) => (
@@ -84,9 +89,9 @@ const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
               key={s}
               type="button"
               onMouseDown={() => { onChange(s); if (onSearch) onSearch(s); }}
-              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left text-foreground hover:bg-accent transition-colors"
+              className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-sm text-left text-foreground hover:bg-muted transition-colors"
             >
-              <Sparkles size={13} className="text-primary flex-shrink-0" />
+              <Sparkles size={12} className="text-primary flex-shrink-0" />
               {s}
             </button>
           ))}
@@ -97,3 +102,4 @@ const SmartSearchBar = ({ value, onChange, onSearch }: SmartSearchBarProps) => {
 };
 
 export default SmartSearchBar;
+
