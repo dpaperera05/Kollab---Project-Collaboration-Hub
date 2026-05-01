@@ -104,9 +104,6 @@ const RecommendedCarousel = ({ projects, title, subtitle, mode, loading = false 
               <Sparkles size={14} className="text-primary" />
             </div>
             <h2 className="text-base font-bold text-foreground">{title}</h2>
-            {mode === "personalized" && (
-              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">AI</span>
-            )}
           </div>
           {subtitle && (
             <p className="text-xs text-muted-foreground pl-9">{subtitle}</p>
