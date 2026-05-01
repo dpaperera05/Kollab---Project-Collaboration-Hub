@@ -14,9 +14,14 @@ const TeamRow = ({ members }: TeamRowProps) => {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-base font-bold text-foreground">Team</h2>
-        <span className="text-xs text-muted-foreground">({members.length} member{members.length !== 1 ? "s" : ""})</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="w-[3px] h-5 rounded-full bg-primary flex-shrink-0" />
+          <h2 className="text-[15px] font-bold text-foreground">Team</h2>
+        </div>
+        <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
+          {members.length} member{members.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       {/* Avatar row */}

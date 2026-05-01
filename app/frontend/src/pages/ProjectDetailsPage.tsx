@@ -232,11 +232,11 @@ const ProjectDetailsPage = () => {
       <Navbar />
 
       <main className="flex-1 pt-16">
-        {/* Full-width hero */}
+        {/* Hero */}
         <ProjectHero project={project} />
 
         {/* Two-column layout */}
-        <Container className="py-8">
+        <Container className="pt-10 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-8 items-start">
 
             {/* ── LEFT column ── */}
