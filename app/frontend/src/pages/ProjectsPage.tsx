@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { FolderOpen, Plus, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -130,6 +130,7 @@ const EmptyState = ({ onClear, isSearch }: { onClear: () => void; isSearch?: boo
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // â”€â”€ State derived from URL (source of truth) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -419,7 +420,7 @@ const ProjectsPage = () => {
   const handleToggleBookmark = async (projectId: string) => {
     const session = getSession();
     if (!session) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 

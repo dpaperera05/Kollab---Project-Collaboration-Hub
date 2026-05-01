@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Upload, ImageIcon, Calendar, MapPin, Tag,
   FileText, Sparkles, ExternalLink, X, ChevronDown, ChevronUp,
@@ -217,6 +217,7 @@ const SectionHeader = ({ icon: Icon, title }: { icon: React.ElementType; title: 
 /* ------------------------------------------------------------------ */
 const CreateEventPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -276,7 +277,7 @@ const CreateEventPage = () => {
     if (!validate()) return;
     const session = getSession();
     if (!session) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X, ImageIcon, PenLine, ChevronDown, ChevronRight } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -210,6 +210,7 @@ const CreateBlogPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -244,7 +245,7 @@ const CreateBlogPage = () => {
 
     const session = getSession();
     if (!session?.token) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 

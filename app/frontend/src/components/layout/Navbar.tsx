@@ -222,6 +222,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
+                  state={{ from: location.pathname }}
                   className="px-4 py-2 text-[15px] font-semibold text-foreground/80 hover:text-foreground transition-colors duration-150"
                 >
                   Login
@@ -322,6 +323,7 @@ const Navbar = () => {
                   <>
                     <Link
                       to="/login"
+                      state={{ from: location.pathname }}
                       className="flex-1 px-4 py-2.5 text-sm font-medium text-center border border-border rounded-lg hover:bg-accent transition-colors"
                     >
                       Login
