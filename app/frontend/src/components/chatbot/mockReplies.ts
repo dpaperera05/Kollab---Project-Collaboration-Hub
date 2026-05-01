@@ -4,11 +4,11 @@ export type QuickAction = {
 };
 
 export const QUICK_ACTIONS: QuickAction[] = [
-  { label: "What is Kollab?", message: "What is Kollab?" },
-  { label: "Find projects", message: "How do I find projects?" },
-  { label: "Improve my portfolio", message: "How can I improve my portfolio?" },
-  { label: "Job simulations", message: "Explain job simulations" },
-  { label: "Job insights", message: "What are job market insights?" },
+  { label: "🤝 What is Kollab?", message: "What is Kollab?" },
+  { label: "🚀 Find projects", message: "How do I find projects?" },
+  { label: "📁 My portfolio", message: "How can I improve my portfolio?" },
+  { label: "🧪 Job simulations", message: "Explain job simulations" },
+  { label: "📊 Job insights", message: "What are job market insights?" },
 ];
 
 interface MockReply {
