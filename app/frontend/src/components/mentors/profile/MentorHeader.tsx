@@ -2,15 +2,7 @@ import { ArrowLeft, Star, CalendarCheck, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { Mentor } from "@/types/mentor";
-
-const avatarColors = [
-  "from-violet-500 to-pink-500",
-  "from-blue-500 to-cyan-500",
-  "from-pink-500 to-rose-500",
-  "from-amber-500 to-orange-500",
-  "from-emerald-500 to-teal-500",
-  "from-indigo-500 to-violet-500",
-];
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 interface MentorHeaderProps {
   mentor: Mentor;
@@ -21,7 +13,7 @@ interface MentorHeaderProps {
   onMessage: () => void;
 }
 
-const MentorHeader = ({ mentor, colorIndex, avgRating, reviewCount, onBook, onMessage }: MentorHeaderProps) => {
+const MentorHeader = ({ mentor, colorIndex: _colorIndex, avgRating, reviewCount, onBook, onMessage }: MentorHeaderProps) => {
   const navigate = useNavigate();
   const totalReviews = reviewCount > 0 ? reviewCount : mentor.reviewsCount;
   const displayRating = reviewCount > 0 ? avgRating : mentor.rating;
@@ -57,8 +49,8 @@ const MentorHeader = ({ mentor, colorIndex, avgRating, reviewCount, onBook, onMe
               <img src={mentor.avatarUrl} alt={mentor.name} className="w-full h-full object-cover" />
             </div>
           ) : (
-            <div className={cn("flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white text-2xl font-bold shadow-brand", avatarColors[colorIndex % avatarColors.length])}>
-              {mentor.avatar}
+            <div className="flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden shadow-brand">
+              <img src={getDefaultAvatarUrl(mentor.id || mentor.name)} alt={mentor.name} className="w-full h-full object-cover" />
             </div>
           )}
 

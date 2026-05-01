@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { type KollabUser } from "@/lib/authStore";
 import { setProfilePublic, uploadAvatar } from "@/lib/profileStore";
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 interface Props { user: KollabUser; onUpdate: () => void; }
 
@@ -17,7 +18,7 @@ const ProfileHeader = ({ user, onUpdate }: Props) => {
   const [isPublic, setIsPublic] = useState(user.isProfilePublic ?? true);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
   const p = user.profile || {};
-  const avatarSrc = p.avatarUrl || (p as any).avatar;
+  const avatarSrc = p.avatarUrl || (p as any).avatar || getDefaultAvatarUrl(user.id || user.email);
 
   useEffect(() => {
     setIsPublic(user.isProfilePublic ?? true);

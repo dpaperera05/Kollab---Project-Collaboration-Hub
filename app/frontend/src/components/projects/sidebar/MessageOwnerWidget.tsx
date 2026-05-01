@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { apiPost } from "@/lib/api";
 import { getSession } from "@/lib/authStore";
 import { toast } from "@/hooks/use-toast";
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 type ChatMessage = {
   id: string;
@@ -143,8 +144,9 @@ const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar, projectId }: Mess
             >
               {!fromUser && (
                 <img
-                  src={ownerAvatar}
+                  src={ownerAvatar || getDefaultAvatarUrl(ownerId || ownerName)}
                   alt={ownerName}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = getDefaultAvatarUrl(ownerId || ownerName); }}
                   className="w-6 h-6 rounded-full border border-border bg-muted flex-shrink-0"
                 />
               )}

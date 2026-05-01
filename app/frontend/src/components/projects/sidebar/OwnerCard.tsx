@@ -1,6 +1,7 @@
 ﻿import { Star, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ProjectOwner } from "@/data/mockProjects";
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 interface OwnerCardProps {
   owner: ProjectOwner;
@@ -21,8 +22,9 @@ const OwnerCard = ({ owner }: OwnerCardProps) => {
       <div className="p-5 space-y-4">
         <div className="flex items-start gap-3">
           <img
-            src={owner.avatar}
+            src={owner.avatar || getDefaultAvatarUrl(owner.id || owner.name)}
             alt={owner.name}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = getDefaultAvatarUrl(owner.id || owner.name); }}
             className="w-12 h-12 rounded-full border-2 border-border bg-muted flex-shrink-0"
           />
           <div className="flex-1 min-w-0">

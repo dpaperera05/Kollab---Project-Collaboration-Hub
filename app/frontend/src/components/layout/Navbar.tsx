@@ -8,6 +8,7 @@ import Container from "@/components/ui/Container";
 import KollabLogo from "@/components/ui/KollabLogo";
 import { cn } from "@/lib/utils";
 import { getSession, logout, type KollabUser } from "@/lib/authStore";
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 const navLinks = [
   { label: "Projects", href: "/projects" },
@@ -69,7 +70,7 @@ const Navbar = () => {
 
   const avatarUrl =
     session?.profile?.avatarUrl ||
-    `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(session?.name || "User")}`;
+    getDefaultAvatarUrl(session?.id || session?.name || session?.email);
 
   const handleLogout = () => {
     logout();

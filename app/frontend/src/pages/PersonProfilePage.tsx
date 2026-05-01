@@ -12,7 +12,7 @@ import ActivityTimeline from "@/components/people/profile/ActivityTimeline";
 import type { PersonProfile, PinnedShowcase } from "@/data/mockPeople";
 import { apiGet } from "@/lib/api";
 import NotFound from "@/pages/NotFound";
-import defaultAvatar from "@/assets/default-avatar.svg";
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 type MemberProfileResponse = {
   success: boolean;
@@ -49,7 +49,7 @@ const PersonProfilePage = () => {
         const res = await apiGet<MemberProfileResponse>(`/profile/members/${id}`);
         const profile = res.data.user?.profile || {};
         const name = profile.name || res.data.user?.name || "Member";
-        const avatar = profile.avatarUrl || defaultAvatar;
+        const avatar = profile.avatarUrl || getDefaultAvatarUrl(id || name);
         const stats = {
           projectsCount: res.data.stats?.projectsCount ?? 0,
           showcasesCount: res.data.stats?.showcasesCount ?? 0,

@@ -6,26 +6,16 @@ import type { Mentor } from "@/types/mentor";
 import BookSessionModal from "./BookSessionModal";
 import { getSession } from "@/lib/authStore";
 import { toast } from "@/hooks/use-toast";
-
-const avatarColors = [
-  "from-violet-500 to-pink-500",
-  "from-blue-500 to-cyan-500",
-  "from-pink-500 to-rose-500",
-  "from-amber-500 to-orange-500",
-  "from-emerald-500 to-teal-500",
-  "from-indigo-500 to-violet-500",
-];
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 interface MentorCardProps {
   mentor: Mentor;
-  index: number;
 }
 
-const MentorCard = ({ mentor, index }: MentorCardProps) => {
+const MentorCard = ({ mentor }: MentorCardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [bookOpen, setBookOpen] = useState(false);
-  const colorIdx = index % avatarColors.length;
 
   const handleBookClick = () => {
     const session = getSession();
@@ -51,9 +41,12 @@ const MentorCard = ({ mentor, index }: MentorCardProps) => {
                 loading="lazy"
               />
             ) : (
-              <div className={cn("flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br text-white text-sm font-bold shadow-brand-sm", avatarColors[colorIdx])}>
-                {mentor.avatar}
-              </div>
+              <img
+                src={getDefaultAvatarUrl(mentor.id || mentor.name)}
+                alt={mentor.name}
+                className="w-12 h-12 rounded-full border border-border flex-shrink-0 object-cover"
+                loading="lazy"
+              />
             )}
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-foreground truncate">{mentor.name}</h3>

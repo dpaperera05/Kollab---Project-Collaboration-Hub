@@ -11,7 +11,7 @@ import PeopleHeroIllustration from "@/components/people/PeopleHeroIllustration";
 import PaginationBar from "@/components/projects/PaginationBar";
 import type { PeoplePerson } from "@/components/people/PeopleCard";
 import { apiGet } from "@/lib/api";
-import defaultAvatar from "@/assets/default-avatar.svg";
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 const PAGE_SIZE = 9;
 
@@ -44,7 +44,7 @@ function mapUserToPerson(u: any): PeoplePerson {
   return {
     id: u.id,
     name: profile.name || u.name || "Member",
-    avatar: profile.avatarUrl || defaultAvatar,
+    avatar: profile.avatarUrl || getDefaultAvatarUrl(u.id || profile.name),
     bio: profile.bio || "",
     preferredRoles: profile.preferredRoles || [],
     skills: profile.skills || [],
