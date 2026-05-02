@@ -158,48 +158,6 @@ const EventPreviewCard = ({ form }: { form: FormState }) => {
 /* ------------------------------------------------------------------ */
 /*  Hero Illustration (right side)                                     */
 /* ------------------------------------------------------------------ */
-const CreateEventIllustration = () => (
-  <svg viewBox="0 0 360 280" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto" aria-hidden="true">
-    <defs>
-      <radialGradient id="ce-glow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="hsl(270 80% 60%)" stopOpacity="0.15" />
-        <stop offset="100%" stopColor="hsl(270 80% 60%)" stopOpacity="0" />
-      </radialGradient>
-    </defs>
-    <circle cx="180" cy="140" r="120" fill="url(#ce-glow)" />
-    {/* Ticket card */}
-    <rect x="110" y="70" width="140" height="90" rx="14" fill="hsl(270 80% 60%)" fillOpacity="0.08" stroke="hsl(270 80% 60%)" strokeWidth="1.2" strokeOpacity="0.3" />
-    <rect x="110" y="70" width="140" height="28" rx="14" fill="hsl(270 80% 60%)" fillOpacity="0.12" />
-    <circle cx="145" cy="84" r="4" fill="hsl(270 80% 60%)" fillOpacity="0.5" />
-    <rect x="155" y="80" width="60" height="8" rx="4" fill="hsl(270 80% 60%)" fillOpacity="0.2" />
-    <rect x="125" y="108" width="110" height="6" rx="3" fill="hsl(270 80% 60%)" fillOpacity="0.12" />
-    <rect x="125" y="120" width="80" height="6" rx="3" fill="hsl(270 80% 60%)" fillOpacity="0.08" />
-    <rect x="125" y="138" width="40" height="14" rx="7" fill="hsl(270 80% 60%)" fillOpacity="0.15" />
-    <rect x="172" y="138" width="40" height="14" rx="7" fill="hsl(315 85% 65%)" fillOpacity="0.1" />
-    {/* Floating elements */}
-    <g>
-      <rect x="60" y="180" width="50" height="20" rx="10" fill="hsl(270 80% 60%)" fillOpacity="0.1" stroke="hsl(270 80% 60%)" strokeWidth="0.7" strokeOpacity="0.25" />
-      <text x="85" y="194" textAnchor="middle" fill="hsl(270 80% 60%)" fontSize="8" fontWeight="600" opacity="0.6">Create</text>
-      <animateTransform attributeName="transform" type="translate" values="0,0;0,-3;0,0" dur="4s" repeatCount="indefinite" />
-    </g>
-    <g>
-      <rect x="250" y="170" width="56" height="20" rx="10" fill="hsl(315 85% 65%)" fillOpacity="0.08" stroke="hsl(315 85% 65%)" strokeWidth="0.7" strokeOpacity="0.2" />
-      <text x="278" y="184" textAnchor="middle" fill="hsl(315 85% 65%)" fontSize="8" fontWeight="600" opacity="0.5">Share</text>
-      <animateTransform attributeName="transform" type="translate" values="0,0;0,3;0,0" dur="5s" repeatCount="indefinite" />
-    </g>
-    {/* Sparkle dots */}
-    <circle cx="80" cy="100" r="3" fill="hsl(270 80% 60%)" fillOpacity="0.3">
-      <animate attributeName="fillOpacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite" />
-    </circle>
-    <circle cx="280" cy="90" r="2.5" fill="hsl(315 85% 65%)" fillOpacity="0.25">
-      <animate attributeName="fillOpacity" values="0.25;0.5;0.25" dur="4s" repeatCount="indefinite" />
-    </circle>
-    <circle cx="180" cy="220" r="60" fill="none" stroke="hsl(270 80% 60%)" strokeWidth="0.6" strokeOpacity="0.1">
-      <animate attributeName="r" values="60;72;60" dur="5s" repeatCount="indefinite" />
-    </circle>
-  </svg>
-);
-
 /* ------------------------------------------------------------------ */
 /*  Section Header                                                     */
 /* ------------------------------------------------------------------ */
@@ -335,33 +293,55 @@ const CreateEventPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="flex-1 pt-20">
-        {/* Hero */}
-        <div className="border-b border-border bg-card/50">
-          <Container className="py-6 lg:py-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10">
-              <div className="flex-1 min-w-0 space-y-4">
-                <Link
-                  to="/events"
-                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft size={14} /> Back to Events
-                </Link>
-                <div className="space-y-2">
-                  <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-                    Create <span className="gradient-text">Event</span>
-                  </h1>
-                  <p className="text-sm text-muted-foreground max-w-lg leading-relaxed">
-                    Share hackathons, workshops, talks, and webinars with the Kollab community.
-                  </p>
-                </div>
-                
-              </div>
-              <div className="hidden lg:flex flex-shrink-0 items-center justify-center w-[300px] xl:w-[340px]">
-                <CreateEventIllustration />
-              </div>
+      <main className="flex-1 pt-16">
+        {/* Hero — matches PostProjectWizard style */}
+        <div className="relative overflow-hidden border-b border-border">
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse 80% 60% at 50% 0%, hsl(var(--primary) / 0.10) 0%, hsl(var(--accent-brand) / 0.05) 50%, transparent 100%)",
+            }}
+          />
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: "-60px",
+              left: "-80px",
+              width: "340px",
+              height: "340px",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, hsl(var(--primary) / 0.08), transparent 70%)",
+              filter: "blur(40px)",
+            }}
+          />
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: "20px",
+              right: "-60px",
+              width: "260px",
+              height: "260px",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, hsl(var(--accent-brand) / 0.07), transparent 70%)",
+              filter: "blur(50px)",
+            }}
+          />
+
+          <div className="relative max-w-4xl mx-auto px-6 pt-14 pb-12 text-center">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold mb-5">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              New Event
             </div>
-          </Container>
+
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-foreground tracking-tight mb-3">
+              Create an <span className="gradient-text">Event</span>
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-lg mx-auto leading-relaxed">
+              Share hackathons, workshops, talks, and webinars with the Kollab community.
+            </p>
+          </div>
         </div>
 
         {/* Content */}
