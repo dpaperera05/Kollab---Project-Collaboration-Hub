@@ -2,7 +2,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Send, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { getSession } from "@/lib/authStore";
 import { toast } from "@/hooks/use-toast";
 import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
@@ -17,6 +17,14 @@ type ChatMessage = {
 type ChatResponse = {
   success: boolean;
   data: { chat: { _id?: string; id?: string; messages: ChatMessage[] } };
+};
+
+type ChatListItem = {
+  _id?: string;
+  id?: string;
+  participantIds: string[];
+  projectId?: string;
+  messages?: ChatMessage[];
 };
 
 interface MessageOwnerWidgetProps {
@@ -45,18 +53,25 @@ const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar, projectId }: Mess
 
   useEffect(() => {
     let cancelled = false;
-    const ensureChat = async () => {
+    const loadExistingChat = async () => {
       if (initializedRef.current) return;
       if (!session?.token || !ownerId) return;
       initializedRef.current = true;
       setLoading(true);
       setError("");
       try {
-        const res = await apiPost<ChatResponse>("/chats", { participantId: ownerId, participantName: ownerName, projectId });
+        const res = await apiGet<{ success: boolean; data: { chats: ChatListItem[] } }>("/chats");
         if (cancelled) return;
-        const id = res?.data?.chat?._id || res?.data?.chat?.id || null;
-        setChatId(id);
-        setMessages(res?.data?.chat?.messages || []);
+        const existing = (res.data.chats || []).find(
+          (chat) => chat.projectId === projectId && chat.participantIds.includes(ownerId)
+        );
+        if (existing) {
+          setChatId(existing._id || existing.id || null);
+          setMessages(existing.messages || []);
+        } else {
+          setChatId(null);
+          setMessages([]);
+        }
       } catch (err: any) {
         if (!cancelled) setError(err?.message || "Failed to load chat");
       } finally {
@@ -64,9 +79,9 @@ const MessageOwnerWidget = ({ ownerId, ownerName, ownerAvatar, projectId }: Mess
       }
     };
 
-    ensureChat();
+    loadExistingChat();
     return () => { cancelled = true; };
-  }, [ownerId, ownerName, projectId, session?.id]);
+  }, [ownerId, projectId, session?.id, session?.token]);
 
   const formatTime = (ts: string) => {
     const date = new Date(ts);
