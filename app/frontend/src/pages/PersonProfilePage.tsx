@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Briefcase, Clock, Layers, MessageCircle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -10,6 +10,7 @@ import TechBadges from "@/components/people/profile/TechBadges";
 import PinnedShowcases from "@/components/people/profile/PinnedShowcases";
 import SkillEvidenceGraph from "@/components/people/profile/SkillEvidenceGraph";
 import ActivityTimeline from "@/components/people/profile/ActivityTimeline";
+import MemberChatWidget from "@/components/people/profile/MemberChatWidget";
 import type { PersonProfile, PinnedShowcase } from "@/types/personProfile";
 import { apiGet } from "@/lib/api";
 import NotFound from "@/pages/NotFound";
@@ -38,10 +39,19 @@ type ActivityApiItem = {
 const PersonProfilePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const chatSectionRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<HTMLInputElement | null>(null);
   const [person, setPerson] = useState<PersonProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activities, setActivities] = useState<ActivityApiItem[]>([]);
+
+  const scrollToChat = () => {
+    chatSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      chatInputRef.current?.focus();
+    }, 350);
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -108,22 +118,21 @@ const PersonProfilePage = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <main className="flex-1 pt-20">
-        <div className="relative border-b border-border bg-card/50 overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,hsl(270_80%_60%/0.06),transparent)] dark:bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,hsl(270_80%_60%/0.12),transparent)]" />
-          <Container className="py-4">
+      <main className="flex-1 pt-16">
+        <Container className="py-2 md:py-3 space-y-4">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <button
               type="button"
               onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/people")}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
+              className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-muted/60 hover:text-foreground transition-colors font-medium"
             >
               <ArrowLeft size={14} />
               Back to People
             </button>
-          </Container>
-        </div>
+            <span className="text-border">/</span>
+            <span className="font-medium text-foreground/80 truncate">Public Profile</span>
+          </div>
 
-        <Container className="py-6 md:py-8 space-y-6">
           {loading || !person ? (
             <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">Loading profile...</div>
           ) : (
@@ -138,10 +147,7 @@ const PersonProfilePage = () => {
                         alt={person.name}
                         className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl border-2 border-white/70 bg-muted object-cover shadow-lg"
                       />
-                      <div className="space-y-3 min-w-0">
-                        <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                          Public Member Profile
-                        </span>
+                      <div className="space-y-2.5 min-w-0">
                         <div className="space-y-1">
                           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground leading-tight">
                             {person.name}
@@ -166,7 +172,7 @@ const PersonProfilePage = () => {
                     <div className="w-full xl:w-auto xl:min-w-[340px] space-y-3">
                       <button
                         type="button"
-                        onClick={() => navigate("/messages")}
+                        onClick={scrollToChat}
                         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-95 transition-opacity"
                       >
                         <MessageCircle size={16} />
@@ -234,6 +240,9 @@ const PersonProfilePage = () => {
                 <aside className="space-y-4 xl:sticky xl:top-24 self-start">
                   <ProfileSidebar person={person} />
                   <TechBadges techStack={person.techStack} />
+                  <div ref={chatSectionRef} id="profile-chatbox">
+                    <MemberChatWidget memberId={person.id} memberName={person.name} inputRef={chatInputRef} />
+                  </div>
                 </aside>
               </div>
             </>

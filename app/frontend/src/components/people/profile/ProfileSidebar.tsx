@@ -1,4 +1,4 @@
-import { ShieldCheck, Clock3, Target, Sparkles, Github, Linkedin, Globe, Copy, Check } from "lucide-react";
+import { Clock3, Target, Sparkles, Github, Linkedin, Globe, Copy, Check } from "lucide-react";
 import type { PersonProfile } from "@/types/personProfile";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -21,13 +21,6 @@ const ProfileSidebar = ({ person }: Props) => {
             <span className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
               <Clock3 size={12} className="text-primary" />
               {person.availabilityHoursPerWeek} hrs/week
-            </span>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
-            <span className="text-xs text-muted-foreground">Profile Visibility</span>
-            <span className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
-              <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
-              {person.isProfilePublic ? "Public" : "Private"}
             </span>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
