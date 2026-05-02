@@ -56,16 +56,24 @@ const MentorProfileTab = ({ user, onUpdate }: Props) => {
   const [expertise, setExpertise] = useState<string[]>(p.expertiseSkills || []);
   const [domains, setDomains] = useState<string[]>(p.domainInterests || []);
   const [languages, setLanguages] = useState<string[]>((p as any).languages || ["English"]);
-  const [rate, setRate] = useState((p as any).rate || "Free");
+  const [rate, setRate] = useState((p as any).rateType === "paid" ? "Paid" : "Free");
+  const [rateNote, setRateNote] = useState((p as any).rateNote || "");
   const [github, setGithub] = useState(p.links?.github || "");
   const [linkedin, setLinkedin] = useState(p.links?.linkedin || "");
   const [portfolio, setPortfolio] = useState(p.links?.portfolio || "");
 
   const save = () => {
     updateUserProfile({
-      name, bio, expertiseSkills: expertise, domainInterests: domains,
+      name,
+      bio,
+      headline,
+      expertiseSkills: expertise,
+      domainInterests: domains,
+      languages,
+      rateType: rate === "Paid" ? "paid" : "free",
+      rateNote: rate === "Paid" ? rateNote.trim() : "",
       links: { github, linkedin, portfolio },
-    } as any);
+    });
     onUpdate();
     toast({ title: "Mentor profile updated" });
   };
@@ -88,7 +96,14 @@ const MentorProfileTab = ({ user, onUpdate }: Props) => {
                     className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all border ${rate === r ? "bg-primary text-primary-foreground border-primary" : "chip"}`}>{r}</button>
                 ))}
               </div>
-              {rate === "Paid" && <Input className="mt-2" placeholder="e.g. LKR 2500 / session" />}
+              {rate === "Paid" && (
+                <Input
+                  className="mt-2"
+                  placeholder="e.g. LKR 2500 / session"
+                  value={rateNote}
+                  onChange={(e) => setRateNote(e.target.value)}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
