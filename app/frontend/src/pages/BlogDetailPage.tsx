@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Calendar, MessageCircle, BookOpen } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -24,19 +24,149 @@ const BlogContentRenderer = ({ content }: { content?: string }) => {
     return <p className="text-sm text-muted-foreground">No content available for this blog.</p>;
   }
 
-  const paragraphs = content
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  const renderInlineCode = (text: string) => {
+    const parts = text.split(/(`[^`]+`)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+        return (
+          <code key={`inline-${idx}`} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.9em] text-foreground">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return <span key={`txt-${idx}`}>{part}</span>;
+    });
+  };
+
+  const lines = content.split("\n");
+  const blocks: ReactNode[] = [];
+  let i = 0;
+  let inCodeBlock = false;
+  let codeLines: string[] = [];
+
+  while (i < lines.length) {
+    const raw = lines[i] ?? "";
+    const line = raw.trimEnd();
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```")) {
+      if (inCodeBlock) {
+        blocks.push(
+          <pre key={`code-${i}`} className="overflow-x-auto rounded-xl border border-border bg-muted/40 p-4">
+            <code className="font-mono text-sm text-foreground">{codeLines.join("\n")}</code>
+          </pre>
+        );
+        codeLines = [];
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(raw);
+      i += 1;
+      continue;
+    }
+
+    if (!trimmed) {
+      i += 1;
+      continue;
+    }
+
+    if (trimmed.startsWith("### ")) {
+      blocks.push(
+        <h3 key={`h3-${i}`} className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+          {renderInlineCode(trimmed.slice(4))}
+        </h3>
+      );
+      i += 1;
+      continue;
+    }
+
+    if (trimmed.startsWith("## ")) {
+      blocks.push(
+        <h2 key={`h2-${i}`} className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+          {renderInlineCode(trimmed.slice(3))}
+        </h2>
+      );
+      i += 1;
+      continue;
+    }
+
+    if (trimmed.startsWith("> ")) {
+      const quoteLines: string[] = [];
+      let j = i;
+      while (j < lines.length && (lines[j] ?? "").trim().startsWith("> ")) {
+        quoteLines.push((lines[j] ?? "").trim().slice(2));
+        j += 1;
+      }
+      blocks.push(
+        <blockquote key={`quote-${i}`} className="rounded-r-xl border-l-4 border-primary bg-primary/5 px-4 py-3 text-sm sm:text-base italic text-foreground/90">
+          {renderInlineCode(quoteLines.join(" "))}
+        </blockquote>
+      );
+      i = j;
+      continue;
+    }
+
+    if (/^-\s+/.test(trimmed)) {
+      const items: string[] = [];
+      let j = i;
+      while (j < lines.length && /^-\s+/.test((lines[j] ?? "").trim())) {
+        items.push((lines[j] ?? "").trim().replace(/^-\s+/, ""));
+        j += 1;
+      }
+      blocks.push(
+        <ul key={`ul-${i}`} className="list-disc pl-6 space-y-2 text-foreground/90 leading-7">
+          {items.map((item, idx) => (
+            <li key={`ul-item-${i}-${idx}`}>{renderInlineCode(item)}</li>
+          ))}
+        </ul>
+      );
+      i = j;
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(trimmed)) {
+      const items: string[] = [];
+      let j = i;
+      while (j < lines.length && /^\d+\.\s+/.test((lines[j] ?? "").trim())) {
+        items.push((lines[j] ?? "").trim().replace(/^\d+\.\s+/, ""));
+        j += 1;
+      }
+      blocks.push(
+        <ol key={`ol-${i}`} className="list-decimal pl-6 space-y-2 text-foreground/90 leading-7">
+          {items.map((item, idx) => (
+            <li key={`ol-item-${i}-${idx}`}>{renderInlineCode(item)}</li>
+          ))}
+        </ol>
+      );
+      i = j;
+      continue;
+    }
+
+    const paragraphLines = [trimmed];
+    let j = i + 1;
+    while (j < lines.length) {
+      const next = (lines[j] ?? "").trim();
+      if (!next || next.startsWith("## ") || next.startsWith("### ") || next.startsWith("> ") || /^-\s+/.test(next) || /^\d+\.\s+/.test(next) || next.startsWith("```")) break;
+      paragraphLines.push(next);
+      j += 1;
+    }
+
+    blocks.push(
+      <p key={`p-${i}`} className="text-base sm:text-lg text-foreground/85 leading-8">
+        {renderInlineCode(paragraphLines.join(" "))}
+      </p>
+    );
+    i = j;
+  }
 
   return (
-    <div className="space-y-6">
-      {paragraphs.map((text, i) => (
-        <p key={i} className="text-base text-foreground/85 leading-[1.85] whitespace-pre-line">
-          {text}
-        </p>
-      ))}
-    </div>
+    <div className="space-y-6 break-words">{blocks}</div>
   );
 };
 
@@ -90,7 +220,7 @@ const BlogCommentsSection = ({ blogId }: { blogId: string }) => {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 rounded-2xl border border-border bg-card/70 p-5 sm:p-6">
       <div className="flex items-center gap-2">
         <MessageCircle size={20} className="text-primary" />
         <h3 className="text-xl font-bold text-foreground">
@@ -106,7 +236,7 @@ const BlogCommentsSection = ({ blogId }: { blogId: string }) => {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground py-4">No comments yet. Be the first to share your thoughts!</p>
+        <p className="text-sm text-muted-foreground py-4 px-4 rounded-xl bg-muted/40 border border-border/60">No comments yet. Be the first to share your thoughts!</p>
       )}
 
       {/* Add comment form */}
@@ -226,7 +356,7 @@ const BlogDetailPage = () => {
             <div className="w-full h-full bg-gradient-to-br from-primary/25 via-primary/10 to-accent/20" />
           )}
           {/* Subtle overlay for readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/15" />
 
           {/* Content on image */}
           <Container className="absolute inset-0 flex flex-col justify-end pb-8 sm:pb-10">
@@ -239,7 +369,7 @@ const BlogDetailPage = () => {
               Back
             </Link>
 
-            <div className="space-y-3 max-w-3xl">
+            <div className="space-y-3 max-w-3xl pr-2">
               {/* Tags */}
               <div className="flex flex-wrap gap-1.5">
                 {(blog.tags || []).map((tag) => (
@@ -253,7 +383,7 @@ const BlogDetailPage = () => {
               </div>
 
               {/* Title */}
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight tracking-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight tracking-tight text-balance">
                 {blog.title}
               </h1>
 
@@ -286,9 +416,9 @@ const BlogDetailPage = () => {
 
         {/* Article body */}
         <Container className="py-10 lg:py-14">
-          <div className="max-w-3xl mx-auto space-y-12">
+          <div className="max-w-3xl mx-auto space-y-12 px-1 sm:px-0">
             {/* Content */}
-            <article>
+            <article className="rounded-2xl border border-border bg-card/70 p-5 sm:p-8 lg:p-10 shadow-sm">
               <BlogContentRenderer content={blog.content} />
             </article>
 

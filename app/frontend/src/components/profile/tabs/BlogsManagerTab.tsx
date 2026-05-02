@@ -11,13 +11,18 @@ import { Plus, Pencil, Trash2, Upload, X, FileText } from "lucide-react";
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 
 type Blog = {
-  _id: string;
+  _id?: string;
+  id?: string;
   title: string;
   coverImage?: string;
   excerpt?: string;
   content?: string;
-  createdAt: string;
+  createdAt?: string;
+  publishedAt?: string;
 };
+
+const getBlogId = (blog: Partial<Blog>) => blog._id ?? blog.id ?? "";
+const getBlogDate = (blog: Partial<Blog>) => blog.createdAt ?? blog.publishedAt;
 
 const BlogsManagerTab = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -45,11 +50,13 @@ const BlogsManagerTab = () => {
 
   const handleSave = () => {
     if (!editing?.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
-    if (editing._id) {
-      apiPut<{ success: boolean; data: { blog: Blog } }>(`/blogs/${editing._id}`, editing)
+    const editingId = getBlogId(editing);
+    if (editingId) {
+      apiPut<{ success: boolean; data: { blog: Blog } }>(`/blogs/${editingId}`, editing)
         .then(res => {
           const updated = res?.data?.blog;
-          setBlogs(prev => prev.map(b => b._id === updated._id ? updated : b));
+          const updatedId = getBlogId(updated || {});
+          setBlogs(prev => prev.map(b => getBlogId(b) === updatedId ? updated : b));
           toast({ title: "Blog updated" });
         })
         .catch(() => toast({ title: "Failed to update blog", variant: "destructive" }))
@@ -69,7 +76,7 @@ const BlogsManagerTab = () => {
   const deleteBlog = (id: string) => {
     apiDelete(`/blogs/${id}`)
       .then(() => {
-        setBlogs(prev => prev.filter(b => b._id !== id));
+        setBlogs(prev => prev.filter(b => getBlogId(b) !== id));
         toast({ title: "Blog deleted" });
       })
       .catch(() => toast({ title: "Failed to delete blog", variant: "destructive" }));
@@ -92,38 +99,41 @@ const BlogsManagerTab = () => {
         </CardContent></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {blogs.map(b => (
-            <Card key={b._id} className="border-border card-shadow overflow-hidden">
+          {blogs.map(b => {
+            const blogId = getBlogId(b);
+            const blogDate = getBlogDate(b);
+            return (
+            <Card key={blogId} className="border-border card-shadow overflow-hidden">
               {b.coverImage && <div className="aspect-video bg-muted overflow-hidden"><img src={b.coverImage} alt="" className="w-full h-full object-cover" /></div>}
               <CardContent className="p-5 space-y-2">
                 <h4 className="font-semibold text-foreground">{b.title}</h4>
-                <p className="text-xs text-muted-foreground">{new Date(b.createdAt).toLocaleDateString()}</p>
+                <p className="text-xs text-muted-foreground">{blogDate ? new Date(blogDate).toLocaleDateString() : "No publish date"}</p>
                 <p className="text-sm text-muted-foreground line-clamp-2">{b.excerpt}</p>
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => openEdit(b)}><Pencil size={12} /> Edit</Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:bg-destructive/10"><Trash2 size={12} /> Delete</Button>
+                      <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:bg-destructive/10" disabled={!blogId}><Trash2 size={12} /> Delete</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader><AlertDialogTitle>Delete blog?</AlertDialogTitle><AlertDialogDescription>This cannot be undone.</AlertDialogDescription></AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteBlog(b._id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                        <AlertDialogAction onClick={() => blogId && deleteBlog(blogId)} className="bg-destructive text-destructive-foreground" disabled={!blogId}>Delete</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       )}
 
       {/* Editor Dialog */}
       <Dialog open={!!editing} onOpenChange={open => { if (!open) setEditing(null); }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editing?._id ? "Edit Blog" : "New Blog"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing && getBlogId(editing) ? "Edit Blog" : "New Blog"}</DialogTitle></DialogHeader>
           {editing && (
             <div className="space-y-4 pt-2">
               <div><Label>Title *</Label><Input value={editing.title || ""} onChange={e => set("title", e.target.value)} placeholder="Blog title..." /></div>
