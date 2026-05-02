@@ -56,6 +56,9 @@ const TECH_STACK = [
   "Vite",
 ];
 
+const backBtnCls = "h-10 rounded-xl border border-border bg-transparent px-5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+const primaryBtnCls = "h-11 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_hsl(var(--primary)/0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-50";
+
 const SkillsStep = () => {
   const navigate = useNavigate();
   const session = getSession();
@@ -98,31 +101,35 @@ const SkillsStep = () => {
       leftHeadline="Show off your skills"
       leftTagline="Your skills help us find perfect matches."
     >
-      <StepHeader
-        title={isMentor ? "Your expertise" : "Your skills & tools"}
-        subtitle={isMentor ? "Select skills you can mentor others in." : "Help us match you with the right projects."}
-      />
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="scrollbar-invisible min-h-0 flex-1 overflow-y-auto pr-1">
+          <StepHeader
+            title={isMentor ? "Your expertise" : "Your skills & tools"}
+            subtitle={isMentor ? "Select skills you can mentor others in." : "Help us match you with the right projects."}
+          />
 
-      <div className="space-y-4">
-        <ChipMultiSelect
-          options={SKILLS}
-          selected={skills}
-          onChange={setSkills}
-          label={isMentor ? "Expertise Skills" : "Skills"}
-          minRequired={3}
-        />
-        <ChipMultiSelect
-          options={TECH_STACK}
-          selected={techStack}
-          onChange={setTechStack}
-          label="Tech Stack"
-          minRequired={isMentor ? 0 : 3}
-        />
-      </div>
+          <div className="space-y-3">
+            <ChipMultiSelect
+              options={SKILLS}
+              selected={skills}
+              onChange={setSkills}
+              label={isMentor ? "Expertise Skills" : "Skills"}
+              minRequired={3}
+            />
+            <ChipMultiSelect
+              options={TECH_STACK}
+              selected={techStack}
+              onChange={setTechStack}
+              label="Tech Stack"
+              minRequired={isMentor ? 0 : 3}
+            />
+          </div>
+        </div>
 
-      <div className="mt-4 flex justify-between">
-        <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>
-        <Button onClick={handleNext} disabled={!isValid} className="h-10 px-6 rounded-xl text-sm font-semibold">Next</Button>
+        <div className="mt-3 shrink-0 flex justify-between border-t border-border/70 pt-2.5">
+          <Button variant="ghost" onClick={handleBack} className={backBtnCls}>Back</Button>
+          <Button onClick={handleNext} disabled={!isValid} className={primaryBtnCls}>Next</Button>
+        </div>
       </div>
     </OnboardingLayout>
   );

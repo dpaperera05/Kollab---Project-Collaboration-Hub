@@ -46,6 +46,8 @@ const MENTOR_EXPERTISE: TileOption[] = [
   { label: "Frontend Engineering", icon: Monitor },
 ];
 
+const primaryBtnCls = "h-11 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_hsl(var(--primary)/0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-50";
+
 const RoleStep = () => {
   const navigate = useNavigate();
   const session = getSession();
@@ -80,27 +82,32 @@ const RoleStep = () => {
       step={1}
       totalSteps={6}
       leftHeadline="Tell us what you're here for"
-      leftTagline="Choose the roles that excite you."
+      leftTagline={isMentor ? "Choose the areas where you can guide others." : "Choose the roles that excite you."}
     >
-      <StepHeader
-        title={isMentor ? "Select your expertise" : "Choose your roles"}
-        subtitle={isMentor ? "Pick areas you can mentor others in." : "Select the roles that interest you."}
-      />
-      <TileSelect
-        options={options}
-        selected={selected}
-        onChange={setSelected}
-        label={isMentor ? "Expertise Areas" : "Preferred Roles"}
-        minRequired={1}
-      />
-      <div className="mt-4 flex justify-end">
-        <Button
-          onClick={handleNext}
-          disabled={selected.length === 0}
-          className="h-10 px-6 rounded-xl text-sm font-semibold"
-        >
-          Next
-        </Button>
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="scrollbar-invisible min-h-0 flex-1 overflow-y-auto pr-1">
+          <StepHeader
+            title={isMentor ? "Select your expertise" : "Choose your roles"}
+            subtitle={isMentor ? "Choose the areas where you can guide others." : "Select the roles that interest you."}
+          />
+          <TileSelect
+            options={options}
+            selected={selected}
+            onChange={setSelected}
+            label={isMentor ? "Expertise Areas" : "Preferred Roles"}
+            minRequired={1}
+          />
+        </div>
+        <div className="mt-3 shrink-0 flex items-center justify-between gap-3 border-t border-border/70 pt-2.5">
+          <p className="text-xs text-muted-foreground">Pick at least one option to continue.</p>
+          <Button
+            onClick={handleNext}
+            disabled={selected.length === 0}
+            className={primaryBtnCls}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </OnboardingLayout>
   );

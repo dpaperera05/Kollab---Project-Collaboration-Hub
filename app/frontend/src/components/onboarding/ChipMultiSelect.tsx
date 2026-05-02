@@ -21,9 +21,9 @@ const ChipMultiSelect = ({ options, selected, onChange, label, minRequired }: Ch
   return (
     <div>
       {label && (
-        <p className="text-xs font-medium text-foreground mb-2">
+        <p className="mb-2 text-xs font-semibold text-foreground">
           {label}
-          {minRequired ? <span className="text-muted-foreground font-normal"> (select at least {minRequired})</span> : null}
+          {minRequired ? <span className="font-normal text-muted-foreground"> (select at least {minRequired})</span> : null}
         </p>
       )}
       <div className="flex flex-wrap gap-1.5">
@@ -35,11 +35,13 @@ const ChipMultiSelect = ({ options, selected, onChange, label, minRequired }: Ch
               type="button"
               onClick={() => toggle(option)}
               className={cn(
-                "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border",
+                "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 isSelected
-                  ? "bg-primary/[0.08] text-primary border-primary"
-                  : "bg-card text-muted-foreground border-border hover:border-primary/30"
+                  ? "border-primary/60 bg-primary/15 text-foreground shadow-sm shadow-primary/25"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:bg-muted/70 hover:text-foreground"
               )}
+              aria-pressed={isSelected}
             >
               {isSelected && <Check className="h-3 w-3" strokeWidth={3} />}
               {option}

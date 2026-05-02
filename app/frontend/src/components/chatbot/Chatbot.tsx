@@ -15,6 +15,9 @@ const Chatbot = () => {
     pathname,
   } = useChatbot();
 
+  const isOnboardingRoute = pathname.startsWith("/onboarding");
+  if (isOnboardingRoute) return null;
+
   return (
     <>
       <ChatWidget
