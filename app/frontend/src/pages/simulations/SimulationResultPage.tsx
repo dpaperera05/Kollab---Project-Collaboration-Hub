@@ -668,7 +668,7 @@ const SimulationResultPage = () => {
   if (!loading && !data && error) {
     const isAuthError = error.includes("log in");
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navbar />
         <Container className="flex flex-col items-center gap-5 py-32 text-center">
           <div
@@ -716,7 +716,7 @@ const SimulationResultPage = () => {
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navbar />
         <ResultSkeleton />
         <Footer />
@@ -748,7 +748,7 @@ const SimulationResultPage = () => {
   const sortedSkills = [...skillBreakdown].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
       {/* ── Hero ── */}

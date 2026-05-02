@@ -52,6 +52,15 @@ type DraftAnswers = Record<string, string | string[]>;
 const DRAFT_KEY = (slug: string) => `jobSimulationDraft:${slug}`;
 const RESULT_KEY = (attemptId: string) => `jobSimulationResult:${attemptId}`;
 
+const DIFFICULTY_STYLES: Record<SimulationDetail["difficulty"], string> = {
+  Beginner:
+    "border-emerald-300/70 bg-emerald-500/10 text-emerald-700 dark:border-emerald-700/70 dark:bg-emerald-900/30 dark:text-emerald-300",
+  Intermediate:
+    "border-amber-300/70 bg-amber-500/10 text-amber-700 dark:border-amber-700/70 dark:bg-amber-900/30 dark:text-amber-300",
+  Advanced:
+    "border-rose-300/70 bg-rose-500/10 text-rose-700 dark:border-rose-700/70 dark:bg-rose-900/30 dark:text-rose-300",
+};
+
 const loadDraft = (slug: string): DraftAnswers => {
   try {
     const raw = localStorage.getItem(DRAFT_KEY(slug));
@@ -206,7 +215,7 @@ const TaskRenderer = ({ task, answer, onChange }: TaskRendererProps) => {
             key={opt}
             className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
               selected === opt
-                ? "border-primary/60 bg-primary/[0.04]"
+                ? "border-primary/60 bg-primary/[0.06] ring-2 ring-primary/20 shadow-sm"
                 : "border-border/70 bg-background hover:border-primary/30 hover:bg-primary/[0.02]"
             }`}
           >
@@ -247,7 +256,7 @@ const TaskRenderer = ({ task, answer, onChange }: TaskRendererProps) => {
               key={opt}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
                 checked
-                  ? "border-primary/60 bg-primary/[0.04]"
+                  ? "border-primary/60 bg-primary/[0.06] ring-2 ring-primary/20 shadow-sm"
                   : "border-border/70 bg-background hover:border-primary/30 hover:bg-primary/[0.02]"
               }`}
             >
@@ -480,7 +489,7 @@ const SimulationPlayerPage = () => {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navbar />
         <Container className="flex flex-col items-center gap-5 py-32 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
@@ -516,7 +525,7 @@ const SimulationPlayerPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navbar />
         <PlayerSkeleton />
         <Footer />
@@ -528,7 +537,7 @@ const SimulationPlayerPage = () => {
 
   if (error || !simulation || flatTasks.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navbar />
         <Container className="flex flex-col items-center gap-5 py-32 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10">
@@ -583,9 +592,12 @@ const SimulationPlayerPage = () => {
   const skillChips = current.task.skillWeights
     ? Object.keys(current.task.skillWeights)
     : [];
+  const difficultyClass =
+    DIFFICULTY_STYLES[simulation.difficulty] ??
+    "border-border bg-muted text-muted-foreground";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
       {/* ── Top progress bar ── */}
@@ -596,19 +608,74 @@ const SimulationPlayerPage = () => {
         />
       </div>
 
-      <Container className="py-8">
-        {/* Breadcrumb */}
-        <Link
-          to={`/simulations/${slug}`}
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft size={14} />
-          {simulation.title}
-        </Link>
+      <Container className="py-6 md:py-8">
+        {/* Simulation header */}
+        <section className="relative mb-6 overflow-hidden rounded-2xl border border-border bg-card/90 p-5 shadow-sm md:p-6">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-primary to-primary/50"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-primary/10 blur-3xl"
+          />
+
+          <div className="relative">
+            <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+              <Link
+                to="/simulations"
+                className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft size={14} />
+                Job Simulations
+              </Link>
+              <span className="text-muted-foreground/40">/</span>
+              <Link
+                to={`/simulations/${slug}`}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Simulation Details
+              </Link>
+            </div>
+
+            <h1 className="text-2xl font-black tracking-tight text-foreground md:text-3xl">
+              {simulation.title}
+            </h1>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center rounded-full border border-border bg-background/80 px-2.5 py-0.5 text-xs font-semibold text-foreground">
+                {simulation.roleCategory}
+              </span>
+              <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${difficultyClass}`}>
+                {simulation.difficulty}
+              </span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4 sm:gap-3 sm:text-sm">
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-2.5 py-2">
+                <Clock size={13} className="text-primary" />
+                ~{simulation.estimatedMinutes} min
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-2.5 py-2">
+                <Layers size={13} className="text-primary" />
+                {simulation.stages.length} stage{simulation.stages.length !== 1 ? "s" : ""}
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-2.5 py-2">
+                <ClipboardList size={13} className="text-primary" />
+                {totalTasks} task{totalTasks !== 1 ? "s" : ""}
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-2.5 py-2">
+                <Zap size={13} className="text-primary" />
+                {simulation.xp} XP
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[220px_1fr_240px]">
           {/* ── Left sidebar: stage/task navigation ── */}
-          <aside className="rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-24">
+          <aside className="relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm lg:sticky lg:top-24">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Stages
             </p>
@@ -629,7 +696,7 @@ const SimulationPlayerPage = () => {
                           onClick={() => setCurrentIndex(ft.index)}
                           className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
                             isActive
-                              ? "bg-primary/10 font-semibold text-primary"
+                              ? "border border-primary/30 bg-primary/10 font-semibold text-primary shadow-sm"
                               : "text-muted-foreground hover:bg-muted hover:text-foreground"
                           }`}
                         >
@@ -668,9 +735,13 @@ const SimulationPlayerPage = () => {
                   </span>
                 )}
               </div>
-              <h1 className="text-xl font-bold text-foreground">
+
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Current Task
+              </p>
+              <h2 className="text-xl font-extrabold tracking-tight text-foreground md:text-2xl">
                 {current.task.title}
-              </h1>
+              </h2>
 
               {/* Skill chips */}
               {skillChips.length > 0 && (
@@ -689,7 +760,7 @@ const SimulationPlayerPage = () => {
 
             {/* Stage narrative (shown on first task of a new stage) */}
             {current.task === current.stage.tasks[0] && (
-              <div className="mb-5 rounded-xl border border-border/50 bg-muted/40 p-4">
+              <div className="mb-5 rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                   Stage Context
                 </p>
@@ -700,7 +771,8 @@ const SimulationPlayerPage = () => {
             )}
 
             {/* Task prompt */}
-            <div className="mb-5 rounded-2xl border border-border bg-card p-5">
+            <div className="relative mb-5 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
               <p className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Your Task
               </p>
@@ -722,7 +794,7 @@ const SimulationPlayerPage = () => {
             </div>
 
             {/* Answer area */}
-            <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-sm">
               <p className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Your Answer
               </p>
@@ -775,6 +847,7 @@ const SimulationPlayerPage = () => {
               ) : (
                 <Button
                   type="button"
+                  className="font-semibold"
                   onClick={() => setCurrentIndex((i) => i + 1)}
                 >
                   Next
@@ -787,7 +860,8 @@ const SimulationPlayerPage = () => {
           {/* ── Right sidebar: meta ── */}
           <aside className="space-y-4 lg:sticky lg:top-24">
             {/* Simulation info card */}
-            <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/55 to-transparent" />
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Simulation Info
               </p>
@@ -821,7 +895,7 @@ const SimulationPlayerPage = () => {
             </div>
 
             {/* Progress card */}
-            <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Progress
@@ -849,7 +923,7 @@ const SimulationPlayerPage = () => {
 
             {/* Skills assessed */}
             {simulation.skillsAssessed.length > 0 && (
-              <div className="rounded-2xl border border-border bg-card p-5">
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Skills Assessed
                 </p>
@@ -857,7 +931,7 @@ const SimulationPlayerPage = () => {
                   {simulation.skillsAssessed.map((s) => (
                     <span
                       key={s}
-                      className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
+                      className="inline-flex rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs text-muted-foreground"
                     >
                       {s}
                     </span>
