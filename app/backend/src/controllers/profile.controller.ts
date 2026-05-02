@@ -23,6 +23,7 @@ import {
   smartSearchMembers,
   type RawMemberDoc,
 } from "../services/memberSmartSearch.service";
+import { computeSkillEvidenceForMember } from "../services/skillEvidence.service";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -325,13 +326,17 @@ export const getMemberProfile = async (req: Request, res: Response) => {
     return res.status(404).json({ success: false, message: "Profile not found" });
   }
 
-  const [ownedProjects, memberProjects, portfolioCount, pinnedPortfolio] = await Promise.all([
+  const [ownedProjects, memberProjects, portfolioCount, pinnedPortfolio, involvedProjects, publishedPortfolio] = await Promise.all([
     Project.countDocuments({ ownerId: id }),
     Project.countDocuments({ "members.userId": id }),
     PortfolioItem.countDocuments({ userId: id, isPublished: { $ne: false } }),
     PortfolioItem.find({ userId: id, isPublished: { $ne: false } })
       .sort({ createdAt: -1 })
       .limit(4),
+    Project.find({
+      $or: [{ ownerId: id }, { "members.userId": id }],
+    }).select("technologies roles.requiredSkills roles.niceToHaveSkills"),
+    PortfolioItem.find({ userId: id, isPublished: { $ne: false } }).select("techStack"),
   ]);
 
   const stats = {
@@ -345,7 +350,29 @@ export const getMemberProfile = async (req: Request, res: Response) => {
     summary: item.summary || item.problem || "",
     techStack: item.techStack || [],
     tags: (item.techStack || []).slice(0, 4),
+    coverImage: item.coverImage || "",
   }));
+
+  const profile = (user.profile || {}) as Record<string, unknown>;
+  const profileSkills = Array.isArray(profile.skills)
+    ? profile.skills.filter((s): s is string => typeof s === "string")
+    : [];
+  const profileTech = Array.isArray(profile.techStack)
+    ? profile.techStack.filter((s): s is string => typeof s === "string")
+    : [];
+
+  const skillEvidenceScores = computeSkillEvidenceForMember({
+    profileSkills,
+    profileTechStack: profileTech,
+    projects: involvedProjects.map((project) => ({
+      technologies: project.technologies || [],
+      requiredSkills: (project.roles || []).flatMap((role) => role.requiredSkills || []),
+      niceToHaveSkills: (project.roles || []).flatMap((role) => role.niceToHaveSkills || []),
+    })),
+    showcases: publishedPortfolio.map((item) => ({
+      techStack: item.techStack || [],
+    })),
+  });
 
   return res.json({
     success: true,
@@ -353,6 +380,7 @@ export const getMemberProfile = async (req: Request, res: Response) => {
       user: toUserResponse(user),
       stats,
       pinnedShowcases,
+      skillEvidenceScores,
     },
   });
 };

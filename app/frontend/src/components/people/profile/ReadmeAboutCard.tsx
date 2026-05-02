@@ -1,5 +1,5 @@
 import { FileText, Sparkles } from "lucide-react";
-import type { PersonProfile } from "@/data/mockPeople";
+import type { PersonProfile } from "@/types/personProfile";
 
 interface Props {
   person: PersonProfile;

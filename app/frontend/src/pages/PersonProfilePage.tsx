@@ -8,8 +8,9 @@ import ProfileSidebar from "@/components/people/profile/ProfileSidebar";
 import ReadmeAboutCard from "@/components/people/profile/ReadmeAboutCard";
 import TechBadges from "@/components/people/profile/TechBadges";
 import PinnedShowcases from "@/components/people/profile/PinnedShowcases";
+import SkillEvidenceGraph from "@/components/people/profile/SkillEvidenceGraph";
 import ActivityTimeline from "@/components/people/profile/ActivityTimeline";
-import type { PersonProfile, PinnedShowcase } from "@/data/mockPeople";
+import type { PersonProfile, PinnedShowcase } from "@/types/personProfile";
 import { apiGet } from "@/lib/api";
 import NotFound from "@/pages/NotFound";
 import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
@@ -20,6 +21,7 @@ type MemberProfileResponse = {
     user: any;
     stats?: { projectsCount?: number; showcasesCount?: number };
     pinnedShowcases?: PinnedShowcase[];
+    skillEvidenceScores?: Record<string, number>;
   };
 };
 
@@ -70,7 +72,7 @@ const PersonProfilePage = () => {
           stats,
           links: profile.links || {},
           pinnedShowcases: res.data.pinnedShowcases || [],
-          skillEvidenceScores: {},
+          skillEvidenceScores: res.data.skillEvidenceScores || {},
           activity: [],
         };
 
@@ -95,6 +97,10 @@ const PersonProfilePage = () => {
   }, [id]);
 
   const hasPinned = useMemo(() => (person?.pinnedShowcases?.length ?? 0) > 0, [person]);
+  const hasSkillEvidence = useMemo(
+    () => Object.keys(person?.skillEvidenceScores || {}).length > 0,
+    [person],
+  );
 
   if (!loading && (!person || error)) return <NotFound />;
 
@@ -139,6 +145,9 @@ const PersonProfilePage = () => {
                 <>
                   <ReadmeAboutCard person={person} />
                   <TechBadges techStack={person.techStack} />
+                  {hasSkillEvidence && (
+                    <SkillEvidenceGraph scores={person.skillEvidenceScores!} />
+                  )}
                   {hasPinned && <PinnedShowcases showcases={person.pinnedShowcases!} />}
                   {activities.length > 0 && (
                     <ActivityTimeline
