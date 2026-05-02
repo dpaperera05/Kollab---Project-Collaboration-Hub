@@ -10,7 +10,7 @@ interface OnboardingLayoutProps {
   totalSteps: number;
 }
 
-const SHARED_ONBOARDING_IMAGE_URL = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/step%202.jfif";  //onboarding images are currently all the same, but this allows us to easily switch to step-specific images in the future if desired
+const SHARED_ONBOARDING_IMAGE_URL = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/step%203.png";  //onboarding images are currently all the same, but this allows us to easily switch to step-specific images in the future if desired
 
 const ONBOARDING_IMAGES_BY_STEP: Record<number, string> = {
   1: SHARED_ONBOARDING_IMAGE_URL,
@@ -67,16 +67,12 @@ const OnboardingLayout = ({
           </div>
         </section>
 
-        <aside className="relative hidden h-full overflow-hidden border-l border-border bg-muted/40 lg:flex lg:w-1/2 dark:bg-muted/20">
+        <aside className="relative hidden h-full overflow-hidden border-l border-border lg:flex lg:w-1/2">
           <img
             src={illustrationSrc}
             alt="Onboarding illustration"
             className="h-full w-full object-cover object-center"
             loading="eager"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent dark:from-black/30"
           />
 
         </aside>
