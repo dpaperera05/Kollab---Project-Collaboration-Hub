@@ -9,11 +9,11 @@ import type { SimulationSummary } from "@/services/simulationsApi";
 
 const DIFFICULTY_STYLES: Record<string, string> = {
   Beginner:
-    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400",
+    "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:border-emerald-700/70 dark:bg-emerald-900/30 dark:text-emerald-300",
   Intermediate:
-    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400",
+    "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-700/70 dark:bg-amber-900/30 dark:text-amber-300",
   Advanced:
-    "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-400",
+    "border-rose-300/60 bg-rose-500/10 text-rose-700 dark:border-rose-700/70 dark:bg-rose-900/30 dark:text-rose-300",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -42,16 +42,16 @@ const SimulationCard = ({ simulation }: SimulationCardProps) => {
     "border-border bg-secondary text-secondary-foreground";
 
   return (
-    <div className="group flex flex-col rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 card-shadow hover:card-shadow-hover overflow-hidden">
+    <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
       {/* Coloured top bar */}
-      <div className="h-1 w-full bg-gradient-to-r from-primary via-primary/70 to-purple-400" />
+      <div className="h-1 w-full bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
 
       <div className="flex flex-col flex-1 p-6 gap-4">
         {/* Header row */}
         <div className="flex items-start justify-between gap-3">
           {/* Role + difficulty */}
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="text-[11px] font-medium text-muted-foreground border-border">
+            <Badge variant="outline" className="text-[11px] font-semibold text-muted-foreground border-border bg-background/80">
               <BriefcaseBusiness size={10} className="mr-1" />
               {roleCategory}
             </Badge>
@@ -67,29 +67,29 @@ const SimulationCard = ({ simulation }: SimulationCardProps) => {
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
+        <h3 className="text-lg font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
           {title}
         </h3>
 
         {/* Overview */}
-        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 min-h-[60px]">
           {overview}
         </p>
 
         {/* Skills */}
         {skillsAssessed.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {skillsAssessed.slice(0, 4).map((skill) => (
+            {skillsAssessed.slice(0, 3).map((skill) => (
               <span
                 key={skill}
-                className="rounded-full bg-primary/8 px-2.5 py-0.5 text-[10px] font-medium text-primary border border-primary/20"
+                className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary"
               >
                 {skill}
               </span>
             ))}
-            {skillsAssessed.length > 4 && (
-              <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground border border-border">
-                +{skillsAssessed.length - 4} more
+            {skillsAssessed.length > 3 && (
+              <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                +{skillsAssessed.length - 3} more
               </span>
             )}
           </div>
@@ -98,19 +98,24 @@ const SimulationCard = ({ simulation }: SimulationCardProps) => {
         {/* Tags */}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {tags.slice(0, 4).map((tag) => (
+            {tags.slice(0, 2).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-border px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                className="rounded-full border border-border bg-background/70 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
               >
                 {tag}
               </span>
             ))}
+            {tags.length > 2 && (
+              <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                +{tags.length - 2} more
+              </span>
+            )}
           </div>
         )}
 
         {/* Meta row */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 border-t border-border/60">
+        <div className="mt-auto grid grid-cols-2 gap-2 border-t border-border/70 pt-3 text-xs text-muted-foreground sm:grid-cols-4">
           <span className="flex items-center gap-1.5">
             <Clock size={12} />
             {estimatedMinutes} min
@@ -132,7 +137,7 @@ const SimulationCard = ({ simulation }: SimulationCardProps) => {
         {/* CTA */}
         <Button
           asChild
-          className="w-full mt-1 gap-2 group/btn"
+          className="w-full mt-2 gap-2 group/btn"
           size="sm"
         >
           <Link to={`/simulations/${slug}`}>
