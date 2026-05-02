@@ -38,7 +38,10 @@ const MemberChatWidget = ({ memberId, memberName, inputRef }: MemberChatWidgetPr
   const navigate = useNavigate();
   const location = useLocation();
   const session = getSession();
-  const userId = session?.id;
+  const viewerId = session?.id || null;
+  const viewerToken = session?.token || null;
+  const isLoggedIn = Boolean(viewerId && viewerToken);
+  const isSelfView = Boolean(viewerId && memberId && viewerId === memberId);
 
   useEffect(() => {
     const list = listRef.current;
@@ -51,29 +54,47 @@ const MemberChatWidget = ({ memberId, memberName, inputRef }: MemberChatWidgetPr
   }, [inputRef]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const bootstrap = async () => {
-      if (!session) {
+      if (!memberId || !isLoggedIn || isSelfView) {
+        if (!cancelled) {
+          setChatId(null);
+          setMessages([]);
+        }
         setLoading(false);
         return;
       }
       try {
         setError(null);
         const res = await apiGet<{ success: boolean; data: { chats: ApiChat[] } }>("/chats");
+        if (cancelled) return;
         const existing = res.data.chats.find((c) => c.participantIds.includes(memberId) && !c.projectId);
         if (existing) {
           setChatId(existing._id);
           setMessages(existing.messages || []);
+        } else {
+          setChatId(null);
+          setMessages([]);
         }
       } catch (err: any) {
+        if (cancelled) return;
         setError(err?.message || "Could not load messages");
         toast({ title: "Could not load chat", description: err?.message || "Please try again", variant: "destructive" });
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
+    setLoading(true);
     void bootstrap();
-  }, [memberId, session, toast]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [memberId, isLoggedIn, isSelfView]);
 
   const ensureChat = async () => {
     if (chatId) return chatId;
@@ -95,7 +116,7 @@ const MemberChatWidget = ({ memberId, memberName, inputRef }: MemberChatWidgetPr
       return;
     }
 
-    if (userId === memberId) {
+    if (viewerId === memberId) {
       toast({ title: "Cannot message yourself", description: "Open Messages to view your conversations." });
       return;
     }
@@ -117,8 +138,8 @@ const MemberChatWidget = ({ memberId, memberName, inputRef }: MemberChatWidgetPr
     }
   };
 
-  const requiresLogin = !session;
-  const selfView = userId === memberId;
+  const requiresLogin = !isLoggedIn;
+  const selfView = viewerId === memberId;
   const inputDisabled = requiresLogin || selfView || loading || sending;
   const placeholder = requiresLogin
     ? "Login to message this member"
@@ -144,11 +165,11 @@ const MemberChatWidget = ({ memberId, memberName, inputRef }: MemberChatWidgetPr
           <p className="text-xs text-muted-foreground text-center py-6">No messages yet. Say hello!</p>
         ) : (
           messages.map((m) => (
-            <div key={m.id} className={cn("flex", m.senderId === userId ? "justify-end" : "justify-start")}>
+            <div key={m.id} className={cn("flex", m.senderId === viewerId ? "justify-end" : "justify-start")}>
               <div
                 className={cn(
                   "max-w-[80%] rounded-xl px-3 py-2 text-xs",
-                  m.senderId === userId ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                  m.senderId === viewerId ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
                 )}
               >
                 {m.text}

@@ -46,6 +46,8 @@ const PersonProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activities, setActivities] = useState<ActivityApiItem[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [activitiesError, setActivitiesError] = useState<string | null>(null);
 
   const scrollToChat = () => {
     chatSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -56,10 +58,14 @@ const PersonProfilePage = () => {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
+
     const fetchProfile = async () => {
       try {
         setLoading(true);
+        setError(null);
         const res = await apiGet<MemberProfileResponse>(`/profile/members/${id}`);
+        if (cancelled) return;
         const profile = res.data.user?.profile || {};
         const name = profile.name || res.data.user?.name || "Member";
         const avatar = profile.avatarUrl || getDefaultAvatarUrl(id || name);
@@ -88,23 +94,42 @@ const PersonProfilePage = () => {
         };
 
         setPerson(mapped);
-        // Fetch recent activity
-        try {
-          const activityRes = await apiGet<{ success: boolean; data: { activities: ActivityApiItem[] } }>(`/activities/${id}?limit=12`);
-          setActivities(activityRes.data.activities || []);
-        } catch {
-          setActivities([]);
-        }
-        setError(null);
       } catch (err: any) {
+        if (cancelled) return;
         setError(err?.message || "Failed to load profile");
         setPerson(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchProfile();
+    const fetchActivities = async () => {
+      try {
+        setActivitiesLoading(true);
+        setActivitiesError(null);
+        setActivities([]);
+        const activityRes = await apiGet<{ success: boolean; data: { activities: ActivityApiItem[] } }>(`/activities/${id}?limit=12`);
+        if (cancelled) return;
+        setActivities(activityRes.data.activities || []);
+      } catch (err: any) {
+        if (cancelled) return;
+        setActivities([]);
+        setActivitiesError(err?.message || "Failed to load recent activity");
+      } finally {
+        if (!cancelled) {
+          setActivitiesLoading(false);
+        }
+      }
+    };
+
+    void fetchProfile();
+    void fetchActivities();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const hasPinned = useMemo(() => (person?.pinnedShowcases?.length ?? 0) > 0, [person]);
@@ -219,7 +244,15 @@ const PersonProfilePage = () => {
                     <SkillEvidenceGraph scores={person.skillEvidenceScores!} />
                   )}
                   {hasPinned && <PinnedShowcases showcases={person.pinnedShowcases!} />}
-                  {activities.length > 0 && (
+                  {activitiesLoading ? (
+                    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm text-xs text-muted-foreground">
+                      Loading recent activity...
+                    </div>
+                  ) : activitiesError ? (
+                    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm text-xs text-muted-foreground">
+                      Could not load recent activity right now.
+                    </div>
+                  ) : activities.length > 0 ? (
                     <ActivityTimeline
                       activities={activities.map((a) => ({
                         id: a._id,
@@ -240,6 +273,10 @@ const PersonProfilePage = () => {
                         date: new Date(a.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
                       }))}
                     />
+                  ) : (
+                    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm text-xs text-muted-foreground">
+                      No recent activity yet.
+                    </div>
                   )}
                 </div>
 

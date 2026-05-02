@@ -135,4 +135,6 @@ const projectSchema = new Schema<IProject>(
   { timestamps: true }
 );
 
+projectSchema.index({ "members.userId": 1 });
+
 export const Project = model<IProject>("Project", projectSchema);
