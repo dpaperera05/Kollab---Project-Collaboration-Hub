@@ -11,9 +11,10 @@ interface Props {
   projectId: string;
   initialTasks: WorkspaceTask[];
   members: WorkspaceMember[];
+  onTasksChange?: (tasks: WorkspaceTask[]) => void;
 }
 
-const KanbanBoard = ({ projectId, initialTasks, members }: Props) => {
+const KanbanBoard = ({ projectId, initialTasks, members, onTasksChange }: Props) => {
   const [tasks, setTasks] = useState<WorkspaceTask[]>(initialTasks);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<WorkspaceTask | null>(null);
@@ -38,7 +39,9 @@ const KanbanBoard = ({ projectId, initialTasks, members }: Props) => {
             status: task.status,
           }
         );
-        setTasks(res.data.board.tasks);
+        const nextTasks = res.data.board.tasks;
+        setTasks(nextTasks);
+        onTasksChange?.(nextTasks);
         toast({ title: "Task updated" });
       } else {
         const res = await apiPost<{ success: boolean; data: { task: WorkspaceTask; board: { tasks: WorkspaceTask[] } } }>(
@@ -50,7 +53,9 @@ const KanbanBoard = ({ projectId, initialTasks, members }: Props) => {
             status: task.status,
           }
         );
-        setTasks(res.data.board.tasks);
+        const nextTasks = res.data.board.tasks;
+        setTasks(nextTasks);
+        onTasksChange?.(nextTasks);
         toast({ title: "Task created" });
       }
     } catch (error) {
@@ -66,7 +71,9 @@ const KanbanBoard = ({ projectId, initialTasks, members }: Props) => {
     setSaving(true);
     try {
       const res = await apiDelete<{ success: boolean; data: { board: { tasks: WorkspaceTask[] } } }>(`/workspace/${projectId}/tasks/${taskId}`);
-      setTasks(res.data.board.tasks);
+      const nextTasks = res.data.board.tasks;
+      setTasks(nextTasks);
+      onTasksChange?.(nextTasks);
       toast({ title: "Task deleted" });
     } catch (error) {
       console.error(error);
@@ -83,7 +90,9 @@ const KanbanBoard = ({ projectId, initialTasks, members }: Props) => {
         `/workspace/${projectId}/tasks/${taskId}`,
         { status }
       );
-      setTasks(res.data.board.tasks);
+      const nextTasks = res.data.board.tasks;
+      setTasks(nextTasks);
+      onTasksChange?.(nextTasks);
     } catch (error) {
       console.error(error);
       toast({ title: "Could not update status", variant: "destructive" });
