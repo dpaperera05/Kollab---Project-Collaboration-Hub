@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, Upload, ImageIcon, Calendar, MapPin, Tag,
+  Upload, ImageIcon, Calendar, MapPin, Tag,
   FileText, Sparkles, ExternalLink, X, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { format, differenceInDays, startOfToday } from "date-fns";
