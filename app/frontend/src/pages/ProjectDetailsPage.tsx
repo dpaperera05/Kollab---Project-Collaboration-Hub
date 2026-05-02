@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { mockProjects, type Project, type ProjectRole, type TeamMember } from "@/data/mockProjects";
 import { getAllProjects } from "@/lib/localProjects";
 import { apiGet } from "@/lib/api";
+import { getSession } from "@/lib/authStore";
 import ProjectHero from "@/components/projects/details/ProjectHero";
 import ProjectOverview from "@/components/projects/details/ProjectOverview";
 import RolesAccordion from "@/components/projects/details/RolesAccordion";
@@ -226,6 +227,8 @@ const ProjectDetailsPage = () => {
   const relatedProjects = project.relatedProjectIds
     .map((rid) => allProjects.find((p) => p.id === rid))
     .filter(Boolean) as Project[];
+  const session = getSession();
+  const isOwnProject = Boolean(session?.id && project.owner?.id && session.id === project.owner.id);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -263,12 +266,14 @@ const ProjectDetailsPage = () => {
 
               <div className="lg:hidden space-y-4">
                 <OwnerCard owner={project.owner} />
-                <MessageOwnerWidget
-                  ownerId={project.owner.id}
-                  ownerName={project.owner.name}
-                  ownerAvatar={project.owner.avatar}
-                  projectId={project.id}
-                />
+                {!isOwnProject && (
+                  <MessageOwnerWidget
+                    ownerId={project.owner.id}
+                    ownerName={project.owner.name}
+                    ownerAvatar={project.owner.avatar}
+                    projectId={project.id}
+                  />
+                )}
               </div>
 
               <RelatedProjects projects={relatedProjects} />
@@ -276,12 +281,14 @@ const ProjectDetailsPage = () => {
 
             <aside className="hidden lg:flex flex-col gap-4 sticky top-24">
               <OwnerCard owner={project.owner} />
-              <MessageOwnerWidget
-                ownerId={project.owner.id}
-                ownerName={project.owner.name}
-                ownerAvatar={project.owner.avatar}
-                projectId={project.id}
-              />
+              {!isOwnProject && (
+                <MessageOwnerWidget
+                  ownerId={project.owner.id}
+                  ownerName={project.owner.name}
+                  ownerAvatar={project.owner.avatar}
+                  projectId={project.id}
+                />
+              )}
             </aside>
           </div>
         </Container>

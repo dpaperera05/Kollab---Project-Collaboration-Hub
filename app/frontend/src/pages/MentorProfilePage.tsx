@@ -109,6 +109,7 @@ const MentorProfilePage = () => {
             onBook={openBookingModal}
             onMessage={scrollToChat}
             canBook={!isOwnMentorProfile}
+            canMessage={!isOwnMentorProfile}
           />
 
           <div className="grid grid-cols-1 gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -127,9 +128,11 @@ const MentorProfilePage = () => {
 
             <aside className="space-y-4 self-start xl:sticky xl:top-24">
               {!isOwnMentorProfile && <MentorBookingCard mentor={mentor} />}
-              <div id="mentor-chat">
-                <MentorChatWidget mentorId={mentor.id} mentorName={mentor.name} />
-              </div>
+              {!isOwnMentorProfile && (
+                <div id="mentor-chat">
+                  <MentorChatWidget mentorId={mentor.id} mentorName={mentor.name} />
+                </div>
+              )}
             </aside>
           </div>
         </Container>

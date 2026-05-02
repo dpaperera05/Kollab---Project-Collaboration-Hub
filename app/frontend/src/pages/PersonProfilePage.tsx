@@ -13,6 +13,7 @@ import ActivityTimeline from "@/components/people/profile/ActivityTimeline";
 import MemberChatWidget from "@/components/people/profile/MemberChatWidget";
 import type { PersonProfile, PinnedShowcase } from "@/types/personProfile";
 import { apiGet } from "@/lib/api";
+import { getSession } from "@/lib/authStore";
 import NotFound from "@/pages/NotFound";
 import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
@@ -114,6 +115,9 @@ const PersonProfilePage = () => {
 
   if (!loading && (!person || error)) return <NotFound />;
 
+  const session = getSession();
+  const isOwnProfile = Boolean(session?.id && person?.id && session.id === person.id);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -170,14 +174,16 @@ const PersonProfilePage = () => {
                     </div>
 
                     <div className="w-full xl:w-auto xl:min-w-[340px] space-y-3">
-                      <button
-                        type="button"
-                        onClick={scrollToChat}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-95 transition-opacity"
-                      >
-                        <MessageCircle size={16} />
-                        Message
-                      </button>
+                      {!isOwnProfile && (
+                        <button
+                          type="button"
+                          onClick={scrollToChat}
+                          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-95 transition-opacity"
+                        >
+                          <MessageCircle size={16} />
+                          Message
+                        </button>
+                      )}
                       <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-3 gap-2.5">
                         <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-3">
                           <p className="text-[11px] text-muted-foreground font-medium">Projects</p>
@@ -240,9 +246,11 @@ const PersonProfilePage = () => {
                 <aside className="space-y-4 xl:sticky xl:top-24 self-start">
                   <ProfileSidebar person={person} />
                   <TechBadges techStack={person.techStack} />
-                  <div ref={chatSectionRef} id="profile-chatbox">
-                    <MemberChatWidget memberId={person.id} memberName={person.name} inputRef={chatInputRef} />
-                  </div>
+                  {!isOwnProfile && (
+                    <div ref={chatSectionRef} id="profile-chatbox">
+                      <MemberChatWidget memberId={person.id} memberName={person.name} inputRef={chatInputRef} />
+                    </div>
+                  )}
                 </aside>
               </div>
             </>

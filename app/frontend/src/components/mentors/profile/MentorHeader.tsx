@@ -12,9 +12,10 @@ interface MentorHeaderProps {
   onBook: () => void;
   onMessage: () => void;
   canBook?: boolean;
+  canMessage?: boolean;
 }
 
-const MentorHeader = ({ mentor, colorIndex: _colorIndex, avgRating, reviewCount, onBook, onMessage, canBook = true }: MentorHeaderProps) => {
+const MentorHeader = ({ mentor, colorIndex: _colorIndex, avgRating, reviewCount, onBook, onMessage, canBook = true, canMessage = true }: MentorHeaderProps) => {
   const navigate = useNavigate();
   const totalReviews = reviewCount > 0 ? reviewCount : mentor.reviewsCount;
   const displayRating = reviewCount > 0 ? avgRating : mentor.rating;
@@ -115,13 +116,15 @@ const MentorHeader = ({ mentor, colorIndex: _colorIndex, avgRating, reviewCount,
                   This is your public mentor profile.
                 </div>
               )}
-              <button
-                onClick={onMessage}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-5 text-sm font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary"
-              >
-                <MessageSquare size={15} />
-                Message
-              </button>
+              {canMessage && (
+                <button
+                  onClick={onMessage}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-5 text-sm font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                >
+                  <MessageSquare size={15} />
+                  Message
+                </button>
+              )}
             </div>
           </div>
         </div>
