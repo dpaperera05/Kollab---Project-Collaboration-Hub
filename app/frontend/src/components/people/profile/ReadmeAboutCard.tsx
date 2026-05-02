@@ -6,31 +6,33 @@ interface Props {
 }
 
 const ReadmeAboutCard = ({ person }: Props) => (
-  <div className="rounded-xl border border-border bg-card overflow-hidden">
-    {/* Header bar */}
-    <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
-      <FileText size={14} className="text-primary" />
-      <span className="text-sm font-bold text-foreground">About</span>
-      <span className="ml-auto px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold flex items-center gap-1">
-        <Sparkles size={10} /> Profile
+  <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+    <div className="flex items-center gap-2 px-5 py-4 border-b border-border bg-[linear-gradient(180deg,hsl(var(--muted)/0.35),hsl(var(--card)))]">
+      <div className="h-7 w-7 rounded-lg bg-primary/12 text-primary flex items-center justify-center">
+        <FileText size={14} />
+      </div>
+      <span className="text-sm font-bold text-foreground">About Me</span>
+      <span className="ml-auto px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary text-[10px] font-semibold flex items-center gap-1">
+        <Sparkles size={10} /> Public Intro
       </span>
     </div>
 
-    {/* Content */}
-    <div className="p-5 space-y-4">
+    <div className="p-5 sm:p-6 space-y-6">
       <div>
-        <h2 className="text-lg font-bold text-foreground mb-2">About Me</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">{person.bio}</p>
+        <h2 className="text-lg font-bold text-foreground mb-2 tracking-tight">Professional Summary</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {person.bio || "No summary available yet."}
+        </p>
       </div>
 
       {person.domainInterests.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            🔭 Currently interested in
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Current Interests
           </h3>
-          <ul className="space-y-1">
+          <ul className="grid sm:grid-cols-2 gap-2">
             {person.domainInterests.map((d) => (
-              <li key={d} className="text-sm text-foreground/80 flex items-center gap-2">
+              <li key={d} className="text-sm text-foreground/85 flex items-center gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                 {d}
               </li>
@@ -40,12 +42,12 @@ const ReadmeAboutCard = ({ person }: Props) => (
       )}
 
       <div>
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-          💼 Looking for roles in
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Preferred Roles
         </h3>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {person.preferredRoles.map((r) => (
-            <span key={r} className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-semibold">{r}</span>
+            <span key={r} className="px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 text-primary text-xs font-semibold">{r}</span>
           ))}
         </div>
       </div>
