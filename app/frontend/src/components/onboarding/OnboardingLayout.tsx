@@ -10,15 +10,15 @@ interface OnboardingLayoutProps {
   totalSteps: number;
 }
 
-const SHARED_ONBOARDING_IMAGE_URL = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/step%203.png";  //onboarding images are currently all the same, but this allows us to easily switch to step-specific images in the future if desired
+const SHARED_ONBOARDING_IMAGE_URL = "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/Step-1.PNG";
 
 const ONBOARDING_IMAGES_BY_STEP: Record<number, string> = {
-  1: SHARED_ONBOARDING_IMAGE_URL,
-  2: SHARED_ONBOARDING_IMAGE_URL,
-  3: SHARED_ONBOARDING_IMAGE_URL,
-  4: SHARED_ONBOARDING_IMAGE_URL,
-  5: SHARED_ONBOARDING_IMAGE_URL,
-  6: SHARED_ONBOARDING_IMAGE_URL,
+  1: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/Step-1.PNG",
+  2: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/Step-2.PNG",
+  3: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/Step-3.PNG",
+  4: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/Step-4.PNG",
+  5: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/Step-5.PNG",
+  6: "https://pub-4ac2f87a270844f29f818efacbb0c342.r2.dev/logos/Step-6.PNG",
 };
 
 const OnboardingLayout = ({
