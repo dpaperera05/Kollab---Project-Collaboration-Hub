@@ -34,22 +34,20 @@ const ProfileSidebar = ({ person }: Props) => {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Roles</h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Skills</h3>
         <div className="flex flex-wrap gap-2">
-          {person.preferredRoles.map((r) => (
-            <span key={r} className="px-2.5 py-1 rounded-full border border-primary/25 bg-primary/10 text-primary text-xs font-semibold">
-              {r}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Interests</h3>
-        <div className="flex flex-wrap gap-2">
-          {person.domainInterests.map((d) => (
-            <span key={d} className="px-2.5 py-1 rounded-full border border-border bg-muted/40 text-[11px] font-medium text-foreground/80">{d}</span>
-          ))}
+          {person.skills.length > 0 ? (
+            person.skills.map((skill) => (
+              <span
+                key={skill}
+                className="px-2.5 py-1 rounded-full border border-primary/25 bg-primary/10 text-primary text-xs font-semibold"
+              >
+                {skill}
+              </span>
+            ))
+          ) : (
+            <p className="text-xs text-muted-foreground">No skills added yet.</p>
+          )}
         </div>
       </div>
 
