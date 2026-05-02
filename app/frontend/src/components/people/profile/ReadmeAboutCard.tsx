@@ -25,6 +25,48 @@ const ReadmeAboutCard = ({ person }: Props) => (
         </p>
       </div>
 
+      <div>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Links
+        </h3>
+        {person.links && (person.links.github || person.links.linkedin || person.links.portfolio) ? (
+          <div className="grid gap-2">
+            {person.links.github && (
+              <a
+                href={person.links.github}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-primary hover:underline break-all rounded-lg border border-border/70 bg-muted/20 px-3 py-2"
+              >
+                GitHub: {person.links.github}
+              </a>
+            )}
+            {person.links.linkedin && (
+              <a
+                href={person.links.linkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-primary hover:underline break-all rounded-lg border border-border/70 bg-muted/20 px-3 py-2"
+              >
+                LinkedIn: {person.links.linkedin}
+              </a>
+            )}
+            {person.links.portfolio && (
+              <a
+                href={person.links.portfolio}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-primary hover:underline break-all rounded-lg border border-border/70 bg-muted/20 px-3 py-2"
+              >
+                Portfolio: {person.links.portfolio}
+              </a>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No public links added yet.</p>
+        )}
+      </div>
+
       {person.domainInterests.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">

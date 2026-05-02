@@ -87,7 +87,11 @@ const PersonProfilePage = () => {
           availabilityHoursPerWeek: profile.availabilityHoursPerWeek || 0,
           isProfilePublic: res.data.user?.isProfilePublic !== false,
           stats,
-          links: profile.links || {},
+          links: {
+            github: profile.links?.github || profile.github || "",
+            linkedin: profile.links?.linkedin || profile.linkedin || profile.linkedIn || "",
+            portfolio: profile.links?.portfolio || profile.portfolio || "",
+          },
           pinnedShowcases: res.data.pinnedShowcases || [],
           skillEvidenceScores: res.data.skillEvidenceScores || {},
           activity: [],
