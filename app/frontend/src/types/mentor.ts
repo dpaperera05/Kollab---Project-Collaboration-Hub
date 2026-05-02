@@ -10,12 +10,20 @@ export interface MentorReview {
 export interface Mentor {
   id: string;
   name: string;
+  email?: string;
   avatar: string;
   avatarUrl?: string;
   headline: string;
+  location?: string;
+  timezone?: string;
   expertiseTags: string[];
   domainTags: string[];
   languages: string[];
+  links?: {
+    github?: string;
+    linkedin?: string;
+    portfolio?: string;
+  };
   rating: number;
   reviewsCount: number;
   rate: string;
