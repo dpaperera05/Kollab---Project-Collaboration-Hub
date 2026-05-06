@@ -6,7 +6,7 @@ import { Project } from "../models/project.model";
 export const listChats = async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
-  const chats = await Chat.find({ participantIds: userId }).sort({ updatedAt: -1 }).lean();
+  const chats = await Chat.find({ participantIds: userId, "messages.0": { $exists: true } }).sort({ updatedAt: -1 }).lean();
 
   const participantIds = Array.from(new Set(chats.flatMap((c) => c.participantIds)));
   const users = await User.find({ _id: { $in: participantIds } }, "name").lean();

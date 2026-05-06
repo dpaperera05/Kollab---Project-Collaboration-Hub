@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import Container from "@/components/ui/Container";
 import type { Mentor } from "@/types/mentor";
 import { getLocalReviewsForMentor, getAverageRating, type MentorReview } from "@/lib/reviewStore";
 import MentorHeader from "@/components/mentors/profile/MentorHeader";
@@ -78,30 +79,41 @@ const MentorProfilePage = () => {
 
   if (!mentor) return <Navigate to="/mentors" replace />;
 
+  const session = getSession();
+  const isOwnMentorProfile = Boolean(session?.id && mentor.id && session.id === mentor.id);
   const colorIndex = Math.abs(mentor.id?.charCodeAt(0) || 0);
   const reviews = getMergedReviews(mentor.id);
   const { avg } = getAverageRating(reviews, mentor.rating);
 
   const scrollToChat = () => {
-    document.getElementById("mentor-chat")?.scrollIntoView({ behavior: "smooth" });
+    const chatRoot = document.getElementById("mentor-chat");
+    if (!chatRoot) return;
+    chatRoot.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    window.setTimeout(() => {
+      const input = chatRoot.querySelector("input") as HTMLInputElement | null;
+      input?.focus();
+    }, 450);
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="flex-1 pt-20">
-        <MentorHeader
-          mentor={mentor}
-          colorIndex={colorIndex}
-          avgRating={avg}
-          reviewCount={reviews.length}
-          onBook={openBookingModal}
-          onMessage={scrollToChat}
-        />
+      <main className="flex-1 pt-16 pb-10">
+        <Container className="space-y-4 py-2 md:py-3">
+          <MentorHeader
+            mentor={mentor}
+            colorIndex={colorIndex}
+            avgRating={avg}
+            reviewCount={reviews.length}
+            onBook={openBookingModal}
+            onMessage={scrollToChat}
+            canBook={!isOwnMentorProfile}
+            canMessage={!isOwnMentorProfile}
+          />
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-6 py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
-            <div className="flex-1 min-w-0 space-y-6">
+          <div className="grid grid-cols-1 gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="min-w-0 space-y-6">
               <MentorAbout mentor={mentor} />
               <MentorExpertise mentor={mentor} />
               <MentorAvailability mentor={mentor} />
@@ -114,18 +126,20 @@ const MentorProfilePage = () => {
               />
             </div>
 
-            <div className="w-full lg:w-[340px] flex-shrink-0 space-y-6">
-              <MentorBookingCard mentor={mentor} />
-              <div id="mentor-chat">
-                <MentorChatWidget mentorId={mentor.id} mentorName={mentor.name} />
-              </div>
-            </div>
+            <aside className="space-y-4 self-start xl:sticky xl:top-24">
+              {!isOwnMentorProfile && <MentorBookingCard mentor={mentor} />}
+              {!isOwnMentorProfile && (
+                <div id="mentor-chat">
+                  <MentorChatWidget mentorId={mentor.id} mentorName={mentor.name} />
+                </div>
+              )}
+            </aside>
           </div>
-        </div>
+        </Container>
       </main>
       <Footer />
 
-      <MentorBookingModal mentor={mentor} open={bookModalOpen} onOpenChange={setBookModalOpen} />
+      <MentorBookingModal mentor={mentor} open={!isOwnMentorProfile && bookModalOpen} onOpenChange={setBookModalOpen} />
     </div>
   );
 };

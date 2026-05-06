@@ -27,6 +27,9 @@ const DOMAINS: TileOption[] = [
   { label: "Research", icon: FlaskConical },
 ];
 
+const backBtnCls = "h-10 rounded-xl border border-border bg-transparent px-5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+const primaryBtnCls = "h-11 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_hsl(var(--primary)/0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-50";
+
 const InterestsStep = () => {
   const navigate = useNavigate();
   const session = getSession();
@@ -60,19 +63,23 @@ const InterestsStep = () => {
       leftHeadline="Explore your interests"
       leftTagline="Pick the domains you're passionate about."
     >
-      <StepHeader title="What domains excite you?" subtitle="Pick areas you'd like to work in or explore." />
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="scrollbar-invisible min-h-0 flex-1 overflow-y-auto pr-1">
+          <StepHeader title="What domains excite you?" subtitle="Pick areas you'd like to work in or explore." />
 
-      <TileSelect
-        options={DOMAINS}
-        selected={selected}
-        onChange={setSelected}
-        label="Domain Interests"
-        minRequired={1}
-      />
+          <TileSelect
+            options={DOMAINS}
+            selected={selected}
+            onChange={setSelected}
+            label="Domain Interests"
+            minRequired={1}
+          />
+        </div>
 
-      <div className="mt-4 flex justify-between">
-        <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>
-        <Button onClick={handleNext} disabled={selected.length === 0} className="h-10 px-6 rounded-xl text-sm font-semibold">Finish</Button>
+        <div className="mt-3 shrink-0 flex justify-between border-t border-border/70 pt-2.5">
+          <Button variant="ghost" onClick={handleBack} className={backBtnCls}>Back</Button>
+          <Button onClick={handleNext} disabled={selected.length === 0} className={primaryBtnCls}>Finish</Button>
+        </div>
       </div>
     </OnboardingLayout>
   );

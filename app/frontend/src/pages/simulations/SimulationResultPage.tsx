@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   XCircle,
   Award,
-  Zap,
   ArrowLeft,
   RotateCcw,
   ExternalLink,
@@ -225,34 +224,36 @@ const SkillRow = ({
 }) => {
   const pct = Math.round(skill.score);
   return (
-    <div className="flex items-center gap-4">
-      <div className="w-48 flex-shrink-0 flex items-center gap-1.5 min-w-0">
-        <span className="truncate text-sm font-medium text-foreground">
-          {skill.skill}
+    <div className="rounded-lg border border-border/70 bg-background/70 px-2.5 py-1.5">
+      <div className="mb-1 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex items-center gap-1">
+          <span className="truncate text-xs font-semibold text-foreground">
+            {skill.skill}
+          </span>
+          {isStrongest && (
+            <span className="flex-shrink-0 rounded-full bg-emerald-100 px-1.5 py-0 text-[9px] font-bold leading-4 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+              Best
+            </span>
+          )}
+          {isWeakest && (
+            <span className="flex-shrink-0 rounded-full bg-rose-100 px-1.5 py-0 text-[9px] font-bold leading-4 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+              Focus
+            </span>
+          )}
+        </div>
+        <span className={`text-[11px] font-bold ${scoreColor(pct)}`}>
+          {pct}%
         </span>
-        {isStrongest && (
-          <span className="flex-shrink-0 rounded-full bg-emerald-100 px-1.5 py-px text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-            Best
-          </span>
-        )}
-        {isWeakest && (
-          <span className="flex-shrink-0 rounded-full bg-rose-100 px-1.5 py-px text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-            Focus
-          </span>
-        )}
       </div>
-      <div className="relative flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
           className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ${scoreBarClass(pct)}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className={`w-10 flex-shrink-0 text-right text-xs font-bold ${scoreColor(pct)}`}>
-        {pct}%
-      </span>
-      <span className="w-24 flex-shrink-0 text-right text-xs text-muted-foreground">
+      <p className="mt-1 text-right text-[10px] text-muted-foreground">
         {formatNumber(skill.earnedPoints)}/{formatNumber(skill.totalPoints)} pts
-      </span>
+      </p>
     </div>
   );
 };
@@ -301,35 +302,43 @@ const RuleBasedCard = ({
     : "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400";
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
+    <div className="rounded-xl border border-border/70 bg-card shadow-sm overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-muted/40 transition-colors"
+        className="flex w-full flex-col items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:px-5"
       >
-        <span
-          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${iconBg}`}
-        >
-          {isCorrect ? (
-            <CheckCircle2 size={15} />
-          ) : isPartial ? (
-            <Star size={15} />
+        <div className="flex w-full min-w-0 items-start gap-3 sm:flex-1">
+          <span
+            className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${iconBg}`}
+          >
+            {isCorrect ? (
+              <CheckCircle2 size={15} />
+            ) : isPartial ? (
+              <Star size={15} />
+            ) : (
+              <XCircle size={15} />
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {result.taskTitle ?? taskTitle ?? `Task ${index + 1}`}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Rule-based assessment</p>
+          </div>
+        </div>
+
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+          <span className={`text-sm font-bold ${scoreColor(pct)}`}>
+            {formatNumber(earned)}/{formatNumber(max)} pts
+          </span>
+          <span className="flex-shrink-0">{statusBadge}</span>
+          {open ? (
+            <ChevronUp size={15} className="flex-shrink-0 text-muted-foreground" />
           ) : (
-            <XCircle size={15} />
+            <ChevronDown size={15} className="flex-shrink-0 text-muted-foreground" />
           )}
-        </span>
-        <span className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">
-          {result.taskTitle ?? taskTitle ?? `Task ${index + 1}`}
-        </span>
-        <span className={`flex-shrink-0 text-sm font-bold ${scoreColor(pct)}`}>
-          {formatNumber(earned)}/{formatNumber(max)} pts
-        </span>
-        <span className="flex-shrink-0 ml-1">{statusBadge}</span>
-        {open ? (
-          <ChevronUp size={15} className="ml-1 flex-shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronDown size={15} className="ml-1 flex-shrink-0 text-muted-foreground" />
-        )}
+        </div>
       </button>
 
       {open && (
@@ -379,7 +388,7 @@ const AIGradingCard = ({
   // ── Pending: AI not yet configured ─────────────────────────────────────────
   if (result.pending) {
     return (
-      <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-900/10 px-5 py-4 flex items-start gap-3">
+      <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-900/10 px-5 py-4 flex items-start gap-3 shadow-sm">
         <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
           <AlertCircle size={14} />
         </div>
@@ -403,7 +412,7 @@ const AIGradingCard = ({
   // ── Failed grading — neutral note, no error details ────────────────────────
   if (result.error) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card px-5 py-4 flex items-start gap-3">
+      <div className="rounded-xl border border-border/70 bg-card px-5 py-4 flex items-start gap-3 shadow-sm">
         <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
           <Bot size={14} />
         </div>
@@ -427,29 +436,33 @@ const AIGradingCard = ({
 
   // ── Normal graded result ───────────────────────────────────────────────────
   return (
-    <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
+    <div className="rounded-xl border border-border/70 bg-card shadow-sm overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-muted/40 transition-colors"
+        className="flex w-full flex-col items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:px-5"
       >
-        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-          <Bot size={14} />
-        </span>
-        <span className="flex-1 min-w-0 text-sm font-semibold text-foreground truncate">
-          {displayTitle}
-          <span className="ml-2 rounded-full border border-purple-200 bg-purple-50 px-2 py-px text-xs font-medium text-purple-600 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-            AI Graded
+        <div className="flex w-full min-w-0 items-start gap-3 sm:flex-1">
+          <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+            <Bot size={14} />
           </span>
-        </span>
-        <span className={`flex-shrink-0 text-sm font-bold ${scoreColor(pct)}`}>
-          {formatNumber(earned)}/{formatNumber(max)} pts
-        </span>
-        {open ? (
-          <ChevronUp size={15} className="ml-2 flex-shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronDown size={15} className="ml-2 flex-shrink-0 text-muted-foreground" />
-        )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{displayTitle}</p>
+            <span className="mt-1 inline-flex rounded-full border border-purple-200 bg-purple-50 px-2 py-px text-xs font-medium text-purple-600 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+              AI Graded
+            </span>
+          </div>
+        </div>
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+          <span className={`text-sm font-bold ${scoreColor(pct)}`}>
+            {formatNumber(earned)}/{formatNumber(max)} pts
+          </span>
+          {open ? (
+            <ChevronUp size={15} className="flex-shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown size={15} className="flex-shrink-0 text-muted-foreground" />
+          )}
+        </div>
       </button>
 
       {open && (
@@ -519,14 +532,15 @@ const AIGradingCard = ({
 
 const ResultSkeleton = () => (
   <>
-    <div className="h-56 w-full bg-muted animate-pulse" />
-    <Container className="py-10 space-y-6">
+    <Container className="py-8 space-y-6">
+      <Skeleton className="h-44 rounded-2xl" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Skeleton className="h-40 rounded-2xl" />
-        <Skeleton className="h-40 rounded-2xl" />
+        <Skeleton className="h-52 rounded-2xl" />
+        <Skeleton className="h-52 rounded-2xl" />
       </div>
-      <Skeleton className="h-48 rounded-2xl" />
-      <Skeleton className="h-32 rounded-2xl" />
+      <Skeleton className="h-56 rounded-2xl" />
+      <Skeleton className="h-40 rounded-2xl" />
+      <Skeleton className="h-28 rounded-2xl" />
     </Container>
   </>
 );
@@ -544,7 +558,8 @@ const Section = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`rounded-2xl border border-border bg-card p-6 ${className}`}>
+  <div className={`relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm ${className}`}>
+    <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
     <h2 className="mb-5 flex items-center gap-2 text-base font-bold text-foreground">
       <span className="text-primary">{icon}</span>
       {title}
@@ -668,7 +683,7 @@ const SimulationResultPage = () => {
   if (!loading && !data && error) {
     const isAuthError = error.includes("log in");
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navbar />
         <Container className="flex flex-col items-center gap-5 py-32 text-center">
           <div
@@ -716,7 +731,7 @@ const SimulationResultPage = () => {
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-16">
         <Navbar />
         <ResultSkeleton />
         <Footer />
@@ -733,7 +748,6 @@ const SimulationResultPage = () => {
     earnedPoints,
     totalPoints,
     skillBreakdown,
-    feedbackSummary,
     strengths,
     improvements,
     badgeEarned,
@@ -746,131 +760,82 @@ const SimulationResultPage = () => {
 
   const passMark = 70;
   const sortedSkills = [...skillBreakdown].sort((a, b) => b.score - a.score);
+  const statusBadgeClass = passed
+    ? "border-emerald-300/70 bg-emerald-500/10 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+    : "border-rose-300/70 bg-rose-500/10 text-rose-700 dark:border-rose-700 dark:bg-rose-900/30 dark:text-rose-300";
+  const scorePanelClass = passed
+    ? "border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+    : "border-rose-200/70 bg-rose-50/70 dark:border-rose-900/50 dark:bg-rose-950/20";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
       <Navbar />
 
       {/* ── Hero ── */}
-      <div
-        className={`relative overflow-hidden ${
-          passed
-            ? "bg-gradient-to-br from-emerald-600 via-teal-600 to-primary"
-            : "bg-gradient-to-br from-primary via-purple-600 to-rose-500"
-        }`}
-      >
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-12 -left-12 h-56 w-56 rounded-full bg-white/5 blur-2xl" />
+      <section className="relative border-b border-border bg-gradient-to-b from-background via-background to-muted/30">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl" />
+        <Container className="relative py-6 md:py-8">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm md:p-6">
+              <Link
+                to="/simulations"
+                className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft size={14} />
+                Job Simulations
+              </Link>
 
-        <Container className="relative py-12">
-          {/* Breadcrumb */}
-          <Link
-            to="/simulations"
-            className="mb-6 inline-flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={14} />
-            Job Simulations
-          </Link>
-
-          <div className="flex flex-col items-center gap-8 md:flex-row md:items-center md:gap-10">
-            {/* Score circle */}
-            <div className="flex-shrink-0">
-              <div className="relative inline-flex items-center justify-center">
-                <svg
-                  width={160}
-                  height={160}
-                  style={{ transform: "rotate(-90deg)" }}
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx={80}
-                    cy={80}
-                    r={64}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.15)"
-                    strokeWidth={12}
-                  />
-                  <circle
-                    cx={80}
-                    cy={80}
-                    r={64}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.95)"
-                    strokeWidth={12}
-                    strokeDasharray={2 * Math.PI * 64}
-                    strokeDashoffset={
-                      2 * Math.PI * 64 -
-                      (Math.min(100, finalScore) / 100) * 2 * Math.PI * 64
-                    }
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute flex flex-col items-center justify-center">
-                  <span className="text-3xl font-extrabold leading-none text-white">
-                    {Math.round(finalScore)}%
-                  </span>
-                  <span className="mt-1 text-xs font-medium text-white/70">
-                    final score
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Title + status */}
-            <div className="flex-1 text-center md:text-left">
-              {simInfo && (
-                <p className="mb-1 text-sm font-medium text-white/70">
-                  {simInfo.roleCategory}
-                </p>
-              )}
-              <h1 className="text-2xl font-extrabold leading-tight text-white md:text-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+                Simulation Result
+              </p>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-foreground md:text-3xl">
                 {simInfo?.title ?? "Simulation Complete"}
               </h1>
 
-              {/* Pass/fail badge */}
-              <div className="mt-3 inline-flex items-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-bold shadow-lg ${
-                    passed
-                      ? "bg-white text-emerald-700"
-                      : "bg-white/15 text-white border border-white/30"
-                  }`}
-                >
-                  {passed ? (
-                    <CheckCircle2 size={15} />
-                  ) : (
-                    <XCircle size={15} />
-                  )}
-                  {passed ? "Passed" : "Not Passed"}
-                </span>
-              </div>
-
-              {/* Chips row */}
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm border border-white/20">
-                  <Zap size={12} />
-                  {xpEarned} XP earned
-                </span>
-
-                {badgeEarned && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/90 px-3 py-1 text-xs font-bold text-amber-900 shadow-sm">
-                    <Trophy size={12} />
-                    {badgeLabel ?? "Excellence Badge"}
+              <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                {simInfo && (
+                  <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-semibold text-foreground">
+                    {simInfo.roleCategory}
                   </span>
                 )}
-
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass}`}>
+                  {passed ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                  {passed ? "Passed" : "Not Passed"}
+                </span>
                 {portfolioEligible && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm border border-white/20">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                     <BookOpen size={12} />
                     Portfolio eligible
                   </span>
                 )}
+                {badgeEarned && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-300">
+                    <Trophy size={12} />
+                    {badgeLabel ?? "Excellence Badge"}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className={`rounded-2xl border p-5 shadow-sm ${scorePanelClass}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Score Snapshot
+              </p>
+              <div className="mt-3 flex items-center gap-4">
+                <ScoreCircle score={finalScore} passed={passed} size={92} />
+                <div className="space-y-1 text-sm">
+                  <p className="text-muted-foreground">Points</p>
+                  <p className="font-bold text-foreground">
+                    {formatNumber(earnedPoints)}/{formatNumber(totalPoints)}
+                  </p>
+                  <p className="text-muted-foreground">Pass mark: {passMark}%</p>
+                  <p className="font-semibold text-foreground">XP earned: {xpEarned}</p>
+                </div>
               </div>
             </div>
           </div>
         </Container>
-      </div>
+      </section>
 
       {/* ── Content ── */}
       <Container className="py-10 space-y-6">
@@ -880,35 +845,27 @@ const SimulationResultPage = () => {
 
           {/* Score card */}
           <Section title="Score Overview" icon={<Star size={17} />}>
-            <div className="flex items-center justify-between mb-6">
-              <ScoreCircle score={finalScore} passed={passed} size={120} />
-              <div className="flex-1 pl-8 space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                    Points earned
-                  </p>
-                  <p className="text-2xl font-extrabold text-foreground">
-                    {formatNumber(earnedPoints)}
-                    <span className="text-lg font-medium text-muted-foreground">
-                      /{formatNumber(totalPoints)}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                    Pass mark
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {passMark}%{" "}
-                    <span
-                      className={`text-xs font-medium ${
-                        passed ? "text-emerald-600" : "text-rose-500"
-                      }`}
-                    >
-                      {passed ? "— You passed!" : "— Not reached"}
-                    </span>
-                  </p>
-                </div>
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Final score</p>
+                <p className={`text-xl font-black ${scoreColor(finalScore)}`}>{Math.round(finalScore)}%</p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Points</p>
+                <p className="text-xl font-black text-foreground">
+                  {formatNumber(earnedPoints)}
+                  <span className="text-sm font-semibold text-muted-foreground">/{formatNumber(totalPoints)}</span>
+                </p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Pass mark</p>
+                <p className="text-xl font-black text-foreground">{passMark}%</p>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</p>
+                <p className={`text-sm font-bold ${passed ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {passed ? "Passed" : "Not Passed"}
+                </p>
               </div>
             </div>
             {/* Score bar */}
@@ -938,6 +895,9 @@ const SimulationResultPage = () => {
 
           {/* Strengths & Improvements */}
           <Section title="Your Performance" icon={<TrendingUp size={17} />}>
+            <p className="mb-4 text-sm text-muted-foreground">
+              A concise review of what went well and what to focus on next.
+            </p>
             {strengths.length > 0 && (
               <div className="mb-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
@@ -947,7 +907,7 @@ const SimulationResultPage = () => {
                   {strengths.map((s, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-2 text-sm text-foreground/85"
+                      className="flex items-start gap-2 rounded-lg border border-emerald-200/60 bg-emerald-50/50 px-3 py-2 text-sm text-foreground/85 dark:border-emerald-900/40 dark:bg-emerald-900/10"
                     >
                       <CheckCircle2
                         size={15}
@@ -969,7 +929,7 @@ const SimulationResultPage = () => {
                   {improvements.map((s, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-2 text-sm text-foreground/85"
+                      className="flex items-start gap-2 rounded-lg border border-amber-200/60 bg-amber-50/50 px-3 py-2 text-sm text-foreground/85 dark:border-amber-900/40 dark:bg-amber-900/10"
                     >
                       <Star
                         size={14}
@@ -993,7 +953,7 @@ const SimulationResultPage = () => {
         {/* ── Skill breakdown ── */}
         {sortedSkills.length > 0 && (
           <Section title="Skill Breakdown" icon={<Award size={17} />}>
-            <div className="space-y-4">
+            <div className="space-y-2">
               {sortedSkills.map((skill, idx) => (
                 <SkillRow
                   key={skill.skill}
@@ -1006,21 +966,15 @@ const SimulationResultPage = () => {
           </Section>
         )}
 
-        {/* ── Feedback summary ── */}
-        {feedbackSummary && (
-          <Section title="Feedback Summary" icon={<BookOpen size={17} />}>
-            <p className="text-sm leading-relaxed text-foreground/85 whitespace-pre-line">
-              {feedbackSummary}
-            </p>
-          </Section>
-        )}
-
         {/* ── Task breakdown ── */}
         {(ruleBasedResults.length > 0 || aiGradingResults.length > 0) && (
           <Section
             title="Task-by-Task Breakdown"
             icon={<ClipboardList />}
           >
+            <p className="mb-3 text-sm text-muted-foreground">
+              Review scoring and evaluator feedback for each task.
+            </p>
             <div className="space-y-3">
               {ruleBasedResults.map((r, i) => (
                 <RuleBasedCard
@@ -1044,12 +998,15 @@ const SimulationResultPage = () => {
         )}
 
         {/* ── Actions ── */}
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <p className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             What&apos;s next?
           </p>
+          <p className="mt-1 mb-4 text-sm text-muted-foreground">
+            Continue building your readiness with your next best action.
+          </p>
           <div className="flex flex-wrap gap-3">
-            <Button asChild variant="outline">
+            <Button asChild variant={passed ? "outline" : "outline"}>
               <Link to="/simulations">
                 <ArrowLeft size={15} className="mr-2" />
                 Browse Simulations
@@ -1057,7 +1014,7 @@ const SimulationResultPage = () => {
             </Button>
 
             {simInfo?.slug && (
-              <Button asChild variant="outline">
+              <Button asChild variant={passed ? "outline" : "default"}>
                 <Link to={`/simulations/${simInfo.slug}/play`}>
                   <RotateCcw size={15} className="mr-2" />
                   Retake Simulation
@@ -1066,7 +1023,7 @@ const SimulationResultPage = () => {
             )}
 
             {simInfo?.slug && (
-              <Button asChild variant="ghost">
+              <Button asChild variant={passed ? "default" : "ghost"}>
                 <Link to={`/simulations/${simInfo.slug}`}>
                   <ExternalLink size={15} className="mr-2" />
                   View Details
@@ -1074,18 +1031,6 @@ const SimulationResultPage = () => {
               </Button>
             )}
 
-            <Button
-              type="button"
-              variant="ghost"
-              disabled
-              title="Coming soon"
-            >
-              <BookOpen size={15} className="mr-2" />
-              Add to Portfolio
-              <span className="ml-2 rounded-full bg-muted px-2 py-px text-xs text-muted-foreground">
-                Soon
-              </span>
-            </Button>
           </div>
         </div>
       </Container>

@@ -13,7 +13,9 @@ function isValidUrl(url: string): boolean {
   try { new URL(url); return true; } catch { return false; }
 }
 
-const inputCls = "h-10 rounded-xl bg-background text-sm placeholder:text-muted-foreground/60 focus-visible:ring-primary border border-border";
+const inputCls = "h-10 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0";
+const backBtnCls = "h-10 rounded-xl border border-border bg-transparent px-5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+const primaryBtnCls = "h-11 rounded-full bg-primary px-7 text-sm font-semibold text-primary-foreground shadow-[0_10px_24px_hsl(var(--primary)/0.35)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/90 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-50";
 
 const LinksStep = () => {
   const navigate = useNavigate();
@@ -65,29 +67,33 @@ const LinksStep = () => {
       leftHeadline="Connect your profiles"
       leftTagline="Share your online presence."
     >
-      <StepHeader title="Add your links" subtitle="All optional, but at least one is recommended." />
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="scrollbar-invisible min-h-0 flex-1 overflow-y-auto pr-1">
+          <StepHeader title="Add your links" subtitle="All optional, but at least one is recommended." />
 
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <Label htmlFor="gh" className="text-xs font-medium text-foreground">GitHub</Label>
-          <Input id="gh" value={github} onChange={e => setGithub(e.target.value)} placeholder="https://github.com/username" className={inputCls} />
-          {errors.github && <p className="text-xs text-destructive">{errors.github}</p>}
+          <div className="space-y-2.5">
+            <div className="space-y-1">
+              <Label htmlFor="gh" className="text-xs font-medium text-foreground">GitHub</Label>
+              <Input id="gh" value={github} onChange={e => setGithub(e.target.value)} placeholder="https://github.com/username" className={inputCls} />
+              {errors.github && <p className="text-xs text-destructive">{errors.github}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="li" className="text-xs font-medium text-foreground">LinkedIn</Label>
+              <Input id="li" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/username" className={inputCls} />
+              {errors.linkedin && <p className="text-xs text-destructive">{errors.linkedin}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="pf" className="text-xs font-medium text-foreground">Portfolio</Label>
+              <Input id="pf" value={portfolio} onChange={e => setPortfolio(e.target.value)} placeholder="https://yoursite.com" className={inputCls} />
+              {errors.portfolio && <p className="text-xs text-destructive">{errors.portfolio}</p>}
+            </div>
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="li" className="text-xs font-medium text-foreground">LinkedIn</Label>
-          <Input id="li" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/username" className={inputCls} />
-          {errors.linkedin && <p className="text-xs text-destructive">{errors.linkedin}</p>}
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="pf" className="text-xs font-medium text-foreground">Portfolio</Label>
-          <Input id="pf" value={portfolio} onChange={e => setPortfolio(e.target.value)} placeholder="https://yoursite.com" className={inputCls} />
-          {errors.portfolio && <p className="text-xs text-destructive">{errors.portfolio}</p>}
-        </div>
-      </div>
 
-      <div className="mt-4 flex justify-between">
-        <Button variant="ghost" onClick={handleBack} className="h-10 px-5 rounded-xl text-sm">Back</Button>
-        <Button onClick={handleNext} className="h-10 px-6 rounded-xl text-sm font-semibold">Next</Button>
+        <div className="mt-3 shrink-0 flex justify-between border-t border-border/70 pt-2.5">
+          <Button variant="ghost" onClick={handleBack} className={backBtnCls}>Back</Button>
+          <Button onClick={handleNext} className={primaryBtnCls}>Next</Button>
+        </div>
       </div>
     </OnboardingLayout>
   );

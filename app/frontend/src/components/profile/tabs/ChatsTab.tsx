@@ -37,8 +37,11 @@ const ChatsTab = () => {
   const [sending, setSending] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
-  // Only keep 1:1 or small DMs; skip workspace group rooms
-  const directChats = useMemo(() => chats.filter((c) => (c.participantIds?.length || 0) <= 2), [chats]);
+  // Only keep real conversations with at least one message and small DMs; skip workspace group rooms
+  const directChats = useMemo(
+    () => chats.filter((c) => (c.messages?.length || 0) > 0 && (c.participantIds?.length || 0) <= 2),
+    [chats]
+  );
   const active = directChats.find((c) => c._id === activeId) || null;
 
   useEffect(() => {
@@ -114,7 +117,7 @@ const ChatsTab = () => {
             ) : directChats.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
                 <MessageCircle size={24} className="mx-auto mb-2 opacity-50" />
-                <p>No conversations</p>
+                <p>No conversations yet.</p>
               </div>
             ) : (
               <div className="divide-y divide-border">

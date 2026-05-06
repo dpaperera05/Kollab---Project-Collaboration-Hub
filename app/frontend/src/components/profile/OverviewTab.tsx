@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Save, UserCircle, Link2, Globe, Briefcase } from "lucide-react";
+import { Save, UserCircle, Link2, Globe, Briefcase, Pencil, Search, X, Check } from "lucide-react";
 import { type KollabUser, updateUserProfile } from "@/lib/authStore";
 
 interface Props { user: KollabUser; onUpdate: () => void; }
@@ -25,10 +26,28 @@ const OverviewTab = ({ user, onUpdate }: Props) => {
   const [hours, setHours] = useState(p.availabilityHoursPerWeek ?? 10);
   const [domains, setDomains] = useState<string[]>(p.domainInterests || []);
   const [roles, setRoles] = useState<string[]>(user.userType === "mentor" ? (p.expertiseSkills || []) : (p.preferredRoles || []));
+  const [editingDomains, setEditingDomains] = useState(false);
+  const [editingRoles, setEditingRoles] = useState(false);
+  const [domainsDraft, setDomainsDraft] = useState<string[]>(p.domainInterests || []);
+  const [rolesDraft, setRolesDraft] = useState<string[]>(user.userType === "mentor" ? (p.expertiseSkills || []) : (p.preferredRoles || []));
+  const [domainSearch, setDomainSearch] = useState("");
+  const [roleSearch, setRoleSearch] = useState("");
 
   const toggleChip = (list: string[], setter: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
     setter(list.includes(val) ? list.filter(v => v !== val) : [...list, val]);
   };
+
+  const filteredDomains = useMemo(() => {
+    if (!domainSearch.trim()) return DOMAIN_OPTIONS;
+    const q = domainSearch.toLowerCase();
+    return DOMAIN_OPTIONS.filter((d) => d.toLowerCase().includes(q));
+  }, [domainSearch]);
+
+  const filteredRoles = useMemo(() => {
+    if (!roleSearch.trim()) return ROLE_OPTIONS;
+    const q = roleSearch.toLowerCase();
+    return ROLE_OPTIONS.filter((r) => r.toLowerCase().includes(q));
+  }, [roleSearch]);
 
   const save = () => {
     const data: Record<string, unknown> = {
@@ -42,6 +61,25 @@ const OverviewTab = ({ user, onUpdate }: Props) => {
     updateUserProfile(data as any);
     onUpdate();
     toast({ title: "Profile updated" });
+  };
+
+  const saveDomains = () => {
+    setDomains(domainsDraft);
+    updateUserProfile({ domainInterests: domainsDraft });
+    onUpdate();
+    setEditingDomains(false);
+    toast({ title: "Domain interests updated" });
+  };
+
+  const saveRoles = () => {
+    setRoles(rolesDraft);
+    const data: Record<string, unknown> = {};
+    if (user.userType === "mentor") data.expertiseSkills = rolesDraft;
+    else data.preferredRoles = rolesDraft;
+    updateUserProfile(data as any);
+    onUpdate();
+    setEditingRoles(false);
+    toast({ title: `${user.userType === "mentor" ? "Expertise areas" : "Preferred roles"} updated` });
   };
 
   return (
@@ -77,35 +115,181 @@ const OverviewTab = ({ user, onUpdate }: Props) => {
 
         {/* Domain Interests */}
         <Card className="border-border card-shadow">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base flex items-center gap-2"><Globe size={16} className="text-primary" />Domain Interests</CardTitle>
+            {!editingDomains && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setDomainsDraft(domains);
+                  setDomainSearch("");
+                  setEditingDomains(true);
+                }}
+                className="gap-1.5"
+              >
+                <Pencil size={13} /> Edit
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {DOMAIN_OPTIONS.map(d => (
-                <button key={d} onClick={() => toggleChip(domains, setDomains, d)}
-                  className={`chip px-3 py-1.5 rounded-full text-xs font-medium transition-all ${domains.includes(d) ? "bg-primary text-primary-foreground border-primary" : ""}`}>
-                  {d}
-                </button>
-              ))}
-            </div>
+            {editingDomains ? (
+              <>
+                {domainsDraft.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {domainsDraft.map((d) => (
+                      <Badge key={d} variant="default" className="gap-1 pr-1.5 bg-primary text-primary-foreground">
+                        {d}
+                        <button type="button" onClick={() => toggleChip(domainsDraft, setDomainsDraft, d)} className="ml-0.5 hover:opacity-70">
+                          <X size={12} />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="relative mb-4">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={domainSearch}
+                    onChange={(e) => setDomainSearch(e.target.value)}
+                    placeholder="Search domain interests..."
+                    className="pl-9"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                  {filteredDomains.map((d) => {
+                    const isSelected = domainsDraft.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => toggleChip(domainsDraft, setDomainsDraft, d)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border ${
+                          isSelected
+                            ? "bg-primary/10 text-primary border-primary"
+                            : "chip hover:border-primary/30"
+                        }`}
+                      >
+                        {isSelected && <Check size={10} strokeWidth={3} />}
+                        {d}
+                      </button>
+                    );
+                  })}
+                  {filteredDomains.length === 0 && (
+                    <p className="text-xs text-muted-foreground py-2">No matches found</p>
+                  )}
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setDomainsDraft(domains); setEditingDomains(false); }}>
+                    Cancel
+                  </Button>
+                  <Button type="button" size="sm" onClick={saveDomains}>Save</Button>
+                </div>
+              </>
+            ) : (
+              domains.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {domains.map((d) => (
+                    <span key={d} className="chip px-3 py-1.5 rounded-full text-xs font-medium">
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No domain interests added yet.</p>
+              )
+            )}
           </CardContent>
         </Card>
 
         {/* Roles */}
         <Card className="border-border card-shadow">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base flex items-center gap-2"><Briefcase size={16} className="text-primary" />{user.userType === "mentor" ? "Expertise Areas" : "Preferred Roles"}</CardTitle>
+            {!editingRoles && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setRolesDraft(roles);
+                  setRoleSearch("");
+                  setEditingRoles(true);
+                }}
+                className="gap-1.5"
+              >
+                <Pencil size={13} /> Edit
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {ROLE_OPTIONS.map(r => (
-                <button key={r} onClick={() => toggleChip(roles, setRoles, r)}
-                  className={`chip px-3 py-1.5 rounded-full text-xs font-medium transition-all ${roles.includes(r) ? "bg-primary text-primary-foreground border-primary" : ""}`}>
-                  {r}
-                </button>
-              ))}
-            </div>
+            {editingRoles ? (
+              <>
+                {rolesDraft.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {rolesDraft.map((r) => (
+                      <Badge key={r} variant="default" className="gap-1 pr-1.5 bg-primary text-primary-foreground">
+                        {r}
+                        <button type="button" onClick={() => toggleChip(rolesDraft, setRolesDraft, r)} className="ml-0.5 hover:opacity-70">
+                          <X size={12} />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="relative mb-4">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={roleSearch}
+                    onChange={(e) => setRoleSearch(e.target.value)}
+                    placeholder={`Search ${user.userType === "mentor" ? "expertise areas" : "preferred roles"}...`}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                  {filteredRoles.map((r) => {
+                    const isSelected = rolesDraft.includes(r);
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => toggleChip(rolesDraft, setRolesDraft, r)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border ${
+                          isSelected
+                            ? "bg-primary/10 text-primary border-primary"
+                            : "chip hover:border-primary/30"
+                        }`}
+                      >
+                        {isSelected && <Check size={10} strokeWidth={3} />}
+                        {r}
+                      </button>
+                    );
+                  })}
+                  {filteredRoles.length === 0 && (
+                    <p className="text-xs text-muted-foreground py-2">No matches found</p>
+                  )}
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setRolesDraft(roles); setEditingRoles(false); }}>
+                    Cancel
+                  </Button>
+                  <Button type="button" size="sm" onClick={saveRoles}>Save</Button>
+                </div>
+              </>
+            ) : (
+              roles.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {roles.map((r) => (
+                    <span key={r} className="chip px-3 py-1.5 rounded-full text-xs font-medium">
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No roles added yet.</p>
+              )
+            )}
           </CardContent>
         </Card>
       </div>

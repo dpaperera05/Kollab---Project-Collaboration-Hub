@@ -20,60 +20,58 @@ const MentorAvailability = ({ mentor }: { mentor: Mentor }) => {
   const hasAnySlots = hasStructuredSlots || fallbackSlots.length > 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-7">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <CalendarClock size={16} className="text-primary" />
-          <h2 className="text-base font-bold text-foreground">Availability</h2>
+          <h2 className="text-lg font-bold text-foreground">Availability</h2>
         </div>
-        {hasAnySlots && (
-          <span className="text-xs text-muted-foreground"></span>
-        )}
+        {hasAnySlots && <span className="text-xs font-medium text-muted-foreground">{slots.length || fallbackSlots.length} slot(s)</span>}
       </div>
 
       {hasStructuredSlots ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {slots.map((slot, idx) => (
             <div
               key={`${slot.date}-${slot.startTime}-${idx}`}
-              className="rounded-md border border-border bg-muted/40 p-3 shadow-sm"
+              className="rounded-xl border border-border/80 bg-gradient-to-b from-background to-muted/35 p-3.5"
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-2.5">
                 <div className="space-y-0.5">
                   <div className="text-xs font-semibold text-foreground flex items-center gap-2">
                     <Clock3 size={13} className="text-primary" />
                     {formatTimeRange(slot)}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">{formatDate(slot.date)}</p>
+                  <p className="text-[11px] font-medium text-muted-foreground">{formatDate(slot.date)}</p>
                 </div>
                 {slot.timezone && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/12 text-primary px-2 py-0.5 text-[10px] font-semibold">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                     <MapPin size={11} />
                     {slot.timezone}
                   </span>
                 )}
               </div>
-              {slot.note && <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{slot.note}</p>}
+              {slot.note && <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground line-clamp-2">{slot.note}</p>}
             </div>
           ))}
         </div>
       ) : hasAnySlots ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           {fallbackSlots.map((slot) => (
             <span
               key={slot}
-              className="rounded-full bg-secondary text-secondary-foreground px-3 py-1 text-xs font-medium border border-border/80"
+              className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
             >
               {slot}
             </span>
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+        <div className="mt-4 rounded-xl border border-dashed border-border bg-muted/35 p-4 text-sm text-muted-foreground">
           This mentor has not shared availability yet. Check back soon or send a chat to coordinate times.
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

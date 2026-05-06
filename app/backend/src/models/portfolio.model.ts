@@ -46,4 +46,7 @@ const portfolioSchema = new Schema<IPortfolioItem>(
   { timestamps: true }
 );
 
+portfolioSchema.index({ userId: 1, isPublished: 1, createdAt: -1 });
+portfolioSchema.index({ userId: 1, isPublished: 1 });
+
 export const PortfolioItem = model<IPortfolioItem>("PortfolioItem", portfolioSchema);

@@ -22,16 +22,17 @@ const BADGE_STYLES: Record<string, string> = {
 const DEFAULT_STYLE = "bg-primary/10 text-primary border-primary/20";
 
 const TechBadges = ({ techStack }: Props) => (
-  <div className="rounded-xl border border-border bg-card p-5">
-    <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+  <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <h3 className="text-sm font-bold tracking-tight text-foreground mb-1 flex items-center gap-2">
       🛠️ Tech Stack
     </h3>
+    <p className="text-xs text-muted-foreground mb-3">Tools and technologies used across projects.</p>
     <div className="flex flex-wrap gap-2">
       {techStack.map((tech) => (
         <span
           key={tech}
           className={cn(
-            "inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-transform hover:scale-105",
+            "inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border",
             BADGE_STYLES[tech] || DEFAULT_STYLE
           )}
         >

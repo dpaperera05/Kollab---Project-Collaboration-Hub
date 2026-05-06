@@ -1,3 +1,5 @@
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
+
 export interface PinnedShowcase {
   id: string;
   title: string;
@@ -39,8 +41,7 @@ export interface PersonProfile {
   activity?: ActivityItem[];
 }
 
-const avatarUrl = (seed: string) =>
-  `https://api.dicebear.com/9.x/notionists/svg?seed=${seed}&backgroundColor=c0aede`;
+const avatarUrl = (seed: string) => getDefaultAvatarUrl(seed);
 
 // Helper to generate evidence scores from skills
 const makeEvidence = (skills: string[], base: number): Record<string, number> => {

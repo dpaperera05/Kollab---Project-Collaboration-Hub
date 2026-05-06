@@ -20,9 +20,9 @@ const TaskCard = ({ task, members, onEdit, onDelete, onStatusChange, disabled }:
     : "?";
 
   const statusBg: Record<WorkspaceTask["status"], string> = {
-    "todo": "bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-100",
+    "todo": "bg-[#FFE5B4] border-[#E5AC00] text-amber-950 dark:bg-[#FFE5B4] dark:border-[#E5AC00] dark:text-amber-950",
     "in-progress": "bg-blue-100 border-blue-300 text-blue-900 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-100",
-    "done": "bg-emerald-100 border-emerald-300 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-100",
+    "done": "bg-[#AFE1AF] border-emerald-300 text-emerald-900 dark:bg-[#AFE1AF] dark:border-emerald-700 dark:text-emerald-950",
   };
 
   return (

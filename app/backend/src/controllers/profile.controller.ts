@@ -23,6 +23,7 @@ import {
   smartSearchMembers,
   type RawMemberDoc,
 } from "../services/memberSmartSearch.service";
+import { computeSkillEvidenceForMember } from "../services/skillEvidence.service";
 
 const sanitizeStringArray = (value?: unknown): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
@@ -320,39 +321,129 @@ export const smartSearchMembersHandler = async (req: Request, res: Response) => 
 
 export const getMemberProfile = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const user = await User.findById(id);
+  const isPerfLoggingEnabled = process.env.NODE_ENV !== "production";
+  const perfPrefix = `[getMemberProfile:${id}:${Date.now()}]`;
+  const logPerf = (label: string, durationMs: number) => {
+    if (isPerfLoggingEnabled) {
+      console.log(`${perfPrefix} ${label}: ${durationMs}ms`);
+    }
+  };
+
+  const endpointStart = Date.now();
+
+  const userLookupStart = Date.now();
+  const user = await User.findById(id)
+    .select("name email userType isEmailVerified onboardingCompleted onboardingStep isProfilePublic profile")
+    .lean();
+  logPerf("userLookup", Date.now() - userLookupStart);
+
   if (!user || user.userType !== "member" || user.isProfilePublic === false) {
+    logPerf("total", Date.now() - endpointStart);
     return res.status(404).json({ success: false, message: "Profile not found" });
   }
 
-  const [ownedProjects, memberProjects, portfolioCount, pinnedPortfolio] = await Promise.all([
-    Project.countDocuments({ ownerId: id }),
-    Project.countDocuments({ "members.userId": id }),
-    PortfolioItem.countDocuments({ userId: id, isPublished: { $ne: false } }),
-    PortfolioItem.find({ userId: id, isPublished: { $ne: false } })
+  const basePortfolioFilter = { userId: id, isPublished: { $ne: false } };
+
+  const pinnedPortfolioQuery = (async () => {
+    const queryStart = Date.now();
+    const result = await PortfolioItem.find(basePortfolioFilter)
+      .select("title summary problem techStack coverImage createdAt")
       .sort({ createdAt: -1 })
-      .limit(4),
+      .limit(4)
+      .lean();
+    logPerf("pinnedShowcasesQuery", Date.now() - queryStart);
+    return result;
+  })();
+
+  const involvedProjectsQuery = (async () => {
+    const queryStart = Date.now();
+    const result = await Project.find({
+      $or: [{ ownerId: id }, { "members.userId": id }],
+    })
+      .select("ownerId members.userId technologies roles.requiredSkills roles.niceToHaveSkills")
+      .lean();
+    logPerf("involvedProjectsQuery", Date.now() - queryStart);
+    return result;
+  })();
+
+  const publishedPortfolioQuery = (async () => {
+    const queryStart = Date.now();
+    const result = await PortfolioItem.find(basePortfolioFilter)
+      .select("techStack")
+      .lean();
+    logPerf("publishedPortfolioTechQuery", Date.now() - queryStart);
+    return result;
+  })();
+
+  const [pinnedPortfolio, involvedProjects, publishedPortfolio] = await Promise.all([
+    pinnedPortfolioQuery,
+    involvedProjectsQuery,
+    publishedPortfolioQuery,
   ]);
+
+  const statsStart = Date.now();
+  let ownedProjects = 0;
+  let memberProjects = 0;
+
+  for (const project of involvedProjects) {
+    if (project.ownerId === id) {
+      ownedProjects += 1;
+    }
+    if ((project.members || []).some((member) => member?.userId === id)) {
+      memberProjects += 1;
+    }
+  }
+
+  const portfolioCount = publishedPortfolio.length;
+  logPerf("statsAggregation", Date.now() - statsStart);
 
   const stats = {
     projectsCount: ownedProjects + memberProjects,
     showcasesCount: portfolioCount,
   };
 
+  const pinnedMapStart = Date.now();
   const pinnedShowcases = pinnedPortfolio.map((item) => ({
-    id: item.id,
+    id: item._id?.toString?.() ?? String(item._id),
     title: item.title,
     summary: item.summary || item.problem || "",
     techStack: item.techStack || [],
     tags: (item.techStack || []).slice(0, 4),
+    coverImage: item.coverImage || "",
   }));
+  logPerf("pinnedShowcasesMapping", Date.now() - pinnedMapStart);
+
+  const profile = (user.profile || {}) as Record<string, unknown>;
+  const profileSkills = Array.isArray(profile.skills)
+    ? profile.skills.filter((s): s is string => typeof s === "string")
+    : [];
+  const profileTech = Array.isArray(profile.techStack)
+    ? profile.techStack.filter((s): s is string => typeof s === "string")
+    : [];
+
+  const skillEvidenceStart = Date.now();
+  const skillEvidenceScores = computeSkillEvidenceForMember({
+    profileSkills,
+    profileTechStack: profileTech,
+    projects: involvedProjects.map((project) => ({
+      technologies: project.technologies || [],
+      requiredSkills: (project.roles || []).flatMap((role) => role.requiredSkills || []),
+      niceToHaveSkills: (project.roles || []).flatMap((role) => role.niceToHaveSkills || []),
+    })),
+    showcases: publishedPortfolio.map((item) => ({
+      techStack: item.techStack || [],
+    })),
+  });
+  logPerf("skillEvidenceCalculation", Date.now() - skillEvidenceStart);
+  logPerf("total", Date.now() - endpointStart);
 
   return res.json({
     success: true,
     data: {
-      user: toUserResponse(user),
+      user: toUserResponse(user as any),
       stats,
       pinnedShowcases,
+      skillEvidenceScores,
     },
   });
 };

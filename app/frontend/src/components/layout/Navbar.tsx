@@ -8,15 +8,16 @@ import Container from "@/components/ui/Container";
 import KollabLogo from "@/components/ui/KollabLogo";
 import { cn } from "@/lib/utils";
 import { getSession, logout, type KollabUser } from "@/lib/authStore";
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 const navLinks = [
   { label: "Projects", href: "/projects" },
-  { label: "People", href: "/people" },
   { label: "Mentors", href: "/mentors" },
+  { label: "Members", href: "/people" },
   { label: "Job Simulations", href: "/simulations" },
+  { label: "Job Market", href: "/insights" },
   { label: "Events", href: "/events" },
   { label: "Blogs", href: "/blogs" },
-  { label: "Insights", href: "/insights" },
 ];
 
 const Navbar = () => {
@@ -69,7 +70,7 @@ const Navbar = () => {
 
   const avatarUrl =
     session?.profile?.avatarUrl ||
-    `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(session?.name || "User")}`;
+    getDefaultAvatarUrl(session?.id || session?.name || session?.email);
 
   const handleLogout = () => {
     logout();
@@ -222,6 +223,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
+                  state={{ from: location.pathname }}
                   className="px-4 py-2 text-[15px] font-semibold text-foreground/80 hover:text-foreground transition-colors duration-150"
                 >
                   Login
@@ -322,6 +324,7 @@ const Navbar = () => {
                   <>
                     <Link
                       to="/login"
+                      state={{ from: location.pathname }}
                       className="flex-1 px-4 py-2.5 text-sm font-medium text-center border border-border rounded-lg hover:bg-accent transition-colors"
                     >
                       Login

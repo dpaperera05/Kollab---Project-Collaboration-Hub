@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getSession, setSession, type KollabUser } from "@/lib/authStore";
 import { apiGet } from "@/lib/api";
 import Navbar from "@/components/layout/Navbar";
@@ -9,11 +9,12 @@ import MentorTabs from "@/components/profile/tabs/MentorTabs";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [session, setSessionState] = useState(getSession());
 
   useEffect(() => {
     const s = getSession();
-    if (!s) { navigate("/login", { replace: true }); return; }
+    if (!s) { navigate("/login", { replace: true, state: { from: location.pathname } }); return; }
     if (!s.isEmailVerified) { navigate("/verify-email", { replace: true }); return; }
     if (!s.onboardingCompleted && s.onboardingStep) {
       navigate(s.onboardingStep, { replace: true }); return;

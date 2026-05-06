@@ -1,15 +1,6 @@
 import { Star, CalendarCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { Mentor } from "@/types/mentor";
-
-const avatarColors = [
-  "from-violet-500 to-pink-500",
-  "from-blue-500 to-cyan-500",
-  "from-pink-500 to-rose-500",
-  "from-amber-500 to-orange-500",
-  "from-emerald-500 to-teal-500",
-  "from-indigo-500 to-violet-500",
-];
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 const RecommendedMentorsCarousel = ({ mentors, onBook }: { mentors: Mentor[]; onBook: (mentor: Mentor) => void }) => {
   const recommended = mentors.filter((m) => m.rating >= 4.8).slice(0, 6);
@@ -20,7 +11,7 @@ const RecommendedMentorsCarousel = ({ mentors, onBook }: { mentors: Mentor[]; on
         Recommended mentors
       </p>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {recommended.map((m, idx) => (
+        {recommended.map((m) => (
           <div
             key={m.id}
             className="flex-shrink-0 w-56 rounded-xl border border-border bg-card p-4 space-y-2 card-shadow hover:card-shadow-hover hover:-translate-y-0.5 transition-all duration-200"
@@ -34,9 +25,12 @@ const RecommendedMentorsCarousel = ({ mentors, onBook }: { mentors: Mentor[]; on
                   loading="lazy"
                 />
               ) : (
-                <div className={cn("w-9 h-9 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold", avatarColors[idx % avatarColors.length])}>
-                  {m.avatar}
-                </div>
+                <img
+                  src={getDefaultAvatarUrl(m.id || m.name)}
+                  alt={m.name}
+                  className="w-9 h-9 rounded-full border border-border object-cover"
+                  loading="lazy"
+                />
               )}
               <div className="min-w-0">
                 <p className="text-xs font-bold text-foreground truncate">{m.name}</p>

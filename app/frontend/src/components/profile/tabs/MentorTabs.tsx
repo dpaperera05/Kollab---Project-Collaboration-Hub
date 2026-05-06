@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Clock, FileText, Calendar, MessageCircle, Settings, CalendarRange } from "lucide-react";
+import { User, Clock, FileText, Calendar, MessageCircle, Settings, CalendarRange, FolderKanban } from "lucide-react";
 import { type KollabUser } from "@/lib/authStore";
 import MentorProfileTab from "./MentorProfileTab";
 import BookingsMentorTab from "./BookingsMentorTab";
@@ -9,12 +9,14 @@ import EventsManagerTab from "./EventsManagerTab";
 import ChatsTab from "./ChatsTab";
 import SettingsTab from "@/components/profile/SettingsTab";
 import MentorAvailabilityTab from "./MentorAvailabilityTab";
+import ManageProjectsTab from "./ManageProjectsTab";
 
 interface Props { user: KollabUser; onUpdate: () => void; }
 
 const tabs = [
   { value: "profile", label: "Mentor Profile", icon: User },
   { value: "availability", label: "Availability", icon: CalendarRange },
+  { value: "projects", label: "Projects", icon: FolderKanban },
   { value: "bookings", label: "Bookings", icon: Clock },
    { value: "calendar", label: "Calendar", icon: Calendar },
   { value: "blogs", label: "Blogs", icon: FileText },
@@ -36,6 +38,7 @@ const MentorTabs = ({ user, onUpdate }: Props) => (
     <div className="mt-8">
       <TabsContent value="profile"><MentorProfileTab user={user} onUpdate={onUpdate} /></TabsContent>
       <TabsContent value="availability"><MentorAvailabilityTab user={user} onUpdate={onUpdate} /></TabsContent>
+      <TabsContent value="projects"><ManageProjectsTab /></TabsContent>
       <TabsContent value="bookings"><BookingsMentorTab /></TabsContent>
       <TabsContent value="calendar"><BookingsCalendarTab /></TabsContent>
       <TabsContent value="blogs"><BlogsManagerTab /></TabsContent>

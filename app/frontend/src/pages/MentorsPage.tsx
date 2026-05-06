@@ -360,11 +360,10 @@ const MentorsPage = () => {
                 <FilterEmptyState onClear={handleClear} />
               )
             ) : (
-              displayMentors.map((mentor, idx) => (
+              displayMentors.map((mentor) => (
                 <MentorCard
                   key={mentor.id}
                   mentor={mentor}
-                  index={idx + (currentPage - 1) * PAGE_SIZE}
                 />
               ))
             )}

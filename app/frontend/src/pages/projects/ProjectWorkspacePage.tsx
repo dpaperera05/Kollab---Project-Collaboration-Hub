@@ -153,7 +153,14 @@ const ProjectWorkspacePage = () => {
                 <ChatPanel projectId={project.id} initialMessages={project.chatMessages} />
               ) : (
                 <div className="p-4 lg:p-6 overflow-y-auto h-full">
-                  <KanbanBoard projectId={project.id} initialTasks={project.tasks} members={project.members} />
+                  <KanbanBoard
+                    projectId={project.id}
+                    initialTasks={project.tasks}
+                    members={project.members}
+                    onTasksChange={(tasks) => {
+                      setWorkspace((prev) => (prev ? { ...prev, tasks } : prev));
+                    }}
+                  />
                 </div>
               )}
             </div>

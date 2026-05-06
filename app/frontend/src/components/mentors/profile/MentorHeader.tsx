@@ -1,16 +1,8 @@
-import { ArrowLeft, Star, CalendarCheck, MessageSquare } from "lucide-react";
+import { ArrowLeft, Star, CalendarCheck, MessageSquare, Mail, MapPin, Clock3, BadgeCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { Mentor } from "@/types/mentor";
-
-const avatarColors = [
-  "from-violet-500 to-pink-500",
-  "from-blue-500 to-cyan-500",
-  "from-pink-500 to-rose-500",
-  "from-amber-500 to-orange-500",
-  "from-emerald-500 to-teal-500",
-  "from-indigo-500 to-violet-500",
-];
+import { getDefaultAvatarUrl } from "@/lib/defaultAvatar";
 
 interface MentorHeaderProps {
   mentor: Mentor;
@@ -19,12 +11,19 @@ interface MentorHeaderProps {
   reviewCount: number;
   onBook: () => void;
   onMessage: () => void;
+  canBook?: boolean;
+  canMessage?: boolean;
 }
 
-const MentorHeader = ({ mentor, colorIndex, avgRating, reviewCount, onBook, onMessage }: MentorHeaderProps) => {
+const MentorHeader = ({ mentor, colorIndex: _colorIndex, avgRating, reviewCount, onBook, onMessage, canBook = true, canMessage = true }: MentorHeaderProps) => {
   const navigate = useNavigate();
   const totalReviews = reviewCount > 0 ? reviewCount : mentor.reviewsCount;
   const displayRating = reviewCount > 0 ? avgRating : mentor.rating;
+  const meta = [
+    mentor.location ? { key: "location", label: mentor.location, icon: MapPin } : null,
+    mentor.timezone ? { key: "timezone", label: mentor.timezone, icon: Clock3 } : null,
+    mentor.email ? { key: "email", label: mentor.email, icon: Mail } : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; icon: typeof MapPin }>;
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -35,78 +34,102 @@ const MentorHeader = ({ mentor, colorIndex, avgRating, reviewCount, onBook, onMe
   };
 
   return (
-    <div className="border-b border-border bg-card/60">
-      <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-6">
-        {/* Back button */}
-        <div className="pt-4 pb-2">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ArrowLeft size={14} />
-            Back to Mentors
-          </button>
-        </div>
+    <section>
+      <div className="flex items-center gap-2 pb-2 pt-2 text-xs text-muted-foreground sm:text-sm">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 font-medium transition-colors hover:bg-muted/60 hover:text-foreground"
+        >
+          <ArrowLeft size={14} />
+          Back to Mentors
+        </button>
+        <span className="text-border">/</span>
+        <span className="font-medium text-foreground/80">Public Profile</span>
+      </div>
 
-        {/* Profile row */}
-        <div className="pb-6 flex flex-col sm:flex-row sm:items-center gap-5">
-          {/* Avatar */}
-          {mentor.avatarUrl ? (
-            <div className="flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden shadow-brand">
-              <img src={mentor.avatarUrl} alt={mentor.name} className="w-full h-full object-cover" />
-            </div>
-          ) : (
-            <div className={cn("flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white text-2xl font-bold shadow-brand", avatarColors[colorIndex % avatarColors.length])}>
-              {mentor.avatar}
-            </div>
-          )}
-
-          {/* Info */}
-          <div className="flex-1 min-w-0 space-y-1.5">
-            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">{mentor.name}</h1>
-            <p className="text-sm text-muted-foreground">{mentor.headline}</p>
-            <div className="flex flex-wrap items-center gap-3 mt-1">
-              {/* Rating */}
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star key={s} size={14} className={cn(s <= Math.round(displayRating) ? "fill-amber-400 text-amber-400" : "text-border")} />
-                ))}
-                <span className="ml-1 text-sm font-semibold text-foreground">{displayRating}</span>
-                <span className="text-xs text-muted-foreground">({totalReviews} reviews)</span>
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_88%_12%,hsl(270_75%_58%/0.12),transparent_42%),linear-gradient(160deg,hsl(var(--card)),hsl(var(--muted)/0.3))]" />
+        <div className="relative p-5 sm:p-6 lg:p-7">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-5">
+              <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border-2 border-white/70 bg-muted shadow-lg sm:h-28 sm:w-28">
+                <img
+                  src={mentor.avatarUrl || getDefaultAvatarUrl(mentor.id || mentor.name)}
+                  alt={mentor.name}
+                  className="h-full w-full object-cover"
+                />
               </div>
-              {/* Rate */}
-              <span className={cn(
-                "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
-                mentor.rate === "Free"
-                  ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800"
-                  : "text-foreground bg-secondary border-border"
-              )}>
-                {mentor.rate}
-              </span>
-            </div>
-          </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 sm:flex-col sm:items-end">
-            <button
-              onClick={onBook}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-brand-sm"
-            >
-              <CalendarCheck size={16} />
-              Book a Session
-            </button>
-            <button
-              onClick={onMessage}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:border-primary/50 hover:text-primary transition-colors"
-            >
-              <MessageSquare size={15} />
-              Message
-            </button>
+              <div className="min-w-0 space-y-2.5">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                  <BadgeCheck size={13} />
+                  Mentor
+                </span>
+                <div className="space-y-1.5">
+                  <h1 className="truncate text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{mentor.name}</h1>
+                  <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">{mentor.headline}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={14} className={cn(s <= Math.round(displayRating) ? "fill-amber-400 text-amber-400" : "text-border")} />
+                    ))}
+                    <span className="ml-1 text-sm font-semibold text-foreground">{displayRating}</span>
+                    <span className="text-xs text-muted-foreground">({totalReviews} reviews)</span>
+                  </div>
+                  <span className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs font-semibold",
+                    mentor.rate === "Free"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      : "border-border bg-secondary text-foreground"
+                  )}>
+                    {mentor.rate}
+                  </span>
+                </div>
+
+                {meta.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {meta.map(({ key, label, icon: Icon }) => (
+                      <span key={key} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                        <Icon size={12} className="text-primary" />
+                        <span className="truncate">{label}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="w-full space-y-2.5 lg:w-auto lg:min-w-[220px]">
+              {canBook ? (
+                <button
+                  onClick={onBook}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+                >
+                  <CalendarCheck size={16} />
+                  Book a Session
+                </button>
+              ) : (
+                <div className="rounded-xl border border-border bg-background/80 px-3 py-2 text-center text-xs text-muted-foreground">
+                  This is your public mentor profile.
+                </div>
+              )}
+              {canMessage && (
+                <button
+                  onClick={onMessage}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-5 text-sm font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                >
+                  <MessageSquare size={15} />
+                  Message
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

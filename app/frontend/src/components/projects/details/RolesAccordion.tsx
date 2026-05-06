@@ -41,7 +41,9 @@ const RoleCard = ({ role, projectTitle, projectId, projectStatus, defaultOpen = 
     <>
       <div className={cn(
         "rounded-xl border transition-all duration-200 overflow-hidden",
-        open ? "border-primary/30 bg-primary/2" : "border-border bg-card hover:border-border/70"
+        open
+          ? "border-primary/40 shadow-[inset_3px_0_0_hsl(var(--primary))] bg-primary/[0.03] dark:bg-primary/[0.05]"
+          : "border-border bg-card hover:border-primary/20 hover:shadow-sm"
       )}>
         {/* Header (always visible) */}
         <button
@@ -140,7 +142,7 @@ const RoleCard = ({ role, projectTitle, projectId, projectStatus, defaultOpen = 
             <div className="pt-1">
               <Button
                 onClick={() => !applyDisabled && setApplyOpen(true)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-brand-sm"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-brand-sm font-semibold"
                 disabled={applyDisabled}
               >
                 {applyLabel}
@@ -175,12 +177,16 @@ const RolesAccordion = ({ roles, projectTitle, projectId, projectStatus }: Roles
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-foreground">
-          Roles & Applications
-        </h2>
-        <span className="text-xs text-muted-foreground">
-          {openRoles} open role{openRoles !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-2.5">
+          <span className="w-[3px] h-5 rounded-full bg-primary flex-shrink-0" />
+          <h2 className="text-[15px] font-bold text-foreground">Roles &amp; Applications</h2>
+        </div>
+        {openRoles > 0 && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {openRoles} open
+          </span>
+        )}
       </div>
 
       <div className="space-y-3">

@@ -42,14 +42,14 @@ const FooterLinkGroup = ({
 
 
 }: {title: string;links: {label: string;href: string;}[];}) =>
-<div className="space-y-4">
-    <h3 className="text-sm font-bold text-foreground tracking-wide">{title}</h3>
-    <ul className="space-y-2.5">
+<div className="space-y-3">
+    <h3 className="text-xs font-bold text-foreground tracking-wide uppercase">{title}</h3>
+    <ul className="space-y-1.5">
       {links.map(({ label, href }) =>
     <li key={label}>
           <Link
         to={href}
-        className="text-sm text-muted-foreground hover:text-primary transition-colors duration-150">
+        className="text-xs text-muted-foreground hover:text-primary transition-colors duration-150">
 
             {label}
           </Link>
@@ -75,12 +75,12 @@ const Footer = () => {
     <footer className="border-t border-border bg-muted/20">
       <Container>
         {/* Main grid */}
-        <div className="py-14 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1.5fr] lg:gap-8">
+        <div className="py-8 grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1.5fr] lg:gap-8">
 
           {/* Col 1 — Brand */}
-          <div className="space-y-5 sm:col-span-2 lg:col-span-1">
-            <KollabLogo size={32} textSize="text-xl" />
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+          <div className="space-y-3 sm:col-span-2 lg:col-span-1">
+            <KollabLogo size={28} textSize="text-lg" />
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
               Kollab is a collaboration platform where students discover projects, find teammates, learn with mentors, and build proof of skills.
             </p>
             
@@ -110,9 +110,9 @@ const Footer = () => {
           <FooterLinkGroup title="Help & Support" links={helpLinks} />
 
           {/* Col 5 — Stay in the loop */}
-          <div className="space-y-5">
-            <h3 className="text-sm font-bold text-foreground tracking-wide">Stay in the Loop</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-foreground tracking-wide uppercase">Stay in the Loop</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Get updates on new projects, features, and opportunities.
             </p>
             <form onSubmit={handleSubscribe} className="space-y-2">
@@ -140,15 +140,15 @@ const Footer = () => {
             </form>
 
             {/* Socials */}
-            <div className="flex items-center gap-1.5 pt-1">
+            <div className="flex items-center gap-1 pt-0">
               {socials.map(({ icon: Icon, label, href }) =>
               <a
                 key={label}
                 href={href}
                 aria-label={label}
-                className="p-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors duration-150">
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors duration-150">
 
-                  <Icon size={16} />
+                  <Icon size={15} />
                 </a>
               )}
             </div>
@@ -156,7 +156,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-border py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="border-t border-border py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© 2026 Kollab. All rights reserved.</span>
           <div className="flex items-center gap-5">
             <Link to="#" className="hover:text-primary transition-colors duration-150">
