@@ -23,6 +23,31 @@ const INITIAL_FILTERS: FilterState = {
   sortOrder: "desc",
 };
 
+const getVisiblePages = (currentPage: number, totalPages: number): (number | "ellipsis")[] => {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+
+  if (start > 2) {
+    pages.push("ellipsis");
+  }
+
+  for (let pageNumber = start; pageNumber <= end; pageNumber += 1) {
+    pages.push(pageNumber);
+  }
+
+  if (end < totalPages - 1) {
+    pages.push("ellipsis");
+  }
+
+  pages.push(totalPages);
+  return pages;
+};
+
 const JobExplorerPage = () => {
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [filterOpts, setFilterOpts] = useState<FilterOptions | null>(null);
@@ -140,24 +165,52 @@ const JobExplorerPage = () => {
 
                   {/* Pagination */}
                   {result.totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 mt-8">
-                      <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                        Previous
-                      </Button>
-                      {Array.from({ length: result.totalPages }).map((_, i) => (
-                        <Button
-                          key={i}
-                          variant={page === i + 1 ? "default" : "outline"}
-                          size="sm"
-                          className="w-9"
-                          onClick={() => setPage(i + 1)}
-                        >
-                          {i + 1}
-                        </Button>
-                      ))}
-                      <Button variant="outline" size="sm" disabled={page >= result.totalPages} onClick={() => setPage(page + 1)}>
-                        Next
-                      </Button>
+                    <div className="mt-8 rounded-xl border border-border/60 bg-card/50 p-3 sm:p-4">
+                      <div className="flex flex-col items-center gap-3">
+                        <p className="text-xs text-muted-foreground">
+                          Page {page} of {result.totalPages}
+                        </p>
+                        <div className="flex w-full flex-wrap items-center justify-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page <= 1}
+                            onClick={() => setPage(page - 1)}
+                            className="min-w-[84px]"
+                          >
+                            Previous
+                          </Button>
+                          {getVisiblePages(page, result.totalPages).map((item, index) =>
+                            item === "ellipsis" ? (
+                              <span
+                                key={`ellipsis-${index}`}
+                                className="inline-flex h-9 min-w-9 items-center justify-center px-2 text-sm text-muted-foreground"
+                              >
+                                ...
+                              </span>
+                            ) : (
+                              <Button
+                                key={item}
+                                variant={page === item ? "default" : "outline"}
+                                size="sm"
+                                className="h-9 min-w-9 px-3"
+                                onClick={() => setPage(item)}
+                              >
+                                {item}
+                              </Button>
+                            ),
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={page >= result.totalPages}
+                            onClick={() => setPage(page + 1)}
+                            className="min-w-[84px]"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
