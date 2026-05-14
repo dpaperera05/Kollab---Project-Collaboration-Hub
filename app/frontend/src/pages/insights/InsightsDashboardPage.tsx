@@ -377,6 +377,9 @@ const InsightsDashboardPage = () => {
   const [roleDistLoading, setRoleDistLoading] = useState(true);
   const [roleDistError, setRoleDistError] = useState<string | null>(null);
 
+  // Carousel state for companies
+  const [carouselIndex, setCarouselIndex] = useState(0);
+
 
   const loadSummary = async () => {
     try {
@@ -442,6 +445,14 @@ const InsightsDashboardPage = () => {
   useEffect(() => {
     void loadRoleDistribution();
   }, [loadRoleDistribution]);
+
+  // Auto-rotate carousel every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCarouselIndex((prevIndex) => (prevIndex + 1) % FEATURED_COMPANIES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const isDirty =
     filters.country !== appliedFilters.country ||
@@ -656,39 +667,42 @@ const InsightsDashboardPage = () => {
               <h2 className="text-xl md:text-2xl font-bold text-foreground">Jobs Sourced From</h2>
               <p className="text-sm text-muted-foreground mt-1">Selected company job boards represented in the current market intelligence pipeline.</p>
             </div>
-            <div
-              className="flex gap-3 overflow-x-auto pb-1"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
-            >
-              {FEATURED_COMPANIES.map((company) => (
-                <div
-                  key={company.name}
-                  className="flex-shrink-0 flex items-center gap-3 rounded-xl border border-border/60 bg-white dark:bg-card shadow-sm hover:shadow-md hover:border-primary/25 transition-all duration-200 px-4 py-3 min-w-[148px]"
-                >
-                  <div className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden bg-muted/30">
-                    <img
-                      src={company.logo}
-                      alt={company.name}
-                      width={36}
-                      height={36}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        const img = e.currentTarget;
-                        img.style.display = "none";
-                        const fallback = img.nextElementSibling as HTMLElement | null;
-                        if (fallback) fallback.style.display = "flex";
-                      }}
-                    />
-                    <span
-                      className="hidden w-full h-full items-center justify-center text-sm font-bold text-primary/70"
-                      aria-hidden="true"
-                    >
-                      {company.name[0]}
-                    </span>
+            
+            {/* Carousel Container */}
+            <div className="relative overflow-hidden py-4">
+              <div 
+                className="flex gap-4 transition-transform duration-700 ease-in-out"
+                style={{ transform: `translateX(-${carouselIndex * 204}px)` }}
+              >
+                {/* Duplicate companies for infinite loop effect */}
+                {[...FEATURED_COMPANIES, ...FEATURED_COMPANIES].map((company, index) => (
+                  <div
+                    key={`${company.name}-${index}`}
+                    className="flex-shrink-0 w-[200px] h-[140px] rounded-xl bg-card border-2 border-border hover:border-primary/60 shadow-md hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 flex flex-col items-center justify-center px-4 group"
+                  >
+                    <h3 className="text-2xl font-bold text-center text-foreground group-hover:text-primary transition-colors duration-300">
+                      {company.name}
+                    </h3>
+                    <div className="mt-3 h-0.5 w-10 bg-border group-hover:w-14 group-hover:bg-primary transition-all duration-300 rounded-full" />
                   </div>
-                  <span className="text-sm font-medium text-foreground whitespace-nowrap">{company.name}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+              
+              {/* Navigation Dots */}
+              <div className="flex justify-center gap-2 mt-6">
+                {FEATURED_COMPANIES.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCarouselIndex(index)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === carouselIndex 
+                        ? 'w-8 bg-primary' 
+                        : 'w-2 bg-muted-foreground/30 hover:bg-primary/60'
+                    }`}
+                    aria-label={`Go to ${FEATURED_COMPANIES[index].name}`}
+                  />
+                ))}
+              </div>
             </div>
           </section>
 
