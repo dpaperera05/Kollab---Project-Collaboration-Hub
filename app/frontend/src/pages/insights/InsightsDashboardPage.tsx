@@ -615,7 +615,7 @@ const InsightsDashboardPage = () => {
                   <div style={{ height: Math.max((roleDistribution.length || 1) * 44 + 32, 220) }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={roleDistribution} layout="vertical" margin={{ left: 14, right: 24, top: 4, bottom: 4 }}>
-                        <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                        <XAxis type="number" tick={false} tickLine={false} axisLine={false} />
                         <YAxis
                           type="category"
                           dataKey="name"
