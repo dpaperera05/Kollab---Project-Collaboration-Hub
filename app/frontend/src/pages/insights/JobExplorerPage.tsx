@@ -18,7 +18,6 @@ const INITIAL_FILTERS: FilterState = {
   workMode: "",
   company: "",
   country: "",
-  isTechOnly: false,
   sortBy: "date",
   sortOrder: "desc",
 };
@@ -75,7 +74,6 @@ const JobExplorerPage = () => {
         roleCategory: filters.roleCategory || undefined,
         seniority: filters.seniority || undefined,
         workMode: filters.workMode || undefined,
-        isTechJob: filters.isTechOnly ? true : undefined,
         company: filters.company || undefined,
         country: filters.country || undefined,
         sortBy: filters.sortBy,

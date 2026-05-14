@@ -15,10 +15,76 @@ export interface FilterState {
   workMode: string;
   company: string;
   country: string;
-  isTechOnly: boolean;
   sortBy: "date" | "title" | "company";
   sortOrder: "asc" | "desc";
 }
+
+// Role category label mappings (same as InsightsDashboardPage)
+const ROLE_CATEGORY_LABELS: Record<string, string> = {
+  devopscloud: "DevOps & Cloud Engineer",
+  devopsandcloud: "DevOps & Cloud Engineer",
+  dataai: "AI/ML Engineer",
+  dataandai: "AI/ML Engineer",
+  aianddata: "AI/ML Engineer",
+  othertech: "Other Tech Jobs",
+  otherengineering: "Other Tech Jobs",
+  programmanagement: "Project Manager",
+  frontend: "Front-End Development",
+  frontenddev: "Front-End Development",
+  frontenddeveloper: "Front-End Development",
+  frontendengineer: "Front-End Development",
+  frontendengineering: "Front-End Development",
+  frontendweb: "Front-End Development",
+  webfrontend: "Front-End Development",
+  uiengineer: "Front-End Development",
+  uideveloper: "Front-End Development",
+  backend: "Back-End Development",
+  backenddev: "Back-End Development",
+  backenddeveloper: "Back-End Development",
+  backendengineer: "Back-End Development",
+  backendengineering: "Back-End Development",
+  serverside: "Back-End Development",
+  fullstack: "Full-Stack Development",
+  fullstackdev: "Full-Stack Development",
+  fullstackdeveloper: "Full-Stack Development",
+  fullstackengineer: "Full-Stack Development",
+  fullstackengineering: "Full-Stack Development",
+  webdeveloper: "Full-Stack Development",
+  webdevelopment: "Full-Stack Development",
+  softwareengineer: "Full-Stack Development",
+  softwaredeveloper: "Full-Stack Development",
+  softwareengineering: "Software Engineer",
+  softwaredevelopment: "Full-Stack Development",
+  generalengineer: "Full-Stack Development",
+  general: "Full-Stack Development",
+  devops: "DevOps & Cloud Engineer",
+  devopsengineer: "DevOps & Cloud Engineer",
+  devopsengineering: "DevOps & Cloud Engineer",
+  cloud: "DevOps & Cloud",
+  cloudengineer: "DevOps & Cloud",
+  cloudarchitect: "DevOps & Cloud",
+  cloudengineering: "DevOps & Cloud",
+  sre: "DevOps & Cloud",
+  sitereliability: "DevOps & Cloud",
+  sitereliabilityengineer: "DevOps & Cloud",
+  platformengineer: "DevOps & Cloud",
+  infrastructure: "DevOps & Cloud",
+};
+
+const toReadableLabel = (value: string) => {
+  if (!value) return "Unknown";
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const normalizeCategoryKey = (raw: string): string =>
+  raw.toLowerCase().replace(/[\s_\-\/]+/g, "");
+
+const labelForCategory = (raw: string): string =>
+  ROLE_CATEGORY_LABELS[normalizeCategoryKey(raw)] ?? toReadableLabel(raw);
 
 interface JobFiltersProps {
   filters: FilterState;
@@ -34,13 +100,12 @@ const EMPTY: FilterState = {
   workMode: "",
   company: "",
   country: "",
-  isTechOnly: false,
   sortBy: "date",
   sortOrder: "desc",
 };
 
 const activeCount = (f: FilterState) =>
-  [f.roleCategory, f.seniority, f.workMode, f.company, f.country].filter(Boolean).length + (f.isTechOnly ? 1 : 0);
+  [f.roleCategory, f.seniority, f.workMode, f.company, f.country].filter(Boolean).length;
 
 const FilterControls = ({ filters, options, onChange }: Omit<JobFiltersProps, "total">) => {
   const set = (partial: Partial<FilterState>) => onChange({ ...filters, ...partial });
@@ -57,25 +122,25 @@ const FilterControls = ({ filters, options, onChange }: Omit<JobFiltersProps, "t
       ].map(({ label, key, items }) => (
         <div key={key} className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-          <Select value={filters[key]} onValueChange={(v) => set({ [key]: v === "__all__" ? "" : v })}>
+          <Select value={filters[key] || "__all__"} onValueChange={(v) => set({ [key]: v === "__all__" ? "" : v })}>
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={`All ${label}s`} />
+              <SelectValue>
+                {filters[key] && key === "roleCategory" 
+                  ? labelForCategory(filters[key]) 
+                  : filters[key] || `All ${label}s`}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">All</SelectItem>
               {items.map((i) => (
-                <SelectItem key={i} value={i}>{i}</SelectItem>
+                <SelectItem key={i} value={i}>
+                  {key === "roleCategory" ? labelForCategory(i) : i}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       ))}
-
-      {/* Tech toggle */}
-      <div className="flex items-center justify-between pt-2">
-        <Label className="text-sm font-medium">Tech Jobs Only</Label>
-        <Switch checked={filters.isTechOnly} onCheckedChange={(v) => set({ isTechOnly: v })} />
-      </div>
 
       {/* Sort */}
       <div className="space-y-1.5 pt-2 border-t border-border">
@@ -150,7 +215,7 @@ const JobFilters = ({ filters, options, onChange, total }: JobFiltersProps) => {
         <div className="flex flex-wrap gap-1.5 mb-4">
           {filters.roleCategory && (
             <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => onChange({ ...filters, roleCategory: "" })}>
-              {filters.roleCategory} <X size={12} />
+              {labelForCategory(filters.roleCategory)} <X size={12} />
             </Badge>
           )}
           {filters.seniority && (
@@ -171,11 +236,6 @@ const JobFilters = ({ filters, options, onChange, total }: JobFiltersProps) => {
           {filters.country && (
             <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => onChange({ ...filters, country: "" })}>
               {filters.country} <X size={12} />
-            </Badge>
-          )}
-          {filters.isTechOnly && (
-            <Badge variant="secondary" className="gap-1 text-xs cursor-pointer" onClick={() => onChange({ ...filters, isTechOnly: false })}>
-              Tech Only <X size={12} />
             </Badge>
           )}
         </div>
