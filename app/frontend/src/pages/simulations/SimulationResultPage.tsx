@@ -558,7 +558,7 @@ const Section = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm ${className}`}>
+  <div className={`relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm min-w-0 ${className}`}>
     <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
     <h2 className="mb-5 flex items-center gap-2 text-base font-bold text-foreground">
       <span className="text-primary">{icon}</span>
@@ -768,12 +768,12 @@ const SimulationResultPage = () => {
     : "border-rose-200/70 bg-rose-50/70 dark:border-rose-900/50 dark:bg-rose-950/20";
 
   return (
-    <div className="min-h-screen bg-background pt-16">
+    <div className="min-h-screen bg-background pt-16 overflow-x-hidden">
       <Navbar />
 
       {/* ── Hero ── */}
-      <section className="relative border-b border-border bg-gradient-to-b from-background via-background to-muted/30">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl" />
+      <section className="relative border-b border-border bg-gradient-to-b from-background via-background to-muted/30 overflow-hidden">
+        <div className="pointer-events-none absolute right-0 -top-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl" />
         <Container className="relative py-6 md:py-8">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="rounded-2xl border border-border bg-card/90 p-5 shadow-sm md:p-6">
@@ -838,15 +838,15 @@ const SimulationResultPage = () => {
       </section>
 
       {/* ── Content ── */}
-      <Container className="py-10 space-y-6">
+      <Container className="py-10 space-y-6 overflow-x-hidden">
 
         {/* ── Row 1: Score card + Strengths / Improvements ── */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
 
           {/* Score card */}
           <Section title="Score Overview" icon={<Star size={17} />}>
-            <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-2.5">
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 min-w-0">
+              <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-2.5 min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Final score</p>
                 <p className={`text-xl font-black ${scoreColor(finalScore)}`}>{Math.round(finalScore)}%</p>
               </div>
