@@ -20,6 +20,73 @@ const workModeColor: Record<string, string> = {
   "On-site": "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
 };
 
+// Role category label mappings
+const ROLE_CATEGORY_LABELS: Record<string, string> = {
+  devopscloud: "DevOps & Cloud Engineer",
+  devopsandcloud: "DevOps & Cloud Engineer",
+  dataai: "AI/ML Engineer",
+  dataandai: "AI/ML Engineer",
+  aianddata: "AI/ML Engineer",
+  othertech: "Other Tech Jobs",
+  otherengineering: "Other Tech Jobs",
+  programmanagement: "Project Manager",
+  frontend: "Front-End Development",
+  frontenddev: "Front-End Development",
+  frontenddeveloper: "Front-End Development",
+  frontendengineer: "Front-End Development",
+  frontendengineering: "Front-End Development",
+  frontendweb: "Front-End Development",
+  webfrontend: "Front-End Development",
+  uiengineer: "Front-End Development",
+  uideveloper: "Front-End Development",
+  backend: "Back-End Development",
+  backenddev: "Back-End Development",
+  backenddeveloper: "Back-End Development",
+  backendengineer: "Back-End Development",
+  backendengineering: "Back-End Development",
+  serverside: "Back-End Development",
+  fullstack: "Full-Stack Development",
+  fullstackdev: "Full-Stack Development",
+  fullstackdeveloper: "Full-Stack Development",
+  fullstackengineer: "Full-Stack Development",
+  fullstackengineering: "Full-Stack Development",
+  webdeveloper: "Full-Stack Development",
+  webdevelopment: "Full-Stack Development",
+  softwareengineer: "Full-Stack Development",
+  softwaredeveloper: "Full-Stack Development",
+  softwareengineering: "Software Engineer",
+  softwaredevelopment: "Full-Stack Development",
+  generalengineer: "Full-Stack Development",
+  general: "Full-Stack Development",
+  devops: "DevOps & Cloud Engineer",
+  devopsengineer: "DevOps & Cloud Engineer",
+  devopsengineering: "DevOps & Cloud Engineer",
+  cloud: "DevOps & Cloud",
+  cloudengineer: "DevOps & Cloud",
+  cloudarchitect: "DevOps & Cloud",
+  cloudengineering: "DevOps & Cloud",
+  sre: "DevOps & Cloud",
+  sitereliability: "DevOps & Cloud",
+  sitereliabilityengineer: "DevOps & Cloud",
+  platformengineer: "DevOps & Cloud",
+  infrastructure: "DevOps & Cloud",
+};
+
+const toReadableLabel = (value: string) => {
+  if (!value) return "Unknown";
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const normalizeCategoryKey = (raw: string): string =>
+  raw.toLowerCase().replace(/[\s_\-\/]+/g, "");
+
+const labelForCategory = (raw: string): string =>
+  ROLE_CATEGORY_LABELS[normalizeCategoryKey(raw)] ?? toReadableLabel(raw);
+
 interface JobCardProps {
   job: Job;
 }
@@ -72,7 +139,7 @@ const JobCard = ({ job }: JobCardProps) => {
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${seniorityColor[job.seniority] || "bg-muted text-muted-foreground"}`}>
             {job.seniority}
           </span>
-          <Badge variant="secondary" className="text-[11px]">{job.roleCategory}</Badge>
+          <Badge variant="secondary" className="text-[11px]">{labelForCategory(job.roleCategory)}</Badge>
           {job.isTechJob && <Badge variant="outline" className="text-[11px] border-primary/30 text-primary">Tech</Badge>}
         </div>
 

@@ -12,6 +12,73 @@ import JobCard from "@/components/insights/JobCard";
 import { getJobMarketJobById, getJobMarketJobs } from "@/services/jobMarketApi";
 import type { Job } from "@/data/mockJobMarket";
 
+// Role category label mappings
+const ROLE_CATEGORY_LABELS: Record<string, string> = {
+  devopscloud: "DevOps & Cloud Engineer",
+  devopsandcloud: "DevOps & Cloud Engineer",
+  dataai: "AI/ML Engineer",
+  dataandai: "AI/ML Engineer",
+  aianddata: "AI/ML Engineer",
+  othertech: "Other Tech Jobs",
+  otherengineering: "Other Tech Jobs",
+  programmanagement: "Project Manager",
+  frontend: "Front-End Development",
+  frontenddev: "Front-End Development",
+  frontenddeveloper: "Front-End Development",
+  frontendengineer: "Front-End Development",
+  frontendengineering: "Front-End Development",
+  frontendweb: "Front-End Development",
+  webfrontend: "Front-End Development",
+  uiengineer: "Front-End Development",
+  uideveloper: "Front-End Development",
+  backend: "Back-End Development",
+  backenddev: "Back-End Development",
+  backenddeveloper: "Back-End Development",
+  backendengineer: "Back-End Development",
+  backendengineering: "Back-End Development",
+  serverside: "Back-End Development",
+  fullstack: "Full-Stack Development",
+  fullstackdev: "Full-Stack Development",
+  fullstackdeveloper: "Full-Stack Development",
+  fullstackengineer: "Full-Stack Development",
+  fullstackengineering: "Full-Stack Development",
+  webdeveloper: "Full-Stack Development",
+  webdevelopment: "Full-Stack Development",
+  softwareengineer: "Full-Stack Development",
+  softwaredeveloper: "Full-Stack Development",
+  softwareengineering: "Software Engineer",
+  softwaredevelopment: "Full-Stack Development",
+  generalengineer: "Full-Stack Development",
+  general: "Full-Stack Development",
+  devops: "DevOps & Cloud Engineer",
+  devopsengineer: "DevOps & Cloud Engineer",
+  devopsengineering: "DevOps & Cloud Engineer",
+  cloud: "DevOps & Cloud",
+  cloudengineer: "DevOps & Cloud",
+  cloudarchitect: "DevOps & Cloud",
+  cloudengineering: "DevOps & Cloud",
+  sre: "DevOps & Cloud",
+  sitereliability: "DevOps & Cloud",
+  sitereliabilityengineer: "DevOps & Cloud",
+  platformengineer: "DevOps & Cloud",
+  infrastructure: "DevOps & Cloud",
+};
+
+const toReadableLabel = (value: string) => {
+  if (!value) return "Unknown";
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const normalizeCategoryKey = (raw: string): string =>
+  raw.toLowerCase().replace(/[\s_\-\/]+/g, "");
+
+const labelForCategory = (raw: string): string =>
+  ROLE_CATEGORY_LABELS[normalizeCategoryKey(raw)] ?? toReadableLabel(raw);
+
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
@@ -136,7 +203,7 @@ const JobDetailsPage = () => {
               {/* Meta badges */}
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">{job.seniority}</Badge>
-                <Badge variant="secondary">{job.roleCategory}</Badge>
+                <Badge variant="secondary">{labelForCategory(job.roleCategory)}</Badge>
                 <Badge variant="outline">{job.workMode}</Badge>
                 <Badge variant="outline">{job.employmentType}</Badge>
                 {job.isTechJob && <Badge variant="outline" className="border-primary/30 text-primary">Tech Job</Badge>}
