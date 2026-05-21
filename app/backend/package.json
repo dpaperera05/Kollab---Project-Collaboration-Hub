@@ -10,6 +10,8 @@
     "seed:recommendation-projects": "ts-node src/seed/seedRecommendationProjects.ts",
     "seed:simulations": "ts-node src/seed/simulations.seed.ts",
     "seed:blogs": "ts-node src/seed/blogs.seed.ts",
+    "seed:technology-blogs": "ts-node src/seed/technologyBlogs.seed.ts",
+    "seed:technology-events": "ts-node src/seed/technologyEvents.seed.ts",
     "seed:members": "ts-node src/seed/members.seed.ts",
     "seed:mentors": "ts-node src/seed/mentors.seed.ts",
     "seed:showcases": "ts-node src/seed/portfolioShowcases.seed.ts",
