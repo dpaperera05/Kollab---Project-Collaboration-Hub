@@ -149,7 +149,7 @@ const ProjectHero = ({ project }: ProjectHeroProps) => {
       {/* ─── Poster section ─── */}
       <div className="border-b border-border bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 pt-4 pb-5">
-          <div className="w-full rounded-xl overflow-hidden border border-border shadow-sm bg-muted" style={{ aspectRatio: "21/5" }}>
+          <div className="w-full rounded-xl overflow-hidden border border-border shadow-sm bg-muted" style={{ aspectRatio: "21/5.5" }}>
             {project.posterImage ? (
               <img
                 src={project.posterImage}

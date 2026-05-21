@@ -33,14 +33,14 @@ const ensureDeliverables = (val: unknown): string[] => {
 const enrichProjectsWithOwner = async (projects: any[]) => {
   const ownerIds = Array.from(new Set(projects.map((p) => p.ownerId).filter(Boolean)));
   const owners = ownerIds.length
-    ? await User.find({ _id: { $in: ownerIds } }, "name profile.avatarUrl profile.headline").lean()
+    ? await User.find({ _id: { $in: ownerIds } }).select("name userType profile").lean()
     : [];
 
   const ownerMap = new Map<string, any>(owners.map((o) => [o._id.toString(), o]));
 
   return projects.map((p) => {
     const owner = ownerMap.get(p.ownerId?.toString());
-    const ownerName = owner?.name || "Project Owner";
+    const ownerName = owner?.profile?.name || owner?.name || "Project Owner";
     const avatar = owner?.profile?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(ownerName)}`;
     return {
       ...p,
@@ -50,6 +50,7 @@ const enrichProjectsWithOwner = async (projects: any[]) => {
         name: ownerName,
         avatar,
         title: owner?.profile?.headline || "Project Owner",
+        userType: owner?.userType || "member",
         rating: 4.8,
         projectsPosted: 1,
       },
@@ -273,17 +274,17 @@ export const getPublicProjectById = async (req: Request, res: Response) => {
   const memberIds = (project.members || []).map((m) => m.userId).filter(Boolean) as string[];
   const userIds = Array.from(new Set([project.ownerId, ...memberIds].filter(Boolean)));
   const users = userIds.length
-    ? await User.find({ _id: { $in: userIds } }, "name profile.avatarUrl profile.headline").lean()
+    ? await User.find({ _id: { $in: userIds } }).select("name userType profile").lean()
     : [];
   const userMap = new Map<string, any>(users.map((u) => [u._id.toString(), u]));
 
   const owner = userMap.get(project.ownerId?.toString());
-  const ownerName = owner?.name || "Project Owner";
+  const ownerName = owner?.profile?.name || owner?.name || "Project Owner";
   const ownerAvatar = owner?.profile?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(ownerName)}`;
 
   const members = (project.members || []).map((m) => {
     const member = userMap.get(m.userId?.toString());
-    const name = member?.name || "Member";
+    const name = member?.profile?.name || member?.name || "Member";
     const avatar = member?.profile?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`;
     return { ...m, name, avatar };
   });
@@ -296,6 +297,7 @@ export const getPublicProjectById = async (req: Request, res: Response) => {
       name: ownerName,
       avatar: ownerAvatar,
       title: owner?.profile?.headline || "Project Owner",
+      userType: owner?.userType || "member",
       rating: 4.8,
       projectsPosted: 1,
     },

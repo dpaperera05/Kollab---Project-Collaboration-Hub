@@ -40,6 +40,7 @@ export interface ProjectOwner {
   rating: number;
   title: string;
   projectsPosted: number;
+  userType?: "member" | "mentor";
 }
 
 export interface Project {

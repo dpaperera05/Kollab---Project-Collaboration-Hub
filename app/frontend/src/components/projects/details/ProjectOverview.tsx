@@ -34,6 +34,8 @@ const SectionHeading = ({ children }: { children: React.ReactNode }) => (
 const ProjectOverview = ({ project }: ProjectOverviewProps) => {
   const typeConfig = PROJECT_TYPE_CONFIG[project.projectType] ?? DEFAULT_TYPE_CONFIG;
   const safeDuration = project.duration ? project.duration.replace("-", " ") : "Not specified";
+  // Route to /mentors/:id if owner is a mentor, otherwise /people/:id
+  const ownerProfilePath = project.owner.userType === "mentor" ? `/mentors/${project.owner.id}` : `/people/${project.owner.id}`;
 
   return (
     <section className="space-y-8">
@@ -186,7 +188,7 @@ const ProjectOverview = ({ project }: ProjectOverviewProps) => {
             </div>
           </div>
           <Link
-            to={`/people/${project.owner.id}`}
+            to={ownerProfilePath}
             className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground/80 hover:text-foreground hover:bg-muted transition-colors"
           >
             View Profile &rarr;

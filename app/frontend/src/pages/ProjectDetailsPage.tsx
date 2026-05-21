@@ -116,7 +116,7 @@ const ProjectDetailsPage = () => {
     status: "Open" | "Ongoing" | "Filled" | "Finished";
     roles?: BackendRole[];
     members?: Array<{ userId: string; role?: string; status?: string; name?: string; avatar?: string }>;
-    owner?: { id?: string; name?: string; avatar?: string; title?: string; rating?: number; projectsPosted?: number };
+    owner?: { id?: string; name?: string; avatar?: string; title?: string; rating?: number; projectsPosted?: number; userType?: "member" | "mentor" };
     postedAt?: string;
     createdAt?: string;
   };
@@ -155,6 +155,7 @@ const ProjectDetailsPage = () => {
       rating: p.owner?.rating || 4.8,
       title: p.owner?.title || "Project Owner",
       projectsPosted: p.owner?.projectsPosted || 1,
+      userType: p.owner?.userType || "member",
     },
     domain: p.domain as Project["domain"],
     difficulty: (p.difficulty as Project["difficulty"]) || "Intermediate",

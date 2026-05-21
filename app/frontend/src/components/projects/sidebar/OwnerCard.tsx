@@ -8,6 +8,9 @@ interface OwnerCardProps {
 }
 
 const OwnerCard = ({ owner }: OwnerCardProps) => {
+  // Route to /mentors/:id if owner is a mentor, otherwise /people/:id
+  const profilePath = owner.userType === "mentor" ? `/mentors/${owner.id}` : `/people/${owner.id}`;
+
   return (
     <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       {/* Card header strip */}
@@ -42,7 +45,7 @@ const OwnerCard = ({ owner }: OwnerCardProps) => {
         </div>
 
         <Link
-          to={`/people/${owner.id}`}
+          to={profilePath}
           className="flex items-center justify-center gap-1.5 w-full h-10 rounded-xl border border-border text-sm font-semibold text-foreground/80 hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <ExternalLink size={14} />
