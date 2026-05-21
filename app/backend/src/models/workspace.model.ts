@@ -23,7 +23,7 @@ const taskSchema = new Schema<IWorkspaceTask>(
   {
     id: { type: String, required: true },
     title: { type: String, required: true, trim: true },
-    description: { type: String, required: true, trim: true },
+    description: { type: String, required: false, trim: true, default: "" },
     assignedTo: { type: String, default: null },
     status: { type: String, enum: ["todo", "in-progress", "done"], default: "todo", index: true },
     createdAt: { type: String, default: () => new Date().toISOString() },
