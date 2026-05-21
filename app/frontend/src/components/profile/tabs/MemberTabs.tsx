@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Wrench, FolderKanban, Briefcase, FileText, Calendar, Clock, MessageCircle, Settings } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { type KollabUser } from "@/lib/authStore";
 import OverviewTab from "@/components/profile/OverviewTab";
 import SkillsToolsTab from "@/components/profile/SkillsToolsTab";
@@ -25,8 +26,16 @@ const tabs = [
   { value: "settings", label: "Settings", icon: Settings },
 ];
 
-const MemberTabs = ({ user, onUpdate }: Props) => (
-  <Tabs defaultValue="overview" className="w-full">
+const MemberTabs = ({ user, onUpdate }: Props) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
+
+  return (
+  <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
     <TabsList className="w-full justify-start gap-1 bg-card border border-border p-1.5 rounded-xl h-auto flex-wrap card-shadow">
       {tabs.map(t => (
         <TabsTrigger key={t.value} value={t.value}
@@ -47,6 +56,7 @@ const MemberTabs = ({ user, onUpdate }: Props) => (
       <TabsContent value="settings"><SettingsTab user={user} onUpdate={onUpdate} /></TabsContent>
     </div>
   </Tabs>
-);
+  );
+};
 
 export default MemberTabs;
