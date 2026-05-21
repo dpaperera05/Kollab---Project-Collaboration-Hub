@@ -15,7 +15,8 @@
     "seed:showcases": "ts-node src/seed/portfolioShowcases.seed.ts",
     "seed:main-member": "ts-node src/seed/mainDemoMember.seed.ts",
     "seed:main-member-showcases": "ts-node src/seed/mainMemberShowcases.seed.ts",
-    "seed:projects": "ts-node src/seed/projects.seed.ts"
+    "seed:projects": "ts-node src/seed/projects.seed.ts",
+    "seed:user-embeddings": "ts-node src/seed/generateUserEmbeddings.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.744.0",
