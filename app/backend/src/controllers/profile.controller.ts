@@ -453,14 +453,13 @@ export const getMemberProfile = async (req: Request, res: Response) => {
 
   const basePortfolioFilter = { userId: id, isPublished: { $ne: false } };
 
-  const pinnedPortfolioQuery = (async () => {
+  const portfolioQuery = (async () => {
     const queryStart = Date.now();
     const result = await PortfolioItem.find(basePortfolioFilter)
       .select("title summary problem techStack coverImage createdAt")
       .sort({ createdAt: -1 })
-      .limit(4)
       .lean();
-    logPerf("pinnedShowcasesQuery", Date.now() - queryStart);
+    logPerf("portfolioQuery", Date.now() - queryStart);
     return result;
   })();
 
@@ -475,19 +474,9 @@ export const getMemberProfile = async (req: Request, res: Response) => {
     return result;
   })();
 
-  const publishedPortfolioQuery = (async () => {
-    const queryStart = Date.now();
-    const result = await PortfolioItem.find(basePortfolioFilter)
-      .select("techStack")
-      .lean();
-    logPerf("publishedPortfolioTechQuery", Date.now() - queryStart);
-    return result;
-  })();
-
-  const [pinnedPortfolio, involvedProjects, publishedPortfolio] = await Promise.all([
-    pinnedPortfolioQuery,
+  const [portfolioItems, involvedProjects] = await Promise.all([
+    portfolioQuery,
     involvedProjectsQuery,
-    publishedPortfolioQuery,
   ]);
 
   const statsStart = Date.now();
@@ -503,7 +492,7 @@ export const getMemberProfile = async (req: Request, res: Response) => {
     }
   }
 
-  const portfolioCount = publishedPortfolio.length;
+  const portfolioCount = portfolioItems.length;
   logPerf("statsAggregation", Date.now() - statsStart);
 
   const stats = {
@@ -512,7 +501,7 @@ export const getMemberProfile = async (req: Request, res: Response) => {
   };
 
   const pinnedMapStart = Date.now();
-  const pinnedShowcases = pinnedPortfolio.map((item) => ({
+  const pinnedShowcases = portfolioItems.slice(0, 4).map((item) => ({
     id: item._id?.toString?.() ?? String(item._id),
     title: item.title,
     summary: item.summary || item.problem || "",
@@ -539,7 +528,7 @@ export const getMemberProfile = async (req: Request, res: Response) => {
       requiredSkills: (project.roles || []).flatMap((role) => role.requiredSkills || []),
       niceToHaveSkills: (project.roles || []).flatMap((role) => role.niceToHaveSkills || []),
     })),
-    showcases: publishedPortfolio.map((item) => ({
+    showcases: portfolioItems.map((item) => ({
       techStack: item.techStack || [],
     })),
   });
