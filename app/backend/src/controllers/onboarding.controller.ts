@@ -54,11 +54,6 @@ export const updateOnboardingProfile = async (req: Request, res: Response) => {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 
-  const user = await User.findById(userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: "User not found" });
-  }
-
   const {
     name,
     bio,
@@ -79,85 +74,141 @@ export const updateOnboardingProfile = async (req: Request, res: Response) => {
     onboardingStep,
   } = req.body as Record<string, unknown>;
 
-  const profile = user.profile && typeof (user.profile as any).toObject === "function"
-    ? (user.profile as any).toObject()
-    : { ...(user.profile || {}) };
+  // Build atomic update object - only include fields explicitly provided in request
+  const update: Record<string, unknown> = {};
 
-  // Snapshot recommendation-relevant fields before mutation
-  const beforeEmbedSnapshot = {
-    skills: profile.skills,
-    preferredRoles: profile.preferredRoles,
-    domainInterests: profile.domainInterests,
-    techStack: profile.techStack,
-    expertiseSkills: profile.expertiseSkills,
-  };
-
-  const cleanedProfile = {
-    ...profile,
-    name: typeof name === "string" ? name.trim() : profile.name,
-    bio: typeof bio === "string" ? bio.trim() : profile.bio,
-    timezone: typeof timezone === "string" ? timezone.trim() : profile.timezone,
-    location: typeof location === "string" ? location.trim() : profile.location,
-    preferredRoles: sanitizeStringArray(preferredRoles) ?? profile.preferredRoles,
-    skills: sanitizeStringArray(skills) ?? profile.skills,
-    techStack: sanitizeStringArray(techStack) ?? profile.techStack,
-    expertiseSkills: sanitizeStringArray(expertiseSkills) ?? profile.expertiseSkills,
-    headline: typeof headline === "string" ? headline.trim() : profile.headline,
-    languages: sanitizeStringArray(languages) ?? profile.languages,
-    rateType:
-      typeof rateType === "string" && ["free", "paid"].includes(rateType)
-        ? (rateType as "free" | "paid")
-        : profile.rateType,
-    rateNote: typeof rateNote === "string" ? rateNote.trim() : profile.rateNote,
-    links: sanitizeLinks(links) ?? profile.links,
-    availabilityHoursPerWeek:
-      typeof availabilityHoursPerWeek === "number"
-        ? availabilityHoursPerWeek
-        : typeof availabilityHoursPerWeek === "string" && availabilityHoursPerWeek.trim()
-          ? Number(availabilityHoursPerWeek)
-          : profile.availabilityHoursPerWeek,
-    domainInterests: sanitizeStringArray(domainInterests) ?? profile.domainInterests,
-  };
-
-  if (
-    cleanedProfile.availabilityHoursPerWeek !== undefined &&
-    (Number.isNaN(cleanedProfile.availabilityHoursPerWeek) || cleanedProfile.availabilityHoursPerWeek < 1)
-  ) {
-    return res.status(400).json({ success: false, message: "Availability hours must be a positive number" });
+  // Profile fields
+  if (typeof name === "string") {
+    const trimmedName = name.trim();
+    update["profile.name"] = trimmedName;
+    update["name"] = trimmedName;
   }
 
-  user.profile = cleanedProfile;
-
-  if (cleanedProfile.name) {
-    user.name = cleanedProfile.name;
+  if (typeof bio === "string") {
+    update["profile.bio"] = bio.trim();
   }
 
+  if (typeof timezone === "string") {
+    update["profile.timezone"] = timezone.trim();
+  }
+
+  if (typeof location === "string") {
+    update["profile.location"] = location.trim();
+  }
+
+  if (typeof headline === "string") {
+    update["profile.headline"] = headline.trim();
+  }
+
+  const cleanedPreferredRoles = sanitizeStringArray(preferredRoles);
+  if (cleanedPreferredRoles !== undefined) {
+    update["profile.preferredRoles"] = cleanedPreferredRoles;
+  }
+
+  const cleanedSkills = sanitizeStringArray(skills);
+  if (cleanedSkills !== undefined) {
+    update["profile.skills"] = cleanedSkills;
+  }
+
+  const cleanedTechStack = sanitizeStringArray(techStack);
+  if (cleanedTechStack !== undefined) {
+    update["profile.techStack"] = cleanedTechStack;
+  }
+
+  const cleanedExpertiseSkills = sanitizeStringArray(expertiseSkills);
+  if (cleanedExpertiseSkills !== undefined) {
+    update["profile.expertiseSkills"] = cleanedExpertiseSkills;
+  }
+
+  const cleanedLanguages = sanitizeStringArray(languages);
+  if (cleanedLanguages !== undefined) {
+    update["profile.languages"] = cleanedLanguages;
+  }
+
+  const cleanedDomainInterests = sanitizeStringArray(domainInterests);
+  if (cleanedDomainInterests !== undefined) {
+    update["profile.domainInterests"] = cleanedDomainInterests;
+  }
+
+  const cleanedLinks = sanitizeLinks(links);
+  if (cleanedLinks !== undefined) {
+    update["profile.links"] = cleanedLinks;
+  }
+
+  if (typeof rateType === "string" && ["free", "paid"].includes(rateType)) {
+    update["profile.rateType"] = rateType;
+  }
+
+  if (typeof rateNote === "string") {
+    update["profile.rateNote"] = rateNote.trim();
+  }
+
+  if (typeof availabilityHoursPerWeek === "number") {
+    if (Number.isNaN(availabilityHoursPerWeek) || availabilityHoursPerWeek < 1) {
+      return res.status(400).json({ success: false, message: "Availability hours must be a positive number" });
+    }
+    update["profile.availabilityHoursPerWeek"] = availabilityHoursPerWeek;
+  } else if (typeof availabilityHoursPerWeek === "string" && availabilityHoursPerWeek.trim()) {
+    const parsed = Number(availabilityHoursPerWeek);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      return res.status(400).json({ success: false, message: "Availability hours must be a positive number" });
+    }
+    update["profile.availabilityHoursPerWeek"] = parsed;
+  }
+
+  // Root-level fields
   if (typeof isProfilePublic === "boolean") {
-    user.isProfilePublic = isProfilePublic;
+    update["isProfilePublic"] = isProfilePublic;
   }
 
   if (typeof onboardingStep === "string") {
     if (!ALLOWED_ONBOARDING_STEPS.includes(onboardingStep)) {
       return res.status(400).json({ success: false, message: "Invalid onboarding step" });
     }
-    user.onboardingStep = onboardingStep;
+    update["onboardingStep"] = onboardingStep;
   }
 
-  await user.save();
+  // Fetch current user to check for embedding regeneration needs
+  const userBefore = await User.findById(userId).select(
+    "profile.skills profile.preferredRoles profile.domainInterests profile.techStack profile.expertiseSkills"
+  );
+  if (!userBefore) {
+    return res.status(404).json({ success: false, message: "User not found" });
+  }
+
+  const beforeEmbedSnapshot = {
+    skills: userBefore.profile?.skills,
+    preferredRoles: userBefore.profile?.preferredRoles,
+    domainInterests: userBefore.profile?.domainInterests,
+    techStack: userBefore.profile?.techStack,
+    expertiseSkills: userBefore.profile?.expertiseSkills,
+  };
+
+  // Perform atomic update - only fields in $set are modified
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $set: update },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedUser) {
+    return res.status(404).json({ success: false, message: "User not found" });
+  }
 
   // Regenerate user recommendation embedding if relevant profile fields changed
   const afterEmbedSnapshot = {
-    skills: cleanedProfile.skills,
-    preferredRoles: cleanedProfile.preferredRoles,
-    domainInterests: cleanedProfile.domainInterests,
-    techStack: cleanedProfile.techStack,
-    expertiseSkills: cleanedProfile.expertiseSkills,
+    skills: updatedUser.profile?.skills,
+    preferredRoles: updatedUser.profile?.preferredRoles,
+    domainInterests: updatedUser.profile?.domainInterests,
+    techStack: updatedUser.profile?.techStack,
+    expertiseSkills: updatedUser.profile?.expertiseSkills,
   };
+
   if (shouldRegenerateUserRecommendationEmbedding(beforeEmbedSnapshot, afterEmbedSnapshot)) {
     triggerUserRecommendationEmbedding(userId, "onboarding_updated");
   }
 
-  return res.json({ success: true, data: { user: toUserResponse(user) } });
+  return res.json({ success: true, data: { user: toUserResponse(updatedUser) } });
 };
 
 export const completeOnboarding = async (req: Request, res: Response) => {
