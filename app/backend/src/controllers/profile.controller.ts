@@ -82,7 +82,65 @@ export const getPublicProfile = async (req: Request, res: Response) => {
 
 export const listPublicMembers = async (_req: Request, res: Response) => {
   const users = await User.find({ userType: "member", isProfilePublic: { $ne: false } });
-  const payload = users.map((u) => toUserResponse(u));
+  
+  // Get user IDs
+  const userIds = users.map((u) => u._id.toString());
+  
+  // Fetch projects for all users in parallel
+  const projects = await Project.find({
+    $or: [
+      { ownerId: { $in: userIds } },
+      { "members.userId": { $in: userIds } },
+    ],
+  }).select("ownerId members.userId").lean();
+  
+  // Fetch portfolio items for all users in parallel
+  const portfolioItems = await PortfolioItem.find({
+    userId: { $in: userIds },
+    isPublished: { $ne: false },
+  }).select("userId").lean();
+  
+  // Build stats map
+  const statsMap = new Map<string, { projectsCount: number; showcasesCount: number }>();
+  
+  // Initialize all users with 0 stats
+  userIds.forEach((id) => {
+    statsMap.set(id, { projectsCount: 0, showcasesCount: 0 });
+  });
+  
+  // Count projects
+  projects.forEach((project) => {
+    const ownerId = project.ownerId;
+    if (statsMap.has(ownerId)) {
+      statsMap.get(ownerId)!.projectsCount += 1;
+    }
+    
+    (project.members || []).forEach((member) => {
+      if (member?.userId && statsMap.has(member.userId)) {
+        const current = statsMap.get(member.userId)!.projectsCount;
+        // Only increment if not already counted as owner
+        if (member.userId !== ownerId) {
+          statsMap.set(member.userId, { ...statsMap.get(member.userId)!, projectsCount: current + 1 });
+        }
+      }
+    });
+  });
+  
+  // Count portfolios
+  portfolioItems.forEach((item) => {
+    const userId = item.userId;
+    if (statsMap.has(userId)) {
+      statsMap.get(userId)!.showcasesCount += 1;
+    }
+  });
+  
+  // Map users with stats
+  const payload = users.map((u) => {
+    const userId = u._id.toString();
+    const stats = statsMap.get(userId) || { projectsCount: 0, showcasesCount: 0 };
+    return { ...toUserResponse(u), stats };
+  });
+  
   return res.json({ success: true, data: { users: payload } });
 };
 
@@ -275,11 +333,62 @@ export const smartSearchMembersHandler = async (req: Request, res: Response) => 
       },
     );
 
-    // ── Strip internal _scoring; attach _debug when requested ───────────────
+    // ── Compute stats for paginated members ─────────────────────────────────
+    const memberIds = result.members.map((m) => m.id);
+    
+    const [projects, portfolioItems] = await Promise.all([
+      Project.find({
+        $or: [
+          { ownerId: { $in: memberIds } },
+          { "members.userId": { $in: memberIds } },
+        ],
+      }).select("ownerId members.userId").lean(),
+      
+      PortfolioItem.find({
+        userId: { $in: memberIds },
+        isPublished: { $ne: false },
+      }).select("userId").lean(),
+    ]);
+    
+    // Build stats map
+    const statsMap = new Map<string, { projectsCount: number; showcasesCount: number }>();
+    memberIds.forEach((id) => {
+      statsMap.set(id, { projectsCount: 0, showcasesCount: 0 });
+    });
+    
+    // Count projects
+    projects.forEach((project) => {
+      const ownerId = project.ownerId;
+      if (statsMap.has(ownerId)) {
+        statsMap.get(ownerId)!.projectsCount += 1;
+      }
+      
+      (project.members || []).forEach((member) => {
+        if (member?.userId && statsMap.has(member.userId)) {
+          const current = statsMap.get(member.userId)!.projectsCount;
+          if (member.userId !== ownerId) {
+            statsMap.set(member.userId, { ...statsMap.get(member.userId)!, projectsCount: current + 1 });
+          }
+        }
+      });
+    });
+    
+    // Count portfolios
+    portfolioItems.forEach((item) => {
+      const userId = item.userId;
+      if (statsMap.has(userId)) {
+        statsMap.get(userId)!.showcasesCount += 1;
+      }
+    });
+
+    // ── Strip internal _scoring; attach _debug when requested; add stats ────
     const members = result.members.map(({ _scoring, ...pub }) => {
+      const stats = statsMap.get(pub.id) || { projectsCount: 0, showcasesCount: 0 };
+      
       if (isDebug && _scoring) {
         return {
           ...pub,
+          stats,
           _debug: {
             smartScore:          pub.smartScore,
             semanticScore:       _scoring.semanticScore,
@@ -295,7 +404,7 @@ export const smartSearchMembersHandler = async (req: Request, res: Response) => 
           },
         };
       }
-      return pub;
+      return { ...pub, stats };
     });
 
     return res.json({

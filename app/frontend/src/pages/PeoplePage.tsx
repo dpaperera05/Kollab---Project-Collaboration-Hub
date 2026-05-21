@@ -50,7 +50,7 @@ function mapUserToPerson(u: any): PeoplePerson {
     skills: profile.skills || [],
     techStack: profile.techStack || [],
     domainInterests: profile.domainInterests || [],
-    stats: { projectsCount: 0, showcasesCount: 0 },
+    stats: u.stats || { projectsCount: 0, showcasesCount: 0 },
     smartScore: u.smartScore,
     searchReasons: u.searchReasons,
   };
