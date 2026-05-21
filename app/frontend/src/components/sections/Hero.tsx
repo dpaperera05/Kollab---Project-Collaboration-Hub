@@ -89,13 +89,13 @@ const Hero = () => {
             style={{ animationDelay: "0.2s" }}
           >
             <a
-              href="#"
+              href="/register"
               className="px-7 py-3.5 text-sm font-semibold text-primary-foreground rounded-xl bg-primary shadow-brand hover:-translate-y-0.5 transition-all duration-200 hover:bg-primary/90 hover:shadow-[0_8px_30px_hsl(270_80%_60%_/_0.4)]"
             >
               Get Started
             </a>
             <a
-              href="#"
+              href="/projects"
               className="px-7 py-3.5 text-sm font-semibold text-foreground rounded-xl border border-border bg-background/60 backdrop-blur-sm hover:bg-accent hover:-translate-y-0.5 transition-all duration-200"
             >
               Explore Projects

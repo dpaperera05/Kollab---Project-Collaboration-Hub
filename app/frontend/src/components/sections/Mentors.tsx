@@ -1,45 +1,9 @@
 import { Star, ShieldCheck, CalendarCheck } from "lucide-react";
+import { useEffect, useState } from "react";
 import Container from "@/components/ui/Container";
 import SectionTitle from "@/components/ui/SectionTitle";
-
-const mentors = [
-  {
-    name: "Amara Nwosu",
-    role: "Senior Software Engineer",
-    company: "Google",
-    avatar: "AN",
-    tags: ["React", "System Design", "Career Coaching"],
-    rating: 4.9,
-    reviews: 47,
-  },
-  {
-    name: "Liam Chen",
-    role: "Product Manager",
-    company: "Spotify",
-    avatar: "LC",
-    tags: ["Product Strategy", "UX Research", "Agile"],
-    rating: 4.8,
-    reviews: 32,
-  },
-  {
-    name: "Priya Sharma",
-    role: "Data Scientist",
-    company: "DeepMind",
-    avatar: "PS",
-    tags: ["ML/AI", "Python", "Data Viz"],
-    rating: 5.0,
-    reviews: 61,
-  },
-  {
-    name: "Marcus Osei",
-    role: "DevOps Lead",
-    company: "Cloudflare",
-    avatar: "MO",
-    tags: ["Kubernetes", "CI/CD", "Cloud Architecture"],
-    rating: 4.7,
-    reviews: 28,
-  },
-];
+import { apiGet } from "@/lib/api";
+import type { KollabUser } from "@/lib/authStore";
 
 const avatarColors = [
   "from-violet-500 to-pink-500",
@@ -48,7 +12,62 @@ const avatarColors = [
   "from-amber-500 to-orange-500",
 ];
 
+interface MentorCardData {
+  id: string;
+  name: string;
+  role: string;
+  company: string;
+  avatar: string;
+  tags: string[];
+  rating: number;
+  reviews: number;
+}
+
 const Mentors = () => {
+  const [mentors, setMentors] = useState<MentorCardData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMentors = async () => {
+      try {
+        const response = await apiGet<{ success: boolean; data: { users: KollabUser[] } }>("/profile/mentors");
+        
+        const mentorData = response.data.users
+          .slice(0, 4)
+          .map((user) => {
+            const initials = user.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2);
+            
+            const skills = user.skills || [];
+            const tags = skills.slice(0, 3);
+            
+            return {
+              id: user._id,
+              name: user.name,
+              role: user.headline || "Mentor",
+              company: user.affiliation || "Independent",
+              avatar: user.avatar || initials,
+              tags,
+              rating: user.mentorRating || 5.0,
+              reviews: user.reviewCount || 0,
+            };
+          });
+        
+        setMentors(mentorData);
+      } catch (error) {
+        console.error("Failed to fetch mentors:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMentors();
+  }, []);
+
   return (
     <section className="py-24 bg-secondary/30">
       <Container>
@@ -65,16 +84,34 @@ const Mentors = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {mentors.map(({ name, role, company, avatar, tags, rating, reviews }, idx) => (
-            <div
-              key={name}
-              className="group flex flex-col rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:-translate-y-1 card-shadow hover:card-shadow-hover"
-            >
-              {/* Avatar */}
-              <div className={`mb-4 self-start flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br ${avatarColors[idx]} text-white text-sm font-bold shadow-brand-sm`}>
-                {avatar}
-              </div>
+        {loading ? (
+          <div className="text-center text-muted-foreground">Loading mentors...</div>
+        ) : mentors.length === 0 ? (
+          <div className="text-center text-muted-foreground">No mentors available at the moment.</div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {mentors.map(({ id, name, role, company, avatar, tags, rating, reviews }, idx) => {
+            const isAvatarUrl = avatar.startsWith("http") || avatar.startsWith("/");
+            
+            return (
+              <div
+                key={id}
+                className="group flex flex-col rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:-translate-y-1 card-shadow hover:card-shadow-hover"
+              >
+                {/* Avatar */}
+                <div className="mb-4 self-start">
+                  {isAvatarUrl ? (
+                    <img
+                      src={avatar}
+                      alt={name}
+                      className="w-12 h-12 rounded-full object-cover shadow-brand-sm"
+                    />
+                  ) : (
+                    <div className={`flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br ${avatarColors[idx]} text-white text-sm font-bold shadow-brand-sm`}>
+                      {avatar}
+                    </div>
+                  )}
+                </div>
 
               {/* Info */}
               <div className="flex-1">
@@ -98,19 +135,24 @@ const Mentors = () => {
                 {/* Rating */}
                 <div className="mt-3 flex items-center gap-1.5">
                   <Star size={12} className="fill-amber-400 text-amber-400" />
-                  <span className="text-sm font-semibold text-foreground">{rating}</span>
+                  <span className="text-sm font-semibold text-foreground">{rating.toFixed(1)}</span>
                   <span className="text-xs text-muted-foreground">({reviews} reviews)</span>
                 </div>
               </div>
 
               {/* CTA */}
-              <button className="mt-5 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-primary-foreground rounded-xl bg-primary shadow-brand-sm hover:bg-primary/90 hover:shadow-brand transition-all duration-200 hover:-translate-y-0.5">
+              <a
+                href={`/mentors/${id}`}
+                className="mt-5 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-primary-foreground rounded-xl bg-primary shadow-brand-sm hover:bg-primary/90 hover:shadow-brand transition-all duration-200 hover:-translate-y-0.5"
+              >
                 <CalendarCheck size={14} />
                 Book session
-              </button>
+              </a>
             </div>
-          ))}
-        </div>
+          );
+        })}
+          </div>
+        )}
       </Container>
     </section>
   );
