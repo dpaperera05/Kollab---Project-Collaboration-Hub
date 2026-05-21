@@ -311,7 +311,7 @@ const PeoplePage = () => {
               <div className="flex-1 min-w-0 space-y-3.5">
                 <div className="space-y-1">
                   <h1 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-                    Meet <span className="gradient-text">Builders</span>
+                    Meet <span className="gradient-text">collaborators</span>
                   </h1>
                   <p className="text-sm text-muted-foreground">
                     Discover members by roles, skills, and what they build.
