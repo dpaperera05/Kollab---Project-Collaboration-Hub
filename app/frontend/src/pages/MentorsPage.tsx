@@ -12,6 +12,7 @@ import type { Mentor } from "@/types/mentor";
 import { apiGet } from "@/lib/api";
 import type { KollabUser } from "@/lib/authStore";
 import { mapUserToMentor } from "@/lib/mentorMapper";
+import { seedMentorReviewsForLoadedMentors } from "@/lib/reviewStore";
 
 const PAGE_SIZE = 9;
 
@@ -118,6 +119,7 @@ const MentorsPage = () => {
   // ── Normal listing cache (fetch-all-once; filtered client-side) ────────────
   const [allMentors, setAllMentors] = useState<Mentor[]>([]);
   const allMentorsLoadedRef = useRef(false);
+  const reviewsSeededRef = useRef(false);
 
   // ── Smart search results (paginated from backend) ─────────────────────────
   const [smartMentors, setSmartMentors]       = useState<Mentor[]>([]);
@@ -187,7 +189,19 @@ const MentorsPage = () => {
       apiGet<{ success: boolean; data: { users: KollabUser[] } }>("/profile/mentors")
         .then((res) => {
           if (cancelled) return;
-          const mapped = (res.data.users || []).map((u) => mapUserToMentor(u));
+          let mapped = (res.data.users || []).map((u) => mapUserToMentor(u));
+          
+          // Seed reviews for presentation (runs once, checks for existing reviews)
+          if (!reviewsSeededRef.current) {
+            const addedCount = seedMentorReviewsForLoadedMentors(mapped);
+            reviewsSeededRef.current = true;
+            
+            // Remap mentors after seeding to pick up new ratings and review counts
+            if (addedCount > 0) {
+              mapped = (res.data.users || []).map((u) => mapUserToMentor(u));
+            }
+          }
+          
           setAllMentors(mapped);
           allMentorsLoadedRef.current = true;
           setError(null);

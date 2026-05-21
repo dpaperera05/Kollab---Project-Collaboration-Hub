@@ -11,6 +11,7 @@
     "seed:simulations": "ts-node src/seed/simulations.seed.ts",
     "seed:blogs": "ts-node src/seed/blogs.seed.ts",
     "seed:members": "ts-node src/seed/members.seed.ts",
+    "seed:mentors": "ts-node src/seed/mentors.seed.ts",
     "seed:showcases": "ts-node src/seed/portfolioShowcases.seed.ts",
     "seed:main-member": "ts-node src/seed/mainDemoMember.seed.ts",
     "seed:main-member-showcases": "ts-node src/seed/mainMemberShowcases.seed.ts"

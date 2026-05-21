@@ -1,5 +1,6 @@
 import type { Mentor } from "@/types/mentor";
 import type { KollabUser } from "@/lib/authStore";
+import { getLocalReviewsForMentor, getAverageRating } from "@/lib/reviewStore";
 
 export const formatSlot = (slot: { date: string; startTime: string; endTime: string; timezone?: string }) => {
   const dateStr = slot.date ? new Date(slot.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : slot.date;
@@ -32,6 +33,10 @@ export const mapUserToMentor = (user: KollabUser & { smartScore?: number; search
   };
   const hasAnyLink = Boolean(links.github || links.linkedin || links.portfolio);
 
+  // Compute rating and review count from localStorage
+  const localReviews = getLocalReviewsForMentor(user.id);
+  const { avg: computedRating, count: computedCount } = getAverageRating(localReviews, 5);
+
   return {
     id: user.id,
     name: profile.name || user.name || "Mentor",
@@ -45,8 +50,8 @@ export const mapUserToMentor = (user: KollabUser & { smartScore?: number; search
     domainTags: profile.domainInterests || [],
     languages: (profile as any).languages || [],
     links: hasAnyLink ? links : undefined,
-    rating: 5,
-    reviewsCount: 0,
+    rating: computedRating,
+    reviewsCount: computedCount,
     rate: profile.rateType === "paid" ? (profile.rateNote || "Paid session") : "Free",
     timeSlots: availabilitySlots?.map((s) => formatSlot(s)) || [],
     availabilitySlots: availabilitySlots || [],
