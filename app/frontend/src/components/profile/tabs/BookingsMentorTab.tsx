@@ -22,6 +22,8 @@ type ApiBooking = {
   _id: string;
   memberId: string;
   mentorId: string;
+  memberName?: string;
+  mentorName?: string;
   date: string; // yyyy-mm-dd expected
   time: string; // HH:mm
   agenda?: string;
@@ -86,7 +88,7 @@ const BookingsMentorTab = () => {
     <Card className="border-border card-shadow">
       <CardContent className="p-5 space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="font-semibold text-foreground">{b.memberId}</h4>
+          <h4 className="font-semibold text-foreground">{b.memberName || "Member"}</h4>
           <Badge variant="outline" className={cn("text-xs", STATUS_STYLES[b.status])}>{b.status}</Badge>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
